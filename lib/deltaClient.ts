@@ -132,3 +132,8 @@ export async function getCandles(symbol: string, resolution: string, start: numb
   const r = await axios.get(`${BASE_URL}/v2/history/candles${qs}`);
   return r.data;
 }
+
+export async function getTicker(symbol: string) {
+  const r = await axios.get(`${BASE_URL}/v2/tickers?symbol=${symbol}`);
+  return r.data?.result?.close ?? null;
+}
