@@ -135,13 +135,15 @@ export async function getCandles(symbol: string, resolution: string, start: numb
 
 export async function getTicker(symbol: string) {
   try {
-    const r = await axios.get(`${BASE_URL}/v2/tickers?symbol=${symbol}`);
-    const result = r.data?.result;
-    const price = result?.close ?? result?.last_price ?? result?.mark_price ?? null;
-    console.log(`Ticker ${symbol}: ${price}`, JSON.stringify(result));
-    return price ? parseFloat(price) : null;
+    const r = await axios.get(`${BASE_URL}/v2/tickers`);
+    const tickers: any[] = r.data?.result ?? [];
+    const ticker = tickers.find((t: any) => t.symbol === symbol);
+    if (!ticker) { console.error('Ticker not found: ' + symbol); return null; }
+    const price = parseFloat(ticker.close ?? ticker.mark_price ?? ticker.last_price);
+    console.log('Ticker ' + symbol + ': ' + price);
+    return price;
   } catch(e: any) {
-    console.error(`getTicker failed ${symbol}:`, e.response?.data ?? e.message);
+    console.error('getTicker failed ' + symbol, e.message);
     return null;
   }
 }
