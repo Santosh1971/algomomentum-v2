@@ -43,7 +43,7 @@
     "jspdf-autotable": "^5.0.8",
     "lucide-react": "^1.17.0",
     "luxon": "^3.7.2",
-    "next": "^15.3.2",
+    "next": "^15.3.8",
     "next-auth": "^4.24.11",
     "pg": "^8.21.0",
     "razorpay": "^2.9.6",
