@@ -1,4 +1,3 @@
-# Dockerfile
 FROM node:20-alpine AS base
 WORKDIR /app
 RUN apk add --no-cache libc6-compat
@@ -10,7 +9,8 @@ RUN npm ci
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npx prisma generate
+# Generate Prisma client without needing DATABASE_URL
+RUN PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1 npx prisma generate
 RUN npm run build
 
 FROM base AS runner
@@ -28,5 +28,4 @@ USER nextjs
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
-
 CMD ["node", "server.js"]
