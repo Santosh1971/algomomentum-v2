@@ -12,15 +12,14 @@ export default function SimulatorPage() {
   const [price, setPrice] = useState("");
   const [livePrice, setLivePrice] = useState<number | null>(null);
   const [loadingPrice, setLoadingPrice] = useState(false);
+  const [outboundIp, setOutboundIp] = useState<string | null>(null);
   const [log, setLog] = useState<{time: string; msg: string; status: string}[]>([]);
 
   useEffect(() => {
     fetch("/api/v1/script").then(r => r.json()).then(data => {
-      if (Array.isArray(data) && data.length > 0) {
-        setSymbols(data);
-        setSymbol(data[0].symbol);
-      }
+      if (Array.isArray(data) && data.length > 0) { setSymbols(data); setSymbol(data[0].symbol); }
     });
+    fetch("/api/v1/myip").then(r => r.json()).then(data => { if (data.ip) setOutboundIp(data.ip); });
   }, []);
 
   useEffect(() => {
@@ -30,10 +29,7 @@ export default function SimulatorPage() {
     setLivePrice(null);
     fetch(`/api/v1/ticker?symbol=${sym}`)
       .then(r => r.json())
-      .then(data => {
-        if (data.price) { setLivePrice(data.price); setPrice(String(data.price)); }
-        setLoadingPrice(false);
-      })
+      .then(data => { if (data.price) { setLivePrice(data.price); setPrice(String(data.price)); } setLoadingPrice(false); })
       .catch(() => setLoadingPrice(false));
   }, [symbol, customSymbol]);
 
@@ -72,9 +68,18 @@ export default function SimulatorPage() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       <div className="max-w-3xl mx-auto p-6 space-y-5">
-        <div>
-          <h1 className="text-2xl font-bold text-[#1E3A5F]">Signal Simulator</h1>
-          <p className="text-sm text-gray-500 mt-1">Fire TradingView-style webhook signals to test your bridge</p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-[#1E3A5F]">Signal Simulator</h1>
+            <p className="text-sm text-gray-500 mt-1">Fire TradingView-style webhook signals to test your bridge</p>
+          </div>
+          {outboundIp && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-2 text-right">
+              <p className="text-xs text-amber-600 font-medium uppercase tracking-wide">Server Outbound IP</p>
+              <p className="font-mono font-bold text-amber-800 text-sm">{outboundIp}</p>
+              <p className="text-xs text-amber-500 mt-0.5">Whitelist this in Delta API Keys</p>
+            </div>
+          )}
         </div>
 
         <div className="bg-white rounded-2xl p-5 shadow-sm border grid grid-cols-2 gap-4">
@@ -109,12 +114,6 @@ export default function SimulatorPage() {
             <div className="border rounded-xl px-3 py-2 text-xs font-mono text-gray-500 bg-gray-50">{webhookUrl}</div>
           </div>
         </div>
-
-        {livePrice && (
-          <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-2 text-sm text-green-700">
-            📈 <strong>{activeSymbol}</strong> current price: <strong>${livePrice}</strong>
-          </div>
-        )}
 
         <div className="grid grid-cols-3 gap-3">
           <button onClick={() => fireSignal("buy", "ENTRY")} className={`${btnBase} border-green-500 text-green-700 hover:bg-green-50`}>📈 Long Entry</button>
