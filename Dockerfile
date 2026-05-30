@@ -9,8 +9,10 @@ RUN npm ci
 FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# Generate Prisma client without needing DATABASE_URL
-RUN PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1 npx prisma generate
+# Declare DATABASE_URL as build arg so Railway can inject it
+ARG DATABASE_URL
+ENV DATABASE_URL=$DATABASE_URL
+RUN npx prisma generate
 RUN npm run build
 
 FROM base AS runner
