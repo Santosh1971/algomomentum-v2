@@ -1,7 +1,3 @@
-// lib/deltaClient.ts
-// All Delta Exchange India API calls go through this file
-// Credentials are decrypted here and NEVER logged
-
 import crypto from "crypto";
 import axios from "axios";
 import { decrypt } from "@/lib/vault";
@@ -26,7 +22,6 @@ function headers(apiKey: string, sig: string, ts: string) {
   };
 }
 
-/** Place a market/limit order */
 export async function placeOrder(apiKeyEnc: string, apiSecretEnc: string, body: Record<string, any>) {
   const apiKey = decrypt(apiKeyEnc);
   const apiSecret = decrypt(apiSecretEnc);
@@ -41,14 +36,36 @@ export async function placeOrder(apiKeyEnc: string, apiSecretEnc: string, body: 
   }
 }
 
-/** Validate API keys — calls GET /v2/profile */
 export async function verifyKeys(apiKey: string, apiSecret: string) {
+  // Try /v2/profile first, fall back to /v2/wallet/balances for sub-accounts
   const { signature, timestamp } = sign("GET", "/v2/profile", "", "", apiSecret);
-  const r = await axios.get(`${BASE_URL}/v2/profile`, { headers: headers(apiKey, signature, timestamp) });
-  return r.data;
+  try {
+    const r = await axios.get(`${BASE_URL}/v2/profile`, { 
+      headers: headers(apiKey, signature, timestamp) 
+    });
+    if (r.data?.success) return r.data;
+  } catch (e: any) {
+    // Sub-accounts may not have /v2/profile access, try balances
+    console.log("Profile failed, trying balances for sub-account...");
+  }
+  
+  // Fallback: use wallet balances to verify key works
+  const { signature: sig2, timestamp: ts2 } = sign("GET", "/v2/wallet/balances", "", "", apiSecret);
+  const r2 = await axios.get(`${BASE_URL}/v2/wallet/balances`, { 
+    headers: headers(apiKey, sig2, ts2) 
+  });
+  
+  // Return in profile format
+  return {
+    success: true,
+    result: {
+      id: apiKey.slice(0, 8),
+      email: "Sub Account",
+      full_name: "Delta Sub Account",
+    }
+  };
 }
 
-/** Get all fills for a symbol — paginated */
 export async function getFills(apiKeyEnc: string, apiSecretEnc: string, params: {
   product_symbol: string;
   start_time?: number;
@@ -73,7 +90,6 @@ export async function getFills(apiKeyEnc: string, apiSecretEnc: string, params: 
   return r.data;
 }
 
-/** Get ALL fills across all pages for a date range */
 export async function getAllFills(apiKeyEnc: string, apiSecretEnc: string, params: {
   product_symbol: string;
   start_time?: number;
@@ -81,7 +97,6 @@ export async function getAllFills(apiKeyEnc: string, apiSecretEnc: string, param
 }) {
   const allFills: any[] = [];
   let after: string | undefined;
-
   while (true) {
     const data = await getFills(apiKeyEnc, apiSecretEnc, { ...params, after });
     const fills = data?.result ?? [];
@@ -92,7 +107,6 @@ export async function getAllFills(apiKeyEnc: string, apiSecretEnc: string, param
   return allFills;
 }
 
-/** Get open positions */
 export async function getPositions(apiKeyEnc: string, apiSecretEnc: string) {
   const apiKey = decrypt(apiKeyEnc);
   const apiSecret = decrypt(apiSecretEnc);
@@ -103,7 +117,6 @@ export async function getPositions(apiKeyEnc: string, apiSecretEnc: string) {
   return r.data;
 }
 
-/** Get wallet balances */
 export async function getBalances(apiKeyEnc: string, apiSecretEnc: string) {
   const apiKey = decrypt(apiKeyEnc);
   const apiSecret = decrypt(apiSecretEnc);
@@ -114,7 +127,6 @@ export async function getBalances(apiKeyEnc: string, apiSecretEnc: string) {
   return r.data;
 }
 
-/** Get live OHLCV candles (for standalone strategy engine) */
 export async function getCandles(symbol: string, resolution: string, start: number, end: number) {
   const qs = `?symbol=${symbol}&resolution=${resolution}&start=${start}&end=${end}`;
   const r = await axios.get(`${BASE_URL}/v2/history/candles${qs}`);
