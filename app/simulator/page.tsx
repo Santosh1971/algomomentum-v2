@@ -1,22 +1,34 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 
-const SYMBOLS = ["BTCUSD", "BIOUSD", "ETHUSD", "SOLUSD", "BNBUSD"];
+interface Script { symbol: string; }
 
 export default function SimulatorPage() {
+  const [symbols, setSymbols] = useState<Script[]>([]);
   const [symbol, setSymbol] = useState("BTCUSD");
   const [customSymbol, setCustomSymbol] = useState("");
   const [price, setPrice] = useState("100000");
   const [log, setLog] = useState<{time: string; msg: string; status: string}[]>([]);
+
+  useEffect(() => {
+    fetch("/api/v1/script")
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setSymbols(data);
+          setSymbol(data[0].symbol);
+        }
+      });
+  }, []);
 
   const activeSymbol = customSymbol.trim() || symbol;
   const webhookUrl = `/api/v1/webhook/${activeSymbol}`;
 
   function addLog(msg: string, status: string) {
     const time = new Date().toTimeString().slice(0, 8);
-    setLog((prev) => [{ time, msg, status }, ...prev].slice(0, 20));
+    setLog((prev) => [{ time, msg, status }, ...prev].slice(0, 30));
   }
 
   async function fireSignal(side: string, trade: string) {
@@ -52,19 +64,23 @@ export default function SimulatorPage() {
           <p className="text-sm text-gray-500 mt-1">Fire TradingView-style webhook signals to test your bridge</p>
         </div>
 
-        {/* Config */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border grid grid-cols-2 gap-4">
           <div>
             <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Symbol</label>
             <select value={symbol} onChange={(e) => setSymbol(e.target.value)}
               className="w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]">
-              {SYMBOLS.map((s) => <option key={s}>{s}</option>)}
+              {symbols.length === 0 ? (
+                <option>Loading...</option>
+              ) : (
+                symbols.map((s) => <option key={s.symbol} value={s.symbol}>{s.symbol}</option>)
+              )}
             </select>
           </div>
           <div>
             <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Custom symbol</label>
             <input value={customSymbol} onChange={(e) => setCustomSymbol(e.target.value)}
-              placeholder="e.g. PIUSD" className="w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
+              placeholder="Override symbol e.g. PIUSD"
+              className="w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
           </div>
           <div>
             <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Price</label>
@@ -79,7 +95,6 @@ export default function SimulatorPage() {
           </div>
         </div>
 
-        {/* Buttons */}
         <div className="grid grid-cols-3 gap-3">
           <button onClick={() => fireSignal("buy", "ENTRY")}
             className={`${btnBase} border-green-500 text-green-700 hover:bg-green-50`}>
@@ -102,21 +117,23 @@ export default function SimulatorPage() {
           <button onClick={async () => {
             await fireSignal("buy", "ENTRY");
             setTimeout(() => fireSignal("sell", "EXIT"), 2000);
-          }} className={`${btnBase} border-blue-400 text-blue-700 hover:bg-blue-50 opacity-80 text-xs`}>
+          }} className={`${btnBase} border-blue-400 text-blue-700 hover:bg-blue-50 text-xs`}>
             🧪 Test: Entry → Exit (2s)
           </button>
         </div>
 
-        {/* Log */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border">
-          <p className="text-xs text-gray-400 uppercase tracking-wide mb-3">Activity log</p>
+          <div className="flex justify-between items-center mb-3">
+            <p className="text-xs text-gray-400 uppercase tracking-wide">Activity log</p>
+            <button onClick={() => setLog([])} className="text-xs text-gray-400 hover:text-red-500">Clear</button>
+          </div>
           {log.length === 0 ? (
             <p className="text-sm text-gray-400">Signals you fire will appear here...</p>
           ) : (
-            <div className="space-y-1 font-mono text-xs">
+            <div className="space-y-1 font-mono text-xs max-h-48 overflow-y-auto">
               {log.map((l, i) => (
                 <div key={i} className="flex gap-3">
-                  <span className="text-gray-400">{l.time}</span>
+                  <span className="text-gray-400 flex-shrink-0">{l.time}</span>
                   <span className={l.status === "ok" ? "text-green-700" : l.status === "err" ? "text-red-600" : "text-yellow-600"}>
                     {l.msg}
                   </span>
