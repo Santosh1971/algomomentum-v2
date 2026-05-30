@@ -10,19 +10,23 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(NEXT_AUTH);
-  if (!session || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Admin only" }, { status: 403 });
-  }
+  if (!session || session.user.role !== "admin") return NextResponse.json({ error: "Admin only" }, { status: 403 });
   const data = await req.json();
   const script = await prisma.script.create({ data });
   return NextResponse.json(script, { status: 201 });
 }
 
+export async function PUT(req: NextRequest) {
+  const session = await getServerSession(NEXT_AUTH);
+  if (!session || session.user.role !== "admin") return NextResponse.json({ error: "Admin only" }, { status: 403 });
+  const { originalSymbol, ...data } = await req.json();
+  const script = await prisma.script.update({ where: { symbol: originalSymbol }, data });
+  return NextResponse.json(script);
+}
+
 export async function DELETE(req: NextRequest) {
   const session = await getServerSession(NEXT_AUTH);
-  if (!session || session.user.role !== "admin") {
-    return NextResponse.json({ error: "Admin only" }, { status: 403 });
-  }
+  if (!session || session.user.role !== "admin") return NextResponse.json({ error: "Admin only" }, { status: 403 });
   const { symbol } = await req.json();
   await prisma.script.delete({ where: { symbol } });
   return NextResponse.json({ message: "Deleted" });

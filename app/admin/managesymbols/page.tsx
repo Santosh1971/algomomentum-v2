@@ -7,15 +7,18 @@ import { toast } from "sonner";
 
 interface Script {
   symbol: string; exchange_symbol: string; productId: number;
-  lot: number; exchange: string; Max_pos_size: number; Pos_Per: number; gridEnabled: boolean;
+  lot: number; exchange: string; Max_pos_size: number; Pos_Per: number;
 }
+
+const blank = { symbol: "", exchange_symbol: "", productId: "", lot: "1", Max_pos_size: "15000", Pos_Per: "100" };
 
 export default function ManageSymbolsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [scripts, setScripts] = useState<Script[]>([]);
   const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({ symbol: "", exchange_symbol: "", productId: "", lot: "1", Max_pos_size: "15000", Pos_Per: "100" });
+  const [form, setForm] = useState(blank);
+  const [editSymbol, setEditSymbol] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/Signup");
@@ -31,34 +34,29 @@ export default function ManageSymbolsPage() {
     setLoading(false);
   }
 
-  async function createScript() {
+  function startEdit(s: Script) {
+    setEditSymbol(s.symbol);
+    setForm({ symbol: s.symbol, exchange_symbol: s.exchange_symbol, productId: String(s.productId), lot: String(s.lot), Max_pos_size: String(s.Max_pos_size), Pos_Per: String(s.Pos_Per) });
+  }
+
+  function cancelEdit() { setEditSymbol(null); setForm(blank); }
+
+  async function saveScript() {
     if (!form.symbol || !form.exchange_symbol || !form.productId) {
-      toast.error("Symbol, exchange symbol and productId required");
-      return;
+      toast.error("Symbol, exchange symbol and productId required"); return;
     }
-    const res = await fetch("/api/v1/script", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        symbol: form.symbol.toUpperCase(),
-        exchange_symbol: form.exchange_symbol.toUpperCase(),
-        productId: parseInt(form.productId),
-        lot: parseFloat(form.lot),
-        Max_pos_size: parseInt(form.Max_pos_size),
-        Pos_Per: parseInt(form.Pos_Per),
-        exchange: "delta",
-      }),
-    });
+    const body = { symbol: form.symbol.toUpperCase(), exchange_symbol: form.exchange_symbol.toUpperCase(), productId: parseInt(form.productId), lot: parseFloat(form.lot), Max_pos_size: parseInt(form.Max_pos_size), Pos_Per: parseInt(form.Pos_Per), exchange: "delta" };
+    const method = editSymbol ? "PUT" : "POST";
+    const res = await fetch("/api/v1/script", { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(editSymbol ? { ...body, originalSymbol: editSymbol } : body) });
     const data = await res.json();
-    if (res.ok) { toast.success("Symbol added!"); setForm({ symbol: "", exchange_symbol: "", productId: "", lot: "1", Max_pos_size: "15000", Pos_Per: "100" }); load(); }
+    if (res.ok) { toast.success(editSymbol ? "Updated!" : "Added!"); setEditSymbol(null); setForm(blank); load(); }
     else toast.error(data.error ?? "Failed");
   }
 
   async function deleteScript(symbol: string) {
     if (!confirm("Delete " + symbol + "?")) return;
     await fetch("/api/v1/script", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ symbol }) });
-    toast.success("Deleted");
-    load();
+    toast.success("Deleted"); load();
   }
 
   const inp = "w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]";
@@ -70,7 +68,7 @@ export default function ManageSymbolsPage() {
         <h1 className="text-2xl font-bold text-[#1E3A5F]">Manage Symbols</h1>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white rounded-2xl p-5 shadow-sm border space-y-3">
-            <h2 className="font-semibold text-gray-700">Add Symbol</h2>
+            <h2 className="font-semibold text-gray-700">{editSymbol ? `Editing: ${editSymbol}` : "Add Symbol"}</h2>
             {[
               { label: "Symbol", key: "symbol", placeholder: "e.g. BTCUSD" },
               { label: "Exchange Symbol", key: "exchange_symbol", placeholder: "e.g. BTCUSD" },
@@ -81,21 +79,33 @@ export default function ManageSymbolsPage() {
             ].map((f) => (
               <div key={f.key}>
                 <label className="text-xs text-gray-500 block mb-1">{f.label}</label>
-                <input value={(form as any)[f.key]} onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
-                  placeholder={f.placeholder} className={inp} />
+                <input value={(form as any)[f.key]}
+                  onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
+                  placeholder={f.placeholder}
+                  disabled={f.key === "symbol" && !!editSymbol}
+                  className={inp + (f.key === "symbol" && editSymbol ? " bg-gray-100" : "")} />
               </div>
             ))}
-            <button onClick={createScript}
-              className="w-full bg-[#1E3A5F] text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-[#152c4a] transition">
-              Add Symbol
-            </button>
+            <div className="flex gap-2">
+              <button onClick={saveScript}
+                className="flex-1 bg-[#1E3A5F] text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-[#152c4a] transition">
+                {editSymbol ? "Save Changes" : "Add Symbol"}
+              </button>
+              {editSymbol && (
+                <button onClick={cancelEdit}
+                  className="px-4 border border-gray-300 text-gray-600 py-2.5 rounded-xl text-sm hover:bg-gray-50 transition">
+                  Cancel
+                </button>
+              )}
+            </div>
           </div>
+
           <div className="md:col-span-2 bg-white rounded-2xl shadow-sm border overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-[#1E3A5F] text-white text-xs">
-                  {["Symbol", "Exchange Symbol", "Product ID", "Lot", "Max Pos", "Actions"].map((h) => (
-                    <th key={h} className="px-4 py-3 text-left font-medium">{h}</th>
+                  {["Symbol", "Exch Symbol", "Product ID", "Lot", "Max Pos", "Actions"].map((h) => (
+                    <th key={h} className="px-3 py-3 text-left font-medium">{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -105,13 +115,17 @@ export default function ManageSymbolsPage() {
                 ) : scripts.length === 0 ? (
                   <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">No symbols yet</td></tr>
                 ) : scripts.map((s, i) => (
-                  <tr key={s.symbol} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                    <td className="px-4 py-2 font-semibold">{s.symbol}</td>
-                    <td className="px-4 py-2 text-gray-600">{s.exchange_symbol}</td>
-                    <td className="px-4 py-2 font-mono text-xs">{s.productId}</td>
-                    <td className="px-4 py-2">{s.lot}</td>
-                    <td className="px-4 py-2">{s.Max_pos_size}</td>
-                    <td className="px-4 py-2">
+                  <tr key={s.symbol} className={`${i % 2 === 0 ? "bg-white" : "bg-gray-50"} ${editSymbol === s.symbol ? "ring-2 ring-inset ring-blue-300" : ""}`}>
+                    <td className="px-3 py-2 font-semibold">{s.symbol}</td>
+                    <td className="px-3 py-2 text-gray-600">{s.exchange_symbol}</td>
+                    <td className="px-3 py-2 font-mono text-xs">{s.productId}</td>
+                    <td className="px-3 py-2">{s.lot}</td>
+                    <td className="px-3 py-2">{s.Max_pos_size}</td>
+                    <td className="px-3 py-2 flex gap-2">
+                      <button onClick={() => startEdit(s)}
+                        className="text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded-lg hover:bg-blue-100">
+                        Edit
+                      </button>
                       <button onClick={() => deleteScript(s.symbol)}
                         className="text-xs bg-red-50 text-red-600 px-3 py-1 rounded-lg hover:bg-red-100">
                         Delete
