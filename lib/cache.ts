@@ -7,15 +7,19 @@ const mutex = new Mutex();
 export interface TradeConfigData {
   id: string;
   userId: string;
+  accountId: string;
   script: string;
   isActive: boolean;
   userActive: boolean;
   amount: number;
+  leverage: number;
+  compoundMode: string;
   api_key_enc: string;
   api_secret_enc: string;
   mode: string;
   strategy: string | null;
   delta_account_name: string | null;
+  webhookToken: string;
 }
 
 export interface ScriptData {
@@ -34,6 +38,7 @@ export interface ScriptData {
 let scriptMap = new Map<string, ScriptData>();
 let configByScript = new Map<string, TradeConfigData[]>();
 let configByUser = new Map<string, TradeConfigData[]>();
+let configByWebhookToken = new Map<string, TradeConfigData>();
 
 async function syncScripts() {
   const scripts = await prisma.script.findMany();
@@ -58,33 +63,49 @@ async function syncScripts() {
 async function syncTradeConfigs() {
   const configs = await prisma.tradeConfig.findMany({
     where: { isActive: true, userActive: true },
+    include: {
+      account: {
+        select: {
+          api_key_enc: true,
+          api_secret_enc: true,
+          delta_account_name: true,
+        },
+      },
+    },
   });
 
   const byScript = new Map<string, TradeConfigData[]>();
   const byUser = new Map<string, TradeConfigData[]>();
+  const byToken = new Map<string, TradeConfigData>();
 
   configs.forEach((c) => {
     const tc: TradeConfigData = {
       id: c.id,
       userId: c.userId,
+      accountId: c.accountId,
       script: c.script,
       isActive: c.isActive,
       userActive: c.userActive,
       amount: c.amount,
-      api_key_enc: c.api_key_enc,
-      api_secret_enc: c.api_secret_enc,
+      leverage: c.leverage,
+      compoundMode: c.compoundMode,
+      api_key_enc: c.account.api_key_enc,
+      api_secret_enc: c.account.api_secret_enc,
       mode: c.mode,
       strategy: c.strategy,
-      delta_account_name: c.delta_account_name,
+      delta_account_name: c.account.delta_account_name ?? null,
+      webhookToken: c.webhookToken,
     };
     if (!byScript.has(c.script)) byScript.set(c.script, []);
     byScript.get(c.script)!.push(tc);
     if (!byUser.has(c.userId)) byUser.set(c.userId, []);
     byUser.get(c.userId)!.push(tc);
+    byToken.set(c.webhookToken, tc);
   });
 
   configByScript = byScript;
   configByUser = byUser;
+  configByWebhookToken = byToken;
   console.log(`♻️ Cache synced: ${configs.length} active configs`);
 }
 
@@ -107,12 +128,14 @@ function startSync() {
 export function getScript(symbol: string) { return scriptMap.get(symbol); }
 export function getConfigsByScript(symbol: string) { return configByScript.get(symbol) || []; }
 export function getConfigsByUser(userId: string) { return configByUser.get(userId) || []; }
+export function getConfigByToken(token: string) { return configByWebhookToken.get(token); }
 
 export function addConfig(c: TradeConfigData) {
   if (!configByScript.has(c.script)) configByScript.set(c.script, []);
   configByScript.get(c.script)!.push(c);
   if (!configByUser.has(c.userId)) configByUser.set(c.userId, []);
   configByUser.get(c.userId)!.push(c);
+  configByWebhookToken.set(c.webhookToken, c);
 }
 
 export function updateConfig(c: TradeConfigData) {
@@ -124,15 +147,19 @@ export function updateConfig(c: TradeConfigData) {
       map.set(key, arr);
     });
   });
+  configByWebhookToken.set(c.webhookToken, c);
 }
 
 export function removeConfig(id: string) {
   [configByScript, configByUser].forEach((map) => {
     map.forEach((arr, key) => map.set(key, arr.filter((x) => x.id !== id)));
   });
+  configByWebhookToken.forEach((val, key) => {
+    if (val.id === id) configByWebhookToken.delete(key);
+  });
 }
 
 initCache();
 startSync();
 
-export default { getScript, getConfigsByScript, getConfigsByUser, addConfig, updateConfig, removeConfig };
+export default { getScript, getConfigsByScript, getConfigsByUser, getConfigByToken, addConfig, updateConfig, removeConfig };

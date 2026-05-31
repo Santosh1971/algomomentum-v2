@@ -1,6 +1,5 @@
 // app/api/v1/tradeconfig/verify-keys/route.ts
-// Validates Delta API keys against GET /v2/profile
-// On success: saves delta_account_name and delta_user_id to TradeConfig
+// Validates Delta API keys — saves to DeltaAccount (not TradeConfig)
 
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
@@ -13,7 +12,7 @@ export async function POST(req: NextRequest) {
   const session = await getServerSession(NEXT_AUTH);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { api_key, api_secret, tradeConfigId } = await req.json();
+  const { api_key, api_secret, accountId } = await req.json();
 
   if (!api_key || !api_secret) {
     return NextResponse.json({ error: "api_key and api_secret are required" }, { status: 400 });
@@ -28,16 +27,15 @@ export async function POST(req: NextRequest) {
     const accountName = profile.result.full_name || profile.result.email || "Delta Account";
     const deltaUserId = String(profile.result.id);
 
-    // If a tradeConfigId was passed, update that config with the verified creds
-    if (tradeConfigId) {
-      await prisma.tradeConfig.update({
-        where: { id: tradeConfigId },
+    // Save verified credentials to DeltaAccount
+    if (accountId) {
+      await prisma.deltaAccount.update({
+        where: { id: accountId },
         data: {
           api_key_enc: encrypt(api_key),
           api_secret_enc: encrypt(api_secret),
           delta_account_name: accountName,
           delta_user_id: deltaUserId,
-          lastEditAt: new Date(),
         },
       });
     }
