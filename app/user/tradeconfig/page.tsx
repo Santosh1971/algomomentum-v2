@@ -60,18 +60,27 @@ export default function TradeConfigPage() {
     setLoading(false);
     setExpandedAccounts(new Set(data.map((a: DeltaAccount) => a.id)));
   }
+
   async function loadBalance(accountId: string) {
     try {
       const res = await fetch(`/api/v1/accounts/${accountId}/balance`);
-      if (res.ok) setBalances(prev => ({ ...prev, [accountId]: await res.json() }));
+      if (res.ok) {
+        const data = await res.json();
+        setBalances(prev => ({ ...prev, [accountId]: data }));
+      }
     } catch {}
   }
+
   async function loadPositions(accountId: string) {
     try {
       const res = await fetch(`/api/v1/accounts/${accountId}/positions`);
-      if (res.ok) setPositions(prev => ({ ...prev, [accountId]: await res.json() }));
+      if (res.ok) {
+        const data = await res.json();
+        setPositions(prev => ({ ...prev, [accountId]: data }));
+      }
     } catch {}
   }
+
   useEffect(() => { loadAccounts(); }, []);
   useEffect(() => {
     accounts.forEach(a => { if (a.delta_account_name) { loadBalance(a.id); loadPositions(a.id); } });
