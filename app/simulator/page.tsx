@@ -10,7 +10,6 @@ export default function SimulatorPage() {
   const [symbols, setSymbols] = useState<Script[]>([]);
   const [symbol, setSymbol] = useState("");
   const [customSymbol, setCustomSymbol] = useState("");
-  const [price, setPrice] = useState("");
   const [livePrice, setLivePrice] = useState<number | null>(null);
   const [loadingPrice, setLoadingPrice] = useState(false);
   const [outboundIp, setOutboundIp] = useState<string | null>(null);
@@ -22,29 +21,184 @@ export default function SimulatorPage() {
   const [timerRemaining, setTimerRemaining] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Trade planner
+  const [side, setSide] = useState<"buy"|"sell">("buy");
+  const [entry, setEntry] = useState("");
+  const [sl, setSl] = useState("");
+  const [tp, setTp] = useState("");
+  const [resolution, setResolution] = useState("15m");
+  const [loadingChart, setLoadingChart] = useState(false);
+  const [chartReady, setChartReady] = useState(false);
+  const chartRef = useRef<HTMLDivElement>(null);
+  const chartInstanceRef = useRef<any>(null);
+  const candleSeriesRef = useRef<any>(null);
+  const entryLineRef = useRef<any>(null);
+  const slLineRef = useRef<any>(null);
+  const tpLineRef = useRef<any>(null);
+
+  const entryN = parseFloat(entry);
+  const slN = parseFloat(sl);
+  const tpN = parseFloat(tp);
+  const risk = entry && sl && !isNaN(entryN) && !isNaN(slN) ? Math.abs(entryN - slN) : null;
+  const reward = entry && tp && !isNaN(entryN) && !isNaN(tpN) ? Math.abs(tpN - entryN) : null;
+  const rr = risk && reward ? (reward / risk).toFixed(2) : null;
+  const rrColor = rr ? (parseFloat(rr) >= 2 ? "text-green-600" : parseFloat(rr) >= 1 ? "text-yellow-600" : "text-red-600") : "";
+
+  // Init
   useEffect(() => {
     fetch("/api/v1/script").then(r => r.json()).then(data => {
       if (Array.isArray(data) && data.length > 0) { setSymbols(data); setSymbol(data[0].symbol); }
     });
-    fetch("/api/v1/myip").then(r => r.json()).then(data => { if (data.ip) setOutboundIp(data.ip); });
+    fetch("/api/v1/myip").then(r => r.json()).then(d => { if (d.ip) setOutboundIp(d.ip); });
+    // Load chart lib
+    if ((window as any).LightweightCharts) { initChart(); return; }
+    const s = document.createElement("script");
+    s.src = "https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js";
+    s.onload = () => initChart();
+    document.head.appendChild(s);
   }, []);
 
-  function fetchLivePrice(sym: string) {
-    if (!sym) return;
-    setLoadingPrice(true);
-    setLivePrice(null);
-    fetch(`/api/v1/ticker?symbol=${sym}`)
-      .then(r => r.json())
-      .then(data => { if (data.price) { setLivePrice(data.price); setPrice(String(data.price)); } setLoadingPrice(false); })
-      .catch(() => setLoadingPrice(false));
+  function initChart() {
+    if (!chartRef.current || chartInstanceRef.current) return;
+    const LW = (window as any).LightweightCharts;
+    if (!LW) return;
+    const chart = LW.createChart(chartRef.current, {
+      width: chartRef.current.clientWidth,
+      height: 380,
+      layout: { background: { color: "#ffffff" }, textColor: "#1E3A5F" },
+      grid: { vertLines: { color: "#f3f4f6" }, horzLines: { color: "#f3f4f6" } },
+      timeScale: { timeVisible: true, secondsVisible: false },
+      crosshair: { mode: 1 },
+    });
+    chartInstanceRef.current = chart;
+    candleSeriesRef.current = chart.addCandlestickSeries({
+      upColor: "#22c55e", downColor: "#ef4444",
+      borderUpColor: "#22c55e", borderDownColor: "#ef4444",
+      wickUpColor: "#22c55e", wickDownColor: "#ef4444",
+    });
+    new ResizeObserver(() => {
+      if (chartRef.current) chart.applyOptions({ width: chartRef.current.clientWidth });
+    }).observe(chartRef.current);
+    setChartReady(true);
   }
 
-  useEffect(() => { fetchLivePrice(customSymbol.trim() || symbol); }, [symbol, customSymbol]);
+  // Load symbol data
+  useEffect(() => {
+    const sym = customSymbol.trim() || symbol;
+    if (!sym) return;
+    fetchPrice(sym);
+    if (chartReady) loadCandles(sym);
+  }, [symbol, customSymbol, chartReady, resolution]);
+
+  // Auto-set SL/TP when entry changes
+  useEffect(() => {
+    if (!entry || isNaN(entryN)) return;
+    if (side === "buy") {
+      setSl((entryN * 0.98).toFixed(6));
+      setTp((entryN * 1.04).toFixed(6));
+    } else {
+      setSl((entryN * 1.02).toFixed(6));
+      setTp((entryN * 0.96).toFixed(6));
+    }
+  }, [entry, side]);
+
+  // Update chart lines
+  useEffect(() => { if (chartReady) updateLines(); }, [entry, sl, tp, chartReady]);
+
+  function fetchPrice(sym: string) {
+    setLoadingPrice(true);
+    fetch(`/api/v1/ticker?symbol=${sym}`).then(r => r.json()).then(d => {
+      if (d.price) { setLivePrice(d.price); setEntry(String(d.price)); }
+      setLoadingPrice(false);
+    }).catch(() => setLoadingPrice(false));
+  }
+
+  async function loadCandles(sym: string) {
+    setLoadingChart(true);
+    try {
+      const res = await fetch(`/api/v1/candles?symbol=${sym}&resolution=${resolution}&limit=120`);
+      const data = await res.json();
+      if (candleSeriesRef.current && Array.isArray(data.candles) && data.candles.length > 0) {
+        candleSeriesRef.current.setData(data.candles);
+        chartInstanceRef.current?.timeScale().fitContent();
+      }
+    } catch (e) { console.error(e); }
+    setLoadingChart(false);
+  }
+
+  function updateLines() {
+    const chart = chartInstanceRef.current;
+    if (!chart) return;
+    [entryLineRef, slLineRef, tpLineRef].forEach(ref => {
+      if (ref.current) { try { chart.removeSeries(ref.current); } catch {} ref.current = null; }
+    });
+    const now = Math.floor(Date.now() / 1000);
+    const past = now - 86400 * 30;
+    if (!isNaN(entryN) && entry) {
+      entryLineRef.current = chart.addLineSeries({ color: "#3b82f6", lineWidth: 2, lineStyle: 1, title: `Entry` });
+      entryLineRef.current.setData([{ time: past, value: entryN }, { time: now, value: entryN }]);
+    }
+    if (!isNaN(slN) && sl) {
+      slLineRef.current = chart.addLineSeries({ color: "#ef4444", lineWidth: 2, lineStyle: 1, title: `SL` });
+      slLineRef.current.setData([{ time: past, value: slN }, { time: now, value: slN }]);
+    }
+    if (!isNaN(tpN) && tp) {
+      tpLineRef.current = chart.addLineSeries({ color: "#22c55e", lineWidth: 2, lineStyle: 1, title: `TP` });
+      tpLineRef.current.setData([{ time: past, value: tpN }, { time: now, value: tpN }]);
+    }
+  }
 
   const activeSymbol = customSymbol.trim() || symbol;
 
-  function addLog(entry: LogEntry) {
-    setLog(prev => [entry, ...prev].slice(0, 50));
+  function addLog(entry: LogEntry) { setLog(prev => [entry, ...prev].slice(0, 50)); }
+
+  async function fireSignal(tradeSide: string, trade: string): Promise<boolean> {
+    const time = new Date().toTimeString().slice(0, 8);
+    addLog({ time, msg: `→ ${trade} ${tradeSide.toUpperCase()} ${activeSymbol} @ ${entry || livePrice}`, status: "pending" });
+    setIpWarning(null);
+    try {
+      const res = await fetch(`/api/v1/webhook/${activeSymbol}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ side: tradeSide, trade, price: entry || livePrice, trigger_time: new Date().toISOString() }),
+      });
+      const data = await res.json();
+      if (!res.ok) { addLog({ time, msg: `✗ Server error: ${data.error || res.status}`, status: "err" }); return false; }
+      if (!data.success) { addLog({ time, msg: `✗ ${data.error || "No active configs"}`, status: "err" }); return false; }
+
+      const summary: any[] = data.summary ?? [];
+      let allOk = true;
+      for (const s of summary) {
+        if (s.status === "rejected") {
+          let reason = s.reason || "Unknown error";
+          if (reason.includes("401")) reason = "Authentication failed — IP may not be whitelisted";
+          addLog({ time, msg: `✗ Order FAILED`, status: "err", detail: reason });
+          allOk = false; continue;
+        }
+        const val = s.value;
+        if (val?.success === false) {
+          const errCode = val?.error?.error?.code ?? val?.error?.code ?? "unknown";
+          const clientIp = val?.error?.error?.context?.client_ip ?? val?.error?.context?.client_ip;
+          if (errCode === "ip_not_whitelisted_for_api_key") {
+            setIpWarning(clientIp ?? outboundIp);
+            addLog({ time, msg: `🚫 IP NOT WHITELISTED — ${clientIp}`, status: "err", detail: `Go to Delta → API Keys → add ${clientIp} to whitelist` });
+          } else {
+            addLog({ time, msg: `✗ Order rejected: ${errCode}`, status: "err" });
+          }
+          allOk = false;
+        } else if (val?.result) {
+          addLog({ time, msg: `✅ ${trade} ${tradeSide.toUpperCase()} ${activeSymbol} — ORDER PLACED`, status: "ok", detail: `Order ID: ${val.result.id ?? val.result.client_order_id ?? "placed"}` });
+          toast.success("Order placed on Delta!");
+        } else if (val?.message === "No open position") {
+          addLog({ time, msg: `⚠️ No open position to exit`, status: "err" });
+        }
+      }
+      if (summary.length === 0) addLog({ time, msg: `✅ ${trade} ${tradeSide.toUpperCase()} ${activeSymbol} — processed`, status: "ok" });
+      return allOk;
+    } catch (e: any) {
+      addLog({ time, msg: `✗ Network error: ${e.message}`, status: "err" });
+      return false;
+    }
   }
 
   function getTimerSeconds() {
@@ -54,79 +208,13 @@ export default function SimulatorPage() {
     return val;
   }
 
-  async function fireSignal(side: string, trade: string): Promise<boolean> {
-    const time = new Date().toTimeString().slice(0, 8);
-    addLog({ time, msg: `→ ${trade} ${side.toUpperCase()} ${activeSymbol} @ ${price}`, status: "pending" });
-    setIpWarning(null);
-    try {
-      const res = await fetch(`/api/v1/webhook/${activeSymbol}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ side, trade, price, trigger_time: new Date().toISOString() }),
-      });
-      const data = await res.json();
-
-      if (!res.ok) {
-        addLog({ time, msg: `✗ Server error: ${data.error || res.status}`, status: "err" });
-        toast.error("Server error");
-        return false;
-      }
-
-      if (!data.success) {
-        addLog({ time, msg: `✗ ${data.error || "No active configs"}`, status: "err" });
-        toast.error(data.error || "No active configs");
-        return false;
-      }
-
-      // Check individual order results in summary
-      const summary: any[] = data.summary ?? [];
-      let allOk = true;
-
-      for (const s of summary) {
-        if (s.status === "rejected") {
-          addLog({ time, msg: `✗ Order FAILED for config ${s.configId?.slice(-6)}`, status: "err", detail: s.reason });
-          toast.error("Order failed — check log");
-          allOk = false;
-          continue;
-        }
-        const val = s.value;
-        if (val?.success === false) {
-          const errCode = val?.error?.error?.code ?? val?.error?.code ?? "unknown";
-          const clientIp = val?.error?.error?.context?.client_ip ?? val?.error?.context?.client_ip;
-          if (errCode === "ip_not_whitelisted_for_api_key") {
-            setIpWarning(clientIp ?? outboundIp);
-            addLog({ time, msg: `🚫 IP NOT WHITELISTED — ${clientIp}`, status: "err", detail: `Go to Delta → API Keys → add ${clientIp} to whitelist` });
-            toast.error(`IP blocked: ${clientIp}`);
-          } else {
-            addLog({ time, msg: `✗ Order rejected: ${errCode}`, status: "err", detail: JSON.stringify(val?.error) });
-            toast.error(`Order rejected: ${errCode}`);
-          }
-          allOk = false;
-        } else if (val?.result) {
-          addLog({ time, msg: `✅ ${trade} ${side.toUpperCase()} ${activeSymbol} — ORDER PLACED on Delta`, status: "ok", detail: `Order ID: ${val.result.id ?? val.result.client_order_id}` });
-          toast.success("Order placed on Delta!");
-        }
-      }
-
-      if (summary.length === 0) {
-        addLog({ time, msg: `✅ ${trade} ${side.toUpperCase()} ${activeSymbol} — processed ${data.processed} config(s)`, status: "ok" });
-      }
-
-      return allOk;
-    } catch (e: any) {
-      addLog({ time, msg: `✗ Network error: ${e.message}`, status: "err" });
-      toast.error("Network error");
-      return false;
-    }
-  }
-
   function startTimer(direction: "long"|"short") {
     if (timerRunning) { stopTimer(); return; }
     const secs = getTimerSeconds();
     setTimerRemaining(secs);
     setTimerRunning(direction);
-    const side = direction === "long" ? "buy" : "sell";
-    fireSignal(side, "ENTRY");
+    const tradeSide = direction === "long" ? "buy" : "sell";
+    fireSignal(tradeSide, "ENTRY");
     let remaining = secs;
     timerRef.current = setInterval(() => {
       remaining -= 1;
@@ -134,168 +222,220 @@ export default function SimulatorPage() {
       if (remaining <= 0) {
         clearInterval(timerRef.current!);
         setTimerRunning(null);
-        const exitSide = direction === "long" ? "sell" : "buy";
-        fireSignal(exitSide, "EXIT");
+        fireSignal(direction === "long" ? "sell" : "buy", "EXIT");
       }
     }, 1000);
   }
 
   function stopTimer() {
     if (timerRef.current) clearInterval(timerRef.current);
-    setTimerRunning(null);
-    setTimerRemaining(0);
+    setTimerRunning(null); setTimerRemaining(0);
   }
 
   function formatRemaining(secs: number) {
-    const h = Math.floor(secs / 3600);
-    const m = Math.floor((secs % 3600) / 60);
-    const s = secs % 60;
+    const h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60), s = secs % 60;
     if (h > 0) return `${h}h ${m}m ${s}s`;
     if (m > 0) return `${m}m ${s}s`;
     return `${s}s`;
   }
 
+  const inp = "w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]";
   const btnBase = "py-3 px-4 rounded-xl border-2 font-semibold text-sm transition-all active:scale-95 cursor-pointer";
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      <div className="max-w-3xl mx-auto p-6 space-y-5">
+      <div className="max-w-7xl mx-auto p-6 space-y-5">
 
-        {/* Header + IP Badge */}
+        {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-[#1E3A5F]">Signal Simulator</h1>
-            <p className="text-sm text-gray-500 mt-1">Fire TradingView-style webhook signals to test your bridge</p>
+            <h1 className="text-2xl font-bold text-[#1E3A5F]">Signal Simulator & Trade Planner</h1>
+            <p className="text-sm text-gray-500 mt-1">Plan trades with live chart, fire signals to your bridge</p>
           </div>
           {outboundIp && (
-            <div className={`rounded-xl px-4 py-2 text-right border cursor-default ${ipWarning ? "bg-red-50 border-red-400 animate-pulse" : "bg-amber-50 border-amber-200"}`}>
+            <div className={`rounded-xl px-4 py-2 text-right border ${ipWarning ? "bg-red-50 border-red-400 animate-pulse" : "bg-amber-50 border-amber-200"}`}>
               <p className={`text-xs font-medium uppercase tracking-wide ${ipWarning ? "text-red-600" : "text-amber-600"}`}>
-                {ipWarning ? "⚠️ Whitelist This IP!" : "Server Outbound IP"}
+                {ipWarning ? "⚠️ Whitelist This IP!" : "Server IP"}
               </p>
               <p className={`font-mono font-bold text-sm ${ipWarning ? "text-red-800" : "text-amber-800"}`}>{outboundIp}</p>
-              <p className={`text-xs mt-0.5 ${ipWarning ? "text-red-500 font-semibold" : "text-amber-500"}`}>
-                {ipWarning ? "Delta is blocking orders!" : "Add to Delta API Key whitelist"}
+              <p className={`text-xs ${ipWarning ? "text-red-500 font-semibold" : "text-amber-500"}`}>
+                {ipWarning ? "Delta is blocking orders!" : "Whitelist in Delta API Keys"}
               </p>
             </div>
           )}
         </div>
 
-        {/* IP Block Warning Banner */}
         {ipWarning && (
           <div className="bg-red-50 border-2 border-red-400 rounded-xl px-4 py-3 flex items-start gap-3">
-            <span className="text-2xl mt-0.5">🚫</span>
+            <span className="text-2xl">🚫</span>
             <div className="flex-1">
               <p className="font-bold text-red-700 text-sm">Orders blocked — IP not whitelisted on Delta</p>
-              <p className="text-red-600 text-sm mt-1">
-                Delta Exchange → Settings → API Keys → Edit your key → add <code className="bg-red-100 px-1.5 py-0.5 rounded font-mono font-bold">{ipWarning}</code> to Whitelisted IPs
-              </p>
+              <p className="text-red-600 text-sm mt-1">Delta Exchange → Settings → API Keys → Edit → add <code className="bg-red-100 px-1.5 py-0.5 rounded font-mono font-bold">{ipWarning}</code></p>
             </div>
             <button onClick={() => setIpWarning(null)} className="text-red-400 hover:text-red-600 text-xl font-bold">×</button>
           </div>
         )}
 
-        {/* Symbol + Price Config */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm border grid grid-cols-2 gap-4">
-          <div>
-            <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Symbol</label>
-            <select value={symbol} onChange={e => setSymbol(e.target.value)}
-              className="w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]">
-              {symbols.map(s => <option key={s.symbol} value={s.symbol}>{s.symbol}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">Custom symbol</label>
-            <input value={customSymbol} onChange={e => setCustomSymbol(e.target.value)}
-              placeholder="Override e.g. PIUSD"
-              className="w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
-          </div>
-          <div className="col-span-2">
-            <label className="text-xs text-gray-500 uppercase tracking-wide block mb-1">
-              Live Price {loadingPrice ? "⏳ fetching..." : livePrice ? `✅ $${livePrice}` : "❌ unavailable"}
-            </label>
-            <div className="flex gap-2">
-              <input type="number" value={price} onChange={e => setPrice(e.target.value)}
-                className="flex-1 border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
-              <button onClick={() => fetchLivePrice(customSymbol.trim() || symbol)}
-                className="px-4 border rounded-xl text-xs text-blue-600 hover:bg-blue-50 border-blue-200 font-medium">
-                🔄 Refresh
-              </button>
-            </div>
-          </div>
-        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
 
-        {/* Manual Signals */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm border space-y-3">
-          <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">Manual Signals</p>
-          <div className="grid grid-cols-2 gap-3">
-            <button onClick={() => fireSignal("buy", "ENTRY")} className={`${btnBase} border-green-500 text-green-700 hover:bg-green-50`}>📈 Long Entry</button>
-            <button onClick={() => fireSignal("sell", "EXIT")} className={`${btnBase} border-green-300 text-green-600 hover:bg-green-50`}>⬜ Exit Long</button>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <button onClick={() => fireSignal("sell", "ENTRY")} className={`${btnBase} border-red-500 text-red-700 hover:bg-red-50`}>📉 Short Entry</button>
-            <button onClick={() => fireSignal("buy", "EXIT")} className={`${btnBase} border-red-300 text-red-600 hover:bg-red-50`}>⬜ Exit Short</button>
-          </div>
-        </div>
+          {/* LEFT PANEL */}
+          <div className="space-y-4">
 
-        {/* Timer Trade */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm border space-y-3">
-          <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">Timer Trade — Entry → Auto Exit</p>
-          <div className="flex gap-3 items-center flex-wrap">
-            <label className="text-sm text-gray-600 flex-shrink-0">Exit after:</label>
-            <input type="number" value={timerValue} onChange={e => setTimerValue(e.target.value)}
-              className="w-24 border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]"
-              min="1" disabled={!!timerRunning} />
-            <select value={timerUnit} onChange={e => setTimerUnit(e.target.value)}
-              className="border rounded-xl px-3 py-2 text-sm focus:outline-none" disabled={!!timerRunning}>
-              <option value="sec">Seconds</option>
-              <option value="min">Minutes</option>
-              <option value="hr">Hours</option>
-            </select>
-            {timerRunning && (
-              <span className="text-sm font-mono font-bold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-200">
-                ⏱ {formatRemaining(timerRemaining)} remaining
-              </span>
-            )}
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <button onClick={() => startTimer("long")}
-              className={`${btnBase} ${timerRunning === "long" ? "border-orange-500 text-orange-700 bg-orange-50" : "border-green-500 text-green-700 hover:bg-green-50"}`}>
-              {timerRunning === "long" ? `⏱ Cancel (${formatRemaining(timerRemaining)})` : "📈 Long + Auto Exit"}
-            </button>
-            <button onClick={() => startTimer("short")}
-              className={`${btnBase} ${timerRunning === "short" ? "border-orange-500 text-orange-700 bg-orange-50" : "border-red-500 text-red-700 hover:bg-red-50"}`}>
-              {timerRunning === "short" ? `⏱ Cancel (${formatRemaining(timerRemaining)})` : "📉 Short + Auto Exit"}
-            </button>
-          </div>
-        </div>
-
-        {/* Activity Log */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm border">
-          <div className="flex justify-between items-center mb-3">
-            <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">Activity Log</p>
-            <button onClick={() => setLog([])} className="text-xs text-gray-400 hover:text-red-500">Clear</button>
-          </div>
-          {log.length === 0 ? <p className="text-sm text-gray-400">Signals you fire will appear here...</p> : (
-            <div className="space-y-1.5 font-mono text-xs max-h-64 overflow-y-auto">
-              {log.map((l, i) => (
-                <div key={i} className={`rounded-lg px-3 py-2 border ${
-                  l.status === "err" ? "bg-red-50 border-red-200" :
-                  l.status === "ok" ? "bg-green-50 border-green-200" :
-                  "bg-yellow-50 border-yellow-200"}`}>
-                  <div className="flex gap-2 items-start">
-                    <span className="text-gray-400 flex-shrink-0">{l.time}</span>
-                    <span className={`font-semibold ${l.status === "ok" ? "text-green-700" : l.status === "err" ? "text-red-700" : "text-yellow-700"}`}>
-                      {l.msg}
-                    </span>
-                  </div>
-                  {l.detail && <p className={`text-xs mt-1 ml-14 ${l.status === "err" ? "text-red-500" : "text-gray-500"}`}>{l.detail}</p>}
+            {/* Symbol */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm border space-y-3">
+              <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">Symbol</p>
+              <select value={symbol} onChange={e => setSymbol(e.target.value)} className={inp}>
+                {symbols.map(s => <option key={s.symbol} value={s.symbol}>{s.symbol}</option>)}
+              </select>
+              <input value={customSymbol} onChange={e => setCustomSymbol(e.target.value)}
+                placeholder="Custom symbol e.g. PIUSD" className={inp} />
+              {livePrice && (
+                <div className="bg-blue-50 rounded-xl px-3 py-2 text-center">
+                  <p className="text-xs text-blue-500">{loadingPrice ? "Fetching..." : "Live Price"}</p>
+                  <p className="text-2xl font-bold text-blue-700 font-mono">${livePrice}</p>
                 </div>
-              ))}
+              )}
+              <div className="flex gap-2">
+                <button onClick={() => fetchPrice(customSymbol.trim() || symbol)}
+                  className="flex-1 py-2 border rounded-xl text-xs text-blue-600 hover:bg-blue-50 border-blue-200 font-medium">
+                  🔄 Refresh Price
+                </button>
+                <select value={resolution} onChange={e => setResolution(e.target.value)}
+                  className="border rounded-xl px-2 py-2 text-xs focus:outline-none">
+                  {["1m","5m","15m","30m","1h","4h","1d"].map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
             </div>
-          )}
-        </div>
 
+            {/* Direction */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm border space-y-2">
+              <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">Direction</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => setSide("buy")}
+                  className={`py-2 rounded-xl border-2 text-sm font-semibold transition ${side === "buy" ? "bg-green-500 border-green-500 text-white" : "border-green-300 text-green-700 hover:bg-green-50"}`}>
+                  📈 Long
+                </button>
+                <button onClick={() => setSide("sell")}
+                  className={`py-2 rounded-xl border-2 text-sm font-semibold transition ${side === "sell" ? "bg-red-500 border-red-500 text-white" : "border-red-300 text-red-700 hover:bg-red-50"}`}>
+                  📉 Short
+                </button>
+              </div>
+            </div>
+
+            {/* Levels */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm border space-y-3">
+              <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">Levels (auto SL 2% / TP 4%)</p>
+              <div>
+                <label className="text-xs text-blue-600 font-semibold block mb-1">🎯 Entry</label>
+                <input type="number" value={entry} onChange={e => setEntry(e.target.value)} className={inp} />
+              </div>
+              <div>
+                <label className="text-xs text-red-600 font-semibold block mb-1">🛑 Stop Loss</label>
+                <input type="number" value={sl} onChange={e => setSl(e.target.value)} className={inp} />
+              </div>
+              <div>
+                <label className="text-xs text-green-600 font-semibold block mb-1">✅ Take Profit</label>
+                <input type="number" value={tp} onChange={e => setTp(e.target.value)} className={inp} />
+              </div>
+              {rr && (
+                <div className={`rounded-xl px-3 py-2 text-center border ${parseFloat(rr) >= 2 ? "bg-green-50 border-green-200" : parseFloat(rr) >= 1 ? "bg-yellow-50 border-yellow-200" : "bg-red-50 border-red-200"}`}>
+                  <p className="text-xs text-gray-500">Risk : Reward</p>
+                  <p className={`text-2xl font-bold ${rrColor}`}>1 : {rr}</p>
+                  <div className="flex justify-around mt-1 text-xs text-gray-500">
+                    <span>Risk: <strong className="text-red-600">${risk?.toFixed(5)}</strong></span>
+                    <span>Target: <strong className="text-green-600">${reward?.toFixed(5)}</strong></span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Manual Signals */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm border space-y-2">
+              <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">Manual Signals</p>
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => fireSignal("buy", "ENTRY")} className={`${btnBase} border-green-500 text-green-700 hover:bg-green-50`}>📈 Long</button>
+                <button onClick={() => fireSignal("sell", "EXIT")} className={`${btnBase} border-green-300 text-green-600 hover:bg-green-50`}>⬜ Exit L</button>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => fireSignal("sell", "ENTRY")} className={`${btnBase} border-red-500 text-red-700 hover:bg-red-50`}>📉 Short</button>
+                <button onClick={() => fireSignal("buy", "EXIT")} className={`${btnBase} border-red-300 text-red-600 hover:bg-red-50`}>⬜ Exit S</button>
+              </div>
+            </div>
+
+            {/* Timer */}
+            <div className="bg-white rounded-2xl p-4 shadow-sm border space-y-3">
+              <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">Timer Trade</p>
+              <div className="flex gap-2">
+                <input type="number" value={timerValue} onChange={e => setTimerValue(e.target.value)}
+                  className="w-20 border rounded-xl px-2 py-2 text-sm focus:outline-none" min="1" disabled={!!timerRunning} />
+                <select value={timerUnit} onChange={e => setTimerUnit(e.target.value)}
+                  className="flex-1 border rounded-xl px-2 py-2 text-sm focus:outline-none" disabled={!!timerRunning}>
+                  <option value="sec">Sec</option>
+                  <option value="min">Min</option>
+                  <option value="hr">Hr</option>
+                </select>
+              </div>
+              {timerRunning && (
+                <div className="bg-blue-50 rounded-xl px-3 py-2 text-center border border-blue-200">
+                  <p className="text-xs text-blue-500">Auto exit in</p>
+                  <p className="font-mono font-bold text-blue-700 text-lg">{formatRemaining(timerRemaining)}</p>
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-2">
+                <button onClick={() => startTimer("long")}
+                  className={`${btnBase} ${timerRunning === "long" ? "border-orange-500 text-orange-700 bg-orange-50" : "border-green-500 text-green-700 hover:bg-green-50"}`}>
+                  {timerRunning === "long" ? "⏱ Cancel" : "📈 Long+Exit"}
+                </button>
+                <button onClick={() => startTimer("short")}
+                  className={`${btnBase} ${timerRunning === "short" ? "border-orange-500 text-orange-700 bg-orange-50" : "border-red-500 text-red-700 hover:bg-red-50"}`}>
+                  {timerRunning === "short" ? "⏱ Cancel" : "📉 Short+Exit"}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT: Chart + Log */}
+          <div className="lg:col-span-3 space-y-4">
+
+            {/* Chart */}
+            <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+              <div className="px-4 py-3 border-b flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <p className="font-semibold text-[#1E3A5F]">{activeSymbol} — {resolution}</p>
+                  {loadingChart && <span className="text-xs text-gray-400 animate-pulse">Loading...</span>}
+                </div>
+                <div className="flex items-center gap-4 text-xs text-gray-500">
+                  <span className="text-blue-600 font-semibold">— Entry</span>
+                  <span className="text-red-500 font-semibold">— SL</span>
+                  <span className="text-green-500 font-semibold">— TP</span>
+                </div>
+              </div>
+              <div ref={chartRef} className="w-full" />
+            </div>
+
+            {/* Activity Log */}
+            <div className="bg-white rounded-2xl p-5 shadow-sm border">
+              <div className="flex justify-between items-center mb-3">
+                <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">Activity Log</p>
+                <button onClick={() => setLog([])} className="text-xs text-gray-400 hover:text-red-500">Clear</button>
+              </div>
+              {log.length === 0 ? <p className="text-sm text-gray-400">Signals you fire will appear here...</p> : (
+                <div className="space-y-1.5 font-mono text-xs max-h-48 overflow-y-auto">
+                  {log.map((l, i) => (
+                    <div key={i} className={`rounded-lg px-3 py-2 border ${l.status === "err" ? "bg-red-50 border-red-200" : l.status === "ok" ? "bg-green-50 border-green-200" : "bg-yellow-50 border-yellow-200"}`}>
+                      <div className="flex gap-2">
+                        <span className="text-gray-400 flex-shrink-0">{l.time}</span>
+                        <span className={`font-semibold ${l.status === "ok" ? "text-green-700" : l.status === "err" ? "text-red-700" : "text-yellow-700"}`}>{l.msg}</span>
+                      </div>
+                      {l.detail && <p className={`text-xs mt-1 ml-14 ${l.status === "err" ? "text-red-500" : "text-gray-500"}`}>{l.detail}</p>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
