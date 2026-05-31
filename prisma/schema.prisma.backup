@@ -17,67 +17,10 @@ model User {
   createdAt  DateTime @default(now())
   isVerified Boolean  @default(false)
 
-  details       UserDetails?
-  deltaAccounts DeltaAccount[]
-  tradeConfigs  TradeConfig[]
-  Billing       Billing[]
-  Payment       Payment[]
-}
-
-model DeltaAccount {
-  id                 String   @id @default(cuid())
-  userId             String
-  accountType        String   @default("main")
-  accountName        String   @default("Main Account")
-  api_key_enc        String   @default("")
-  api_secret_enc     String   @default("")
-  delta_account_name String?
-  delta_user_id      String?
-  isActive           Boolean  @default(true)
-  createdAt          DateTime @default(now())
-
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  details      UserDetails?
   tradeConfigs TradeConfig[]
-
-  @@unique([userId, accountType])
-  @@index([userId])
-}
-
-model TradeConfig {
-  id             String   @id @default(cuid())
-  userId         String
-  accountId      String
-  script         String
-  amount         Float
-  initial_amount Float?
-  isActive       Boolean  @default(false)
-  userActive     Boolean  @default(true)
-  comission      Float?
-  createdAt      DateTime @default(now())
-
-  webhookToken   String   @unique @default(cuid())
-  leverage       Int      @default(1)
-  compoundMode   String   @default("fixed")
-
-  mode          String  @default("bridge")
-  strategy      String?
-  timeframe     String?
-  session_start String?
-  session_end   String?
-  risk_reward   Float   @default(3.0)
-
-  platformFeePercent  Float     @default(20)
-  lastToggledAt       DateTime?
-  pause_lastToggledAt DateTime?
-  lastEditAt          DateTime?
-
-  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  account DeltaAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  Billing Billing[]
-
-  @@unique([accountId, script])
-  @@index([isActive])
-  @@index([webhookToken])
+  Billing      Billing[]
+  Payment      Payment[]
 }
 
 model UserDetails {
@@ -103,6 +46,48 @@ model VerificationToken {
   expires    DateTime
   userId     String?
   createdAt  DateTime @default(now())
+}
+
+model TradeConfig {
+  id             String   @id @default(cuid())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+  amount         Float
+  initial_amount Float?
+  isActive       Boolean  @default(false)
+  userActive     Boolean  @default(true)
+  script         String
+  comission      Float?
+  createdAt      DateTime @default(now())
+
+  // Encrypted Delta API credentials
+  api_key_enc    String   @default("")
+  api_secret_enc String   @default("")
+
+  // Delta account info (auto-fetched on key connect)
+  delta_account_name String?
+  delta_user_id      String?
+
+  // Mode: "bridge" (TradingView) or "standalone" (built-in strategy)
+  mode     String  @default("bridge")
+  strategy String? // "pdh_pdl" etc. — used when mode = "standalone"
+
+  // Standalone config
+  timeframe     String? // "15m", "5m" etc.
+  session_start String? // "09:15" IST
+  session_end   String? // "22:55" IST
+  risk_reward   Float   @default(3.0)
+
+  platformFeePercent Float @default(20)
+
+  lastToggledAt       DateTime?
+  pause_lastToggledAt DateTime?
+  lastEditAt          DateTime?
+
+  Billing Billing[]
+
+  @@index([isActive])
+  @@unique([userId, script])
 }
 
 model Script {
@@ -146,7 +131,7 @@ model Payment {
   paymentDate       DateTime @default(now())
   method            String?
   razorpayPaymentId String?
-  reference         String?
-  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  billing Billing? @relation(fields: [billingId], references: [id], onDelete: Cascade)
+  reference         String?  // for manual payments
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  billing           Billing? @relation(fields: [billingId], references: [id], onDelete: Cascade)
 }
