@@ -1,4 +1,7 @@
 "use client";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import Navbar from "@/components/Navbar";
 import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
 import ConnectDeltaModal from "@/components/ConnectDeltaModal";
@@ -35,6 +38,10 @@ const ACCOUNT_TYPES = [
 ];
 
 export default function TradeConfigPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  useEffect(() => { if (status === "unauthenticated") router.push("/Signup"); }, [status, router]);
+
   const [accounts, setAccounts] = useState<DeltaAccount[]>([]);
   const [balances, setBalances] = useState<Record<string, Balance>>({});
   const [positions, setPositions] = useState<Record<string, PositionsData>>({});
@@ -183,7 +190,9 @@ export default function TradeConfigPage() {
   const availableTypes = ACCOUNT_TYPES.filter(t => !usedTypes.includes(t.value));
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+<>
+      <Navbar />
+      <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -507,5 +516,6 @@ export default function TradeConfigPage() {
         />
       )}
     </div>
+  </>
   );
 }
