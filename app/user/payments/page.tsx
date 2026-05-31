@@ -14,7 +14,7 @@ interface Billing {
   platformFeePercent: number;
   status: string;
   generatedAt: string;
-  tradeConfig: { script: string; delta_account_name: string | null };
+  tradeConfig: { script: string; account: { delta_account_name: string | null } | null };
   Payment: { id: string; amountPaid: number; method: string; paymentDate: string }[];
 }
 
@@ -89,8 +89,8 @@ export default function PaymentsPage() {
                         {b.status}
                       </span>
                     </div>
-                    {b.tradeConfig.delta_account_name && (
-                      <p className="text-xs text-gray-400">{b.tradeConfig.delta_account_name}</p>
+                    {b.tradeConfig.account?.delta_account_name && (
+                      <p className="text-xs text-gray-400">{b.tradeConfig.account?.delta_account_name}</p>
                     )}
                     <div className="flex gap-4 mt-2 text-sm text-gray-600">
                       <span>Net PnL: <span className={b.netPnl >= 0 ? "text-green-600 font-medium" : "text-red-600 font-medium"}>${b.netPnl.toFixed(2)}</span></span>

@@ -1,4 +1,3 @@
-// app/api/v1/pnl/[tradeConfigId]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { NEXT_AUTH } from "@/lib/auth";
@@ -18,18 +17,21 @@ export async function GET(req: NextRequest, context: { params: Promise<{ tradeCo
 
   const config = await prisma.tradeConfig.findUnique({
     where: { id: tradeConfigId },
-    select: { userId: true, script: true, api_key_enc: true, api_secret_enc: true },
+    select: {
+      userId: true,
+      script: true,
+      account: { select: { api_key_enc: true, api_secret_enc: true } },
+    },
   });
 
   if (!config) return NextResponse.json({ error: "Config not found" }, { status: 404 });
 
-  // Auth: only owner or admin
   if (config.userId !== session.user.id && session.user.role !== "admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   try {
-    const report = await computePnlReport(config.api_key_enc, config.api_secret_enc, config.script, from, to);
+    const report = await computePnlReport(config.account.api_key_enc, config.account.api_secret_enc, config.script, from, to);
     return NextResponse.json({ tradeConfigId, symbol: config.script, from, to, ...report });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

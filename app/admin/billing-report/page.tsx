@@ -10,7 +10,7 @@ interface TradeConfig {
   id: string;
   script: string;
   amount: number;
-  delta_account_name: string | null;
+  account: { delta_account_name: string | null } | null;
   platformFeePercent: number;
 }
 
@@ -121,7 +121,7 @@ export default function AdminBillingReport() {
                   <option value="">Select config...</option>
                   {configs.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.script} — {c.delta_account_name ?? "Not connected"}
+                      {c.script} — {c.account?.delta_account_name ?? "Not connected"}
                     </option>
                   ))}
                 </select>

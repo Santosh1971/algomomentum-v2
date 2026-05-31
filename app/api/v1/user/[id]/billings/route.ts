@@ -16,7 +16,12 @@ export async function GET(_: NextRequest, context: { params: Promise<{ id: strin
     where: { userId: id },
     orderBy: { generatedAt: "desc" },
     include: {
-      tradeConfig: { select: { script: true, delta_account_name: true } },
+      tradeConfig: {
+        select: {
+          script: true,
+          account: { select: { delta_account_name: true } },
+        },
+      },
       Payment: { select: { id: true, amountPaid: true, method: true, paymentDate: true } },
     },
   });
