@@ -1,13 +1,14 @@
 "use client";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 
 interface Script { symbol: string; }
 interface LogEntry { time: string; msg: string; status: string; detail?: string; }
 
-function smartDecimals(price: number): number {
-  if (!price) return 2;
+function decimals(price: number): number {
+  if (!price || isNaN(price)) return 2;
+  if (price >= 10000) return 0;
   if (price >= 1000) return 1;
   if (price >= 100) return 2;
   if (price >= 1) return 3;
@@ -16,10 +17,9 @@ function smartDecimals(price: number): number {
   return 6;
 }
 
-function fmt(price: number | string): string {
-  const n = parseFloat(String(price));
-  if (isNaN(n)) return String(price);
-  return n.toFixed(smartDecimals(n));
+function fmt(n: number): string {
+  if (isNaN(n)) return "";
+  return n.toFixed(decimals(n));
 }
 
 export default function SimulatorPage() {
@@ -43,19 +43,30 @@ export default function SimulatorPage() {
   const [resolution, setResolution] = useState("15m");
   const [loadingChart, setLoadingChart] = useState(false);
   const [chartReady, setChartReady] = useState(false);
+
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstanceRef = useRef<any>(null);
   const candleSeriesRef = useRef<any>(null);
   const entryLineRef = useRef<any>(null);
   const slLineRef = useRef<any>(null);
   const tpLineRef = useRef<any>(null);
+  // Drag state
+  const draggingRef = useRef<"entry"|"sl"|"tp"|null>(null);
+  const entryRef = useRef(entry);
+  const slRef = useRef(sl);
+  const tpRef = useRef(tp);
+
+  // Keep refs in sync
+  useEffect(() => { entryRef.current = entry; }, [entry]);
+  useEffect(() => { slRef.current = sl; }, [sl]);
+  useEffect(() => { tpRef.current = tp; }, [tp]);
 
   const entryN = parseFloat(entry);
   const slN = parseFloat(sl);
   const tpN = parseFloat(tp);
-  const risk = entry && sl && !isNaN(entryN) && !isNaN(slN) ? Math.abs(entryN - slN) : null;
-  const reward = entry && tp && !isNaN(entryN) && !isNaN(tpN) ? Math.abs(tpN - entryN) : null;
-  const rr = risk && reward ? (reward / risk).toFixed(2) : null;
+  const risk = !isNaN(entryN) && !isNaN(slN) && sl ? Math.abs(entryN - slN) : null;
+  const reward = !isNaN(entryN) && !isNaN(tpN) && tp ? Math.abs(tpN - entryN) : null;
+  const rr = risk && reward && risk > 0 ? (reward / risk).toFixed(2) : null;
   const rrColor = rr ? (parseFloat(rr) >= 2 ? "text-green-600" : parseFloat(rr) >= 1 ? "text-yellow-600" : "text-red-600") : "";
 
   useEffect(() => {
@@ -63,10 +74,10 @@ export default function SimulatorPage() {
       if (Array.isArray(data) && data.length > 0) { setSymbols(data); setSymbol(data[0].symbol); }
     });
     fetch("/api/v1/myip").then(r => r.json()).then(d => { if (d.ip) setOutboundIp(d.ip); });
-    if ((window as any).LightweightCharts) { initChart(); return; }
+    if ((window as any).LightweightCharts) { setTimeout(initChart, 100); return; }
     const s = document.createElement("script");
     s.src = "https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js";
-    s.onload = () => initChart();
+    s.onload = () => setTimeout(initChart, 100);
     document.head.appendChild(s);
   }, []);
 
@@ -75,8 +86,7 @@ export default function SimulatorPage() {
     const LW = (window as any).LightweightCharts;
     if (!LW) return;
     const chart = LW.createChart(chartRef.current, {
-      width: chartRef.current.clientWidth,
-      height: 400,
+      width: chartRef.current.clientWidth, height: 400,
       layout: { background: { color: "#ffffff" }, textColor: "#1E3A5F" },
       grid: { vertLines: { color: "#f3f4f6" }, horzLines: { color: "#f3f4f6" } },
       timeScale: { timeVisible: true, secondsVisible: false },
@@ -91,6 +101,60 @@ export default function SimulatorPage() {
     new ResizeObserver(() => {
       if (chartRef.current) chart.applyOptions({ width: chartRef.current.clientWidth });
     }).observe(chartRef.current);
+
+    // Manual drag implementation
+    const el = chartRef.current;
+    let dragTarget: "entry"|"sl"|"tp"|null = null;
+
+    function getPriceAtY(y: number): number | null {
+      try { return candleSeriesRef.current?.coordinateToPrice(y) ?? null; } catch { return null; }
+    }
+
+    function getNearestLine(price: number): "entry"|"sl"|"tp"|null {
+      const e = parseFloat(entryRef.current);
+      const s = parseFloat(slRef.current);
+      const t = parseFloat(tpRef.current);
+      const threshold = price * 0.005; // 0.5% tolerance
+      const dists: [number, "entry"|"sl"|"tp"][] = [];
+      if (!isNaN(e) && entryRef.current) dists.push([Math.abs(price - e), "entry"]);
+      if (!isNaN(s) && slRef.current) dists.push([Math.abs(price - s), "sl"]);
+      if (!isNaN(t) && tpRef.current) dists.push([Math.abs(price - t), "tp"]);
+      if (dists.length === 0) return null;
+      dists.sort((a, b) => a[0] - b[0]);
+      return dists[0][0] < threshold ? dists[0][1] : null;
+    }
+
+    el.addEventListener("mousedown", (e) => {
+      const rect = el.getBoundingClientRect();
+      const y = e.clientY - rect.top;
+      const price = getPriceAtY(y);
+      if (price === null) return;
+      const line = getNearestLine(price);
+      if (line) { dragTarget = line; el.style.cursor = "ns-resize"; e.preventDefault(); }
+    });
+
+    el.addEventListener("mousemove", (e) => {
+      if (!dragTarget) {
+        // Show resize cursor when near a line
+        const rect = el.getBoundingClientRect();
+        const price = getPriceAtY(e.clientY - rect.top);
+        if (price !== null && getNearestLine(price)) el.style.cursor = "ns-resize";
+        else el.style.cursor = "default";
+        return;
+      }
+      const rect = el.getBoundingClientRect();
+      const price = getPriceAtY(e.clientY - rect.top);
+      if (price === null) return;
+      const p = parseFloat(fmt(price));
+      if (dragTarget === "entry") setEntry(fmt(price));
+      else if (dragTarget === "sl") setSl(fmt(price));
+      else if (dragTarget === "tp") setTp(fmt(price));
+    });
+
+    const stopDrag = () => { dragTarget = null; draggingRef.current = null; el.style.cursor = "default"; };
+    el.addEventListener("mouseup", stopDrag);
+    el.addEventListener("mouseleave", stopDrag);
+
     setChartReady(true);
   }
 
@@ -101,9 +165,10 @@ export default function SimulatorPage() {
     if (chartReady) loadCandles(sym);
   }, [symbol, customSymbol, chartReady, resolution]);
 
+  // Auto SL/TP with correct decimals
   useEffect(() => {
     if (!entry || isNaN(entryN)) return;
-    const dec = smartDecimals(entryN);
+    const dec = decimals(entryN);
     if (side === "buy") {
       setSl((entryN * 0.98).toFixed(dec));
       setTp((entryN * 1.04).toFixed(dec));
@@ -113,58 +178,30 @@ export default function SimulatorPage() {
     }
   }, [entry, side]);
 
-  // Draggable price lines using lightweight-charts priceLine
-  useEffect(() => {
-    if (chartReady) updatePriceLines();
-  }, [entry, sl, tp, chartReady]);
+  // Update price lines on chart
+  useEffect(() => { if (chartReady) updatePriceLines(); }, [entry, sl, tp, chartReady]);
 
   function updatePriceLines() {
     const series = candleSeriesRef.current;
     if (!series) return;
-
-    // Remove old price lines
     if (entryLineRef.current) { try { series.removePriceLine(entryLineRef.current); } catch {} entryLineRef.current = null; }
     if (slLineRef.current) { try { series.removePriceLine(slLineRef.current); } catch {} slLineRef.current = null; }
     if (tpLineRef.current) { try { series.removePriceLine(tpLineRef.current); } catch {} tpLineRef.current = null; }
-
     if (!isNaN(entryN) && entry) {
-      entryLineRef.current = series.createPriceLine({
-        price: entryN, color: "#3b82f6", lineWidth: 2,
-        lineStyle: 1, axisLabelVisible: true, title: `Entry ${fmt(entryN)}`,
-        draggable: true,
-      });
-      entryLineRef.current.applyOptions({});
-      // Listen for drag
-      try {
-        entryLineRef.current.on?.("priceLineMove", (p: number) => setEntry(p.toFixed(smartDecimals(p))));
-      } catch {}
+      entryLineRef.current = series.createPriceLine({ price: entryN, color: "#3b82f6", lineWidth: 2, lineStyle: 1, axisLabelVisible: true, title: `Entry ${fmt(entryN)}` });
     }
     if (!isNaN(slN) && sl) {
-      slLineRef.current = series.createPriceLine({
-        price: slN, color: "#ef4444", lineWidth: 2,
-        lineStyle: 1, axisLabelVisible: true, title: `SL ${fmt(slN)}`,
-        draggable: true,
-      });
-      try {
-        slLineRef.current.on?.("priceLineMove", (p: number) => setSl(p.toFixed(smartDecimals(p))));
-      } catch {}
+      slLineRef.current = series.createPriceLine({ price: slN, color: "#ef4444", lineWidth: 2, lineStyle: 1, axisLabelVisible: true, title: `SL ${fmt(slN)}` });
     }
     if (!isNaN(tpN) && tp) {
-      tpLineRef.current = series.createPriceLine({
-        price: tpN, color: "#22c55e", lineWidth: 2,
-        lineStyle: 1, axisLabelVisible: true, title: `TP ${fmt(tpN)}`,
-        draggable: true,
-      });
-      try {
-        tpLineRef.current.on?.("priceLineMove", (p: number) => setTp(p.toFixed(smartDecimals(p))));
-      } catch {}
+      tpLineRef.current = series.createPriceLine({ price: tpN, color: "#22c55e", lineWidth: 2, lineStyle: 1, axisLabelVisible: true, title: `TP ${fmt(tpN)}` });
     }
   }
 
   function fetchPrice(sym: string) {
     setLoadingPrice(true);
     fetch(`/api/v1/ticker?symbol=${sym}`).then(r => r.json()).then(d => {
-      if (d.price) { setLivePrice(d.price); setEntry(String(d.price)); }
+      if (d.price) { setLivePrice(d.price); setEntry(fmt(d.price)); }
       setLoadingPrice(false);
     }).catch(() => setLoadingPrice(false));
   }
@@ -187,7 +224,7 @@ export default function SimulatorPage() {
 
   async function fireSignal(tradeSide: string, trade: string): Promise<boolean> {
     const time = new Date().toTimeString().slice(0, 8);
-    addLog({ time, msg: `→ ${trade} ${tradeSide.toUpperCase()} ${activeSymbol} @ ${fmt(entry || String(livePrice))}`, status: "pending" });
+    addLog({ time, msg: `→ ${trade} ${tradeSide.toUpperCase()} ${activeSymbol} @ ${entry || fmt(livePrice!)}`, status: "pending" });
     setIpWarning(null);
     try {
       const res = await fetch(`/api/v1/webhook/${activeSymbol}`, {
@@ -202,10 +239,9 @@ export default function SimulatorPage() {
       let allOk = true;
       for (const s of summary) {
         if (s.status === "rejected") {
-          let reason = s.reason || "Unknown error";
+          let reason = s.reason || "Unknown";
           if (reason.includes("401")) reason = "Authentication failed — IP may not be whitelisted";
-          addLog({ time, msg: `✗ Order FAILED`, status: "err", detail: reason });
-          allOk = false; continue;
+          addLog({ time, msg: `✗ Order FAILED`, status: "err", detail: reason }); allOk = false; continue;
         }
         const val = s.value;
         if (val?.success === false) {
@@ -225,10 +261,7 @@ export default function SimulatorPage() {
       }
       if (summary.length === 0) addLog({ time, msg: `✅ ${trade} ${tradeSide.toUpperCase()} ${activeSymbol} — processed`, status: "ok" });
       return allOk;
-    } catch (e: any) {
-      addLog({ time, msg: `✗ Network error: ${e.message}`, status: "err" });
-      return false;
-    }
+    } catch (e: any) { addLog({ time, msg: `✗ Network error: ${e.message}`, status: "err" }); return false; }
   }
 
   function getTimerSeconds() {
@@ -246,23 +279,15 @@ export default function SimulatorPage() {
     let remaining = secs;
     timerRef.current = setInterval(() => {
       remaining -= 1; setTimerRemaining(remaining);
-      if (remaining <= 0) {
-        clearInterval(timerRef.current!); setTimerRunning(null);
-        fireSignal(direction === "long" ? "sell" : "buy", "EXIT");
-      }
+      if (remaining <= 0) { clearInterval(timerRef.current!); setTimerRunning(null); fireSignal(direction === "long" ? "sell" : "buy", "EXIT"); }
     }, 1000);
   }
 
-  function stopTimer() {
-    if (timerRef.current) clearInterval(timerRef.current);
-    setTimerRunning(null); setTimerRemaining(0);
-  }
+  function stopTimer() { if (timerRef.current) clearInterval(timerRef.current); setTimerRunning(null); setTimerRemaining(0); }
 
   function formatRemaining(secs: number) {
     const h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60), s = secs % 60;
-    if (h > 0) return `${h}h ${m}m ${s}s`;
-    if (m > 0) return `${m}m ${s}s`;
-    return `${s}s`;
+    if (h > 0) return `${h}h ${m}m ${s}s`; if (m > 0) return `${m}m ${s}s`; return `${s}s`;
   }
 
   const inp = "w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]";
@@ -298,7 +323,6 @@ export default function SimulatorPage() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
-          {/* LEFT */}
           <div className="space-y-4">
             <div className="bg-white rounded-2xl p-4 shadow-sm border space-y-3">
               <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">Symbol</p>
@@ -315,8 +339,7 @@ export default function SimulatorPage() {
               <div className="flex gap-2">
                 <button onClick={() => fetchPrice(customSymbol.trim() || symbol)}
                   className="flex-1 py-2 border rounded-xl text-xs text-blue-600 hover:bg-blue-50 border-blue-200 font-medium">🔄 Refresh</button>
-                <select value={resolution} onChange={e => setResolution(e.target.value)}
-                  className="border rounded-xl px-2 py-2 text-xs focus:outline-none">
+                <select value={resolution} onChange={e => setResolution(e.target.value)} className="border rounded-xl px-2 py-2 text-xs focus:outline-none">
                   {["1m","5m","15m","30m","1h","4h","1d"].map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
               </div>
@@ -331,7 +354,9 @@ export default function SimulatorPage() {
             </div>
 
             <div className="bg-white rounded-2xl p-4 shadow-sm border space-y-3">
-              <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">Levels <span className="text-gray-300 normal-case font-normal">(drag lines on chart)</span></p>
+              <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">
+                Levels <span className="text-gray-300 text-xs font-normal normal-case">(drag on chart)</span>
+              </p>
               <div>
                 <label className="text-xs text-blue-600 font-semibold block mb-1">🎯 Entry</label>
                 <input type="number" value={entry} onChange={e => setEntry(e.target.value)} className={inp} />
@@ -349,8 +374,8 @@ export default function SimulatorPage() {
                   <p className="text-xs text-gray-500">Risk : Reward</p>
                   <p className={`text-2xl font-bold ${rrColor}`}>1 : {rr}</p>
                   <div className="flex justify-around mt-1 text-xs">
-                    <span>Risk: <strong className="text-red-600">${risk?.toFixed(smartDecimals(risk!))}</strong></span>
-                    <span>Target: <strong className="text-green-600">${reward?.toFixed(smartDecimals(reward!))}</strong></span>
+                    <span>Risk: <strong className="text-red-600">${fmt(risk!)}</strong></span>
+                    <span>Target: <strong className="text-green-600">${fmt(reward!)}</strong></span>
                   </div>
                 </div>
               )}
@@ -397,14 +422,13 @@ export default function SimulatorPage() {
             </div>
           </div>
 
-          {/* RIGHT */}
           <div className="lg:col-span-3 space-y-4">
             <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
               <div className="px-4 py-3 border-b flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <p className="font-semibold text-[#1E3A5F]">{activeSymbol} — {resolution}</p>
                   {loadingChart && <span className="text-xs text-gray-400 animate-pulse">Loading...</span>}
-                  <span className="text-xs text-gray-400">Drag lines to adjust levels</span>
+                  <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">Hover near line + drag to move</span>
                 </div>
                 <div className="flex items-center gap-3 text-xs">
                   <span className="text-blue-600 font-semibold">— Entry</span>
