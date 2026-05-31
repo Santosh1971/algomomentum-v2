@@ -41,6 +41,7 @@
     "graceful-fs": "^4.2.11",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
+    "lightweight-charts": "^5.2.0",
     "lucide-react": "^1.17.0",
     "luxon": "^3.7.2",
     "next": "^15.3.8",

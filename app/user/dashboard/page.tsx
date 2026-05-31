@@ -66,6 +66,11 @@ export default function DashboardPage() {
                 <h2 className="font-semibold text-gray-800">Signal Simulator</h2>
                 <p className="text-sm text-gray-500 mt-1">Fire test signals to the bridge</p>
               </Link>
+              <Link href="/admin/trade-planner" className="bg-indigo-50 rounded-2xl p-5 border border-indigo-100 hover:shadow-md transition block">
+                <div className="text-3xl mb-3">📐</div>
+                <h2 className="font-semibold text-gray-800">Trade Planner</h2>
+                <p className="text-sm text-gray-500 mt-1">Set Entry, SL, TP with live chart</p>
+              </Link>
             </div>
           </>
         )}
