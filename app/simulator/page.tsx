@@ -1,10 +1,26 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 
 interface Script { symbol: string; }
 interface LogEntry { time: string; msg: string; status: string; detail?: string; }
+
+function smartDecimals(price: number): number {
+  if (!price) return 2;
+  if (price >= 1000) return 1;
+  if (price >= 100) return 2;
+  if (price >= 1) return 3;
+  if (price >= 0.1) return 4;
+  if (price >= 0.01) return 5;
+  return 6;
+}
+
+function fmt(price: number | string): string {
+  const n = parseFloat(String(price));
+  if (isNaN(n)) return String(price);
+  return n.toFixed(smartDecimals(n));
+}
 
 export default function SimulatorPage() {
   const [symbols, setSymbols] = useState<Script[]>([]);
@@ -20,8 +36,6 @@ export default function SimulatorPage() {
   const [timerRunning, setTimerRunning] = useState<"long"|"short"|null>(null);
   const [timerRemaining, setTimerRemaining] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Trade planner
   const [side, setSide] = useState<"buy"|"sell">("buy");
   const [entry, setEntry] = useState("");
   const [sl, setSl] = useState("");
@@ -44,13 +58,11 @@ export default function SimulatorPage() {
   const rr = risk && reward ? (reward / risk).toFixed(2) : null;
   const rrColor = rr ? (parseFloat(rr) >= 2 ? "text-green-600" : parseFloat(rr) >= 1 ? "text-yellow-600" : "text-red-600") : "";
 
-  // Init
   useEffect(() => {
     fetch("/api/v1/script").then(r => r.json()).then(data => {
       if (Array.isArray(data) && data.length > 0) { setSymbols(data); setSymbol(data[0].symbol); }
     });
     fetch("/api/v1/myip").then(r => r.json()).then(d => { if (d.ip) setOutboundIp(d.ip); });
-    // Load chart lib
     if ((window as any).LightweightCharts) { initChart(); return; }
     const s = document.createElement("script");
     s.src = "https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js";
@@ -64,7 +76,7 @@ export default function SimulatorPage() {
     if (!LW) return;
     const chart = LW.createChart(chartRef.current, {
       width: chartRef.current.clientWidth,
-      height: 380,
+      height: 400,
       layout: { background: { color: "#ffffff" }, textColor: "#1E3A5F" },
       grid: { vertLines: { color: "#f3f4f6" }, horzLines: { color: "#f3f4f6" } },
       timeScale: { timeVisible: true, secondsVisible: false },
@@ -82,7 +94,6 @@ export default function SimulatorPage() {
     setChartReady(true);
   }
 
-  // Load symbol data
   useEffect(() => {
     const sym = customSymbol.trim() || symbol;
     if (!sym) return;
@@ -90,20 +101,65 @@ export default function SimulatorPage() {
     if (chartReady) loadCandles(sym);
   }, [symbol, customSymbol, chartReady, resolution]);
 
-  // Auto-set SL/TP when entry changes
   useEffect(() => {
     if (!entry || isNaN(entryN)) return;
+    const dec = smartDecimals(entryN);
     if (side === "buy") {
-      setSl((entryN * 0.98).toFixed(6));
-      setTp((entryN * 1.04).toFixed(6));
+      setSl((entryN * 0.98).toFixed(dec));
+      setTp((entryN * 1.04).toFixed(dec));
     } else {
-      setSl((entryN * 1.02).toFixed(6));
-      setTp((entryN * 0.96).toFixed(6));
+      setSl((entryN * 1.02).toFixed(dec));
+      setTp((entryN * 0.96).toFixed(dec));
     }
   }, [entry, side]);
 
-  // Update chart lines
-  useEffect(() => { if (chartReady) updateLines(); }, [entry, sl, tp, chartReady]);
+  // Draggable price lines using lightweight-charts priceLine
+  useEffect(() => {
+    if (chartReady) updatePriceLines();
+  }, [entry, sl, tp, chartReady]);
+
+  function updatePriceLines() {
+    const series = candleSeriesRef.current;
+    if (!series) return;
+
+    // Remove old price lines
+    if (entryLineRef.current) { try { series.removePriceLine(entryLineRef.current); } catch {} entryLineRef.current = null; }
+    if (slLineRef.current) { try { series.removePriceLine(slLineRef.current); } catch {} slLineRef.current = null; }
+    if (tpLineRef.current) { try { series.removePriceLine(tpLineRef.current); } catch {} tpLineRef.current = null; }
+
+    if (!isNaN(entryN) && entry) {
+      entryLineRef.current = series.createPriceLine({
+        price: entryN, color: "#3b82f6", lineWidth: 2,
+        lineStyle: 1, axisLabelVisible: true, title: `Entry ${fmt(entryN)}`,
+        draggable: true,
+      });
+      entryLineRef.current.applyOptions({});
+      // Listen for drag
+      try {
+        entryLineRef.current.on?.("priceLineMove", (p: number) => setEntry(p.toFixed(smartDecimals(p))));
+      } catch {}
+    }
+    if (!isNaN(slN) && sl) {
+      slLineRef.current = series.createPriceLine({
+        price: slN, color: "#ef4444", lineWidth: 2,
+        lineStyle: 1, axisLabelVisible: true, title: `SL ${fmt(slN)}`,
+        draggable: true,
+      });
+      try {
+        slLineRef.current.on?.("priceLineMove", (p: number) => setSl(p.toFixed(smartDecimals(p))));
+      } catch {}
+    }
+    if (!isNaN(tpN) && tp) {
+      tpLineRef.current = series.createPriceLine({
+        price: tpN, color: "#22c55e", lineWidth: 2,
+        lineStyle: 1, axisLabelVisible: true, title: `TP ${fmt(tpN)}`,
+        draggable: true,
+      });
+      try {
+        tpLineRef.current.on?.("priceLineMove", (p: number) => setTp(p.toFixed(smartDecimals(p))));
+      } catch {}
+    }
+  }
 
   function fetchPrice(sym: string) {
     setLoadingPrice(true);
@@ -126,35 +182,12 @@ export default function SimulatorPage() {
     setLoadingChart(false);
   }
 
-  function updateLines() {
-    const chart = chartInstanceRef.current;
-    if (!chart) return;
-    [entryLineRef, slLineRef, tpLineRef].forEach(ref => {
-      if (ref.current) { try { chart.removeSeries(ref.current); } catch {} ref.current = null; }
-    });
-    const now = Math.floor(Date.now() / 1000);
-    const past = now - 86400 * 30;
-    if (!isNaN(entryN) && entry) {
-      entryLineRef.current = chart.addLineSeries({ color: "#3b82f6", lineWidth: 2, lineStyle: 1, title: `Entry` });
-      entryLineRef.current.setData([{ time: past, value: entryN }, { time: now, value: entryN }]);
-    }
-    if (!isNaN(slN) && sl) {
-      slLineRef.current = chart.addLineSeries({ color: "#ef4444", lineWidth: 2, lineStyle: 1, title: `SL` });
-      slLineRef.current.setData([{ time: past, value: slN }, { time: now, value: slN }]);
-    }
-    if (!isNaN(tpN) && tp) {
-      tpLineRef.current = chart.addLineSeries({ color: "#22c55e", lineWidth: 2, lineStyle: 1, title: `TP` });
-      tpLineRef.current.setData([{ time: past, value: tpN }, { time: now, value: tpN }]);
-    }
-  }
-
   const activeSymbol = customSymbol.trim() || symbol;
-
-  function addLog(entry: LogEntry) { setLog(prev => [entry, ...prev].slice(0, 50)); }
+  function addLog(e: LogEntry) { setLog(prev => [e, ...prev].slice(0, 50)); }
 
   async function fireSignal(tradeSide: string, trade: string): Promise<boolean> {
     const time = new Date().toTimeString().slice(0, 8);
-    addLog({ time, msg: `→ ${trade} ${tradeSide.toUpperCase()} ${activeSymbol} @ ${entry || livePrice}`, status: "pending" });
+    addLog({ time, msg: `→ ${trade} ${tradeSide.toUpperCase()} ${activeSymbol} @ ${fmt(entry || String(livePrice))}`, status: "pending" });
     setIpWarning(null);
     try {
       const res = await fetch(`/api/v1/webhook/${activeSymbol}`, {
@@ -165,7 +198,6 @@ export default function SimulatorPage() {
       const data = await res.json();
       if (!res.ok) { addLog({ time, msg: `✗ Server error: ${data.error || res.status}`, status: "err" }); return false; }
       if (!data.success) { addLog({ time, msg: `✗ ${data.error || "No active configs"}`, status: "err" }); return false; }
-
       const summary: any[] = data.summary ?? [];
       let allOk = true;
       for (const s of summary) {
@@ -181,13 +213,11 @@ export default function SimulatorPage() {
           const clientIp = val?.error?.error?.context?.client_ip ?? val?.error?.context?.client_ip;
           if (errCode === "ip_not_whitelisted_for_api_key") {
             setIpWarning(clientIp ?? outboundIp);
-            addLog({ time, msg: `🚫 IP NOT WHITELISTED — ${clientIp}`, status: "err", detail: `Go to Delta → API Keys → add ${clientIp} to whitelist` });
-          } else {
-            addLog({ time, msg: `✗ Order rejected: ${errCode}`, status: "err" });
-          }
+            addLog({ time, msg: `🚫 IP NOT WHITELISTED — ${clientIp}`, status: "err", detail: `Delta → API Keys → add ${clientIp}` });
+          } else { addLog({ time, msg: `✗ Order rejected: ${errCode}`, status: "err" }); }
           allOk = false;
         } else if (val?.result) {
-          addLog({ time, msg: `✅ ${trade} ${tradeSide.toUpperCase()} ${activeSymbol} — ORDER PLACED`, status: "ok", detail: `Order ID: ${val.result.id ?? val.result.client_order_id ?? "placed"}` });
+          addLog({ time, msg: `✅ ${trade} ${tradeSide.toUpperCase()} ${activeSymbol} — ORDER PLACED`, status: "ok", detail: `Order ID: ${val.result.id ?? "placed"}` });
           toast.success("Order placed on Delta!");
         } else if (val?.message === "No open position") {
           addLog({ time, msg: `⚠️ No open position to exit`, status: "err" });
@@ -211,17 +241,13 @@ export default function SimulatorPage() {
   function startTimer(direction: "long"|"short") {
     if (timerRunning) { stopTimer(); return; }
     const secs = getTimerSeconds();
-    setTimerRemaining(secs);
-    setTimerRunning(direction);
-    const tradeSide = direction === "long" ? "buy" : "sell";
-    fireSignal(tradeSide, "ENTRY");
+    setTimerRemaining(secs); setTimerRunning(direction);
+    fireSignal(direction === "long" ? "buy" : "sell", "ENTRY");
     let remaining = secs;
     timerRef.current = setInterval(() => {
-      remaining -= 1;
-      setTimerRemaining(remaining);
+      remaining -= 1; setTimerRemaining(remaining);
       if (remaining <= 0) {
-        clearInterval(timerRef.current!);
-        setTimerRunning(null);
+        clearInterval(timerRef.current!); setTimerRunning(null);
         fireSignal(direction === "long" ? "sell" : "buy", "EXIT");
       }
     }, 1000);
@@ -246,22 +272,16 @@ export default function SimulatorPage() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       <div className="max-w-7xl mx-auto p-6 space-y-5">
-
-        {/* Header */}
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-[#1E3A5F]">Signal Simulator & Trade Planner</h1>
-            <p className="text-sm text-gray-500 mt-1">Plan trades with live chart, fire signals to your bridge</p>
+            <p className="text-sm text-gray-500 mt-1">Plan trades with live chart · fire signals to your bridge</p>
           </div>
           {outboundIp && (
-            <div className={`rounded-xl px-4 py-2 text-right border ${ipWarning ? "bg-red-50 border-red-400 animate-pulse" : "bg-amber-50 border-amber-200"}`}>
-              <p className={`text-xs font-medium uppercase tracking-wide ${ipWarning ? "text-red-600" : "text-amber-600"}`}>
-                {ipWarning ? "⚠️ Whitelist This IP!" : "Server IP"}
-              </p>
+            <div className={`rounded-xl px-4 py-2 text-right border flex-shrink-0 ${ipWarning ? "bg-red-50 border-red-400 animate-pulse" : "bg-amber-50 border-amber-200"}`}>
+              <p className={`text-xs font-medium uppercase tracking-wide ${ipWarning ? "text-red-600" : "text-amber-600"}`}>{ipWarning ? "⚠️ Whitelist This IP!" : "Server IP"}</p>
               <p className={`font-mono font-bold text-sm ${ipWarning ? "text-red-800" : "text-amber-800"}`}>{outboundIp}</p>
-              <p className={`text-xs ${ipWarning ? "text-red-500 font-semibold" : "text-amber-500"}`}>
-                {ipWarning ? "Delta is blocking orders!" : "Whitelist in Delta API Keys"}
-              </p>
+              <p className={`text-xs ${ipWarning ? "text-red-500 font-semibold" : "text-amber-500"}`}>{ipWarning ? "Delta blocking orders!" : "Whitelist in Delta API Keys"}</p>
             </div>
           )}
         </div>
@@ -278,29 +298,23 @@ export default function SimulatorPage() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
-
-          {/* LEFT PANEL */}
+          {/* LEFT */}
           <div className="space-y-4">
-
-            {/* Symbol */}
             <div className="bg-white rounded-2xl p-4 shadow-sm border space-y-3">
               <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">Symbol</p>
               <select value={symbol} onChange={e => setSymbol(e.target.value)} className={inp}>
                 {symbols.map(s => <option key={s.symbol} value={s.symbol}>{s.symbol}</option>)}
               </select>
-              <input value={customSymbol} onChange={e => setCustomSymbol(e.target.value)}
-                placeholder="Custom symbol e.g. PIUSD" className={inp} />
+              <input value={customSymbol} onChange={e => setCustomSymbol(e.target.value)} placeholder="Custom e.g. PIUSD" className={inp} />
               {livePrice && (
                 <div className="bg-blue-50 rounded-xl px-3 py-2 text-center">
                   <p className="text-xs text-blue-500">{loadingPrice ? "Fetching..." : "Live Price"}</p>
-                  <p className="text-2xl font-bold text-blue-700 font-mono">${livePrice}</p>
+                  <p className="text-2xl font-bold text-blue-700 font-mono">${fmt(livePrice)}</p>
                 </div>
               )}
               <div className="flex gap-2">
                 <button onClick={() => fetchPrice(customSymbol.trim() || symbol)}
-                  className="flex-1 py-2 border rounded-xl text-xs text-blue-600 hover:bg-blue-50 border-blue-200 font-medium">
-                  🔄 Refresh Price
-                </button>
+                  className="flex-1 py-2 border rounded-xl text-xs text-blue-600 hover:bg-blue-50 border-blue-200 font-medium">🔄 Refresh</button>
                 <select value={resolution} onChange={e => setResolution(e.target.value)}
                   className="border rounded-xl px-2 py-2 text-xs focus:outline-none">
                   {["1m","5m","15m","30m","1h","4h","1d"].map(r => <option key={r} value={r}>{r}</option>)}
@@ -308,49 +322,40 @@ export default function SimulatorPage() {
               </div>
             </div>
 
-            {/* Direction */}
             <div className="bg-white rounded-2xl p-4 shadow-sm border space-y-2">
               <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">Direction</p>
               <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => setSide("buy")}
-                  className={`py-2 rounded-xl border-2 text-sm font-semibold transition ${side === "buy" ? "bg-green-500 border-green-500 text-white" : "border-green-300 text-green-700 hover:bg-green-50"}`}>
-                  📈 Long
-                </button>
-                <button onClick={() => setSide("sell")}
-                  className={`py-2 rounded-xl border-2 text-sm font-semibold transition ${side === "sell" ? "bg-red-500 border-red-500 text-white" : "border-red-300 text-red-700 hover:bg-red-50"}`}>
-                  📉 Short
-                </button>
+                <button onClick={() => setSide("buy")} className={`py-2 rounded-xl border-2 text-sm font-semibold transition ${side === "buy" ? "bg-green-500 border-green-500 text-white" : "border-green-300 text-green-700 hover:bg-green-50"}`}>📈 Long</button>
+                <button onClick={() => setSide("sell")} className={`py-2 rounded-xl border-2 text-sm font-semibold transition ${side === "sell" ? "bg-red-500 border-red-500 text-white" : "border-red-300 text-red-700 hover:bg-red-50"}`}>📉 Short</button>
               </div>
             </div>
 
-            {/* Levels */}
             <div className="bg-white rounded-2xl p-4 shadow-sm border space-y-3">
-              <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">Levels (auto SL 2% / TP 4%)</p>
+              <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">Levels <span className="text-gray-300 normal-case font-normal">(drag lines on chart)</span></p>
               <div>
                 <label className="text-xs text-blue-600 font-semibold block mb-1">🎯 Entry</label>
                 <input type="number" value={entry} onChange={e => setEntry(e.target.value)} className={inp} />
               </div>
               <div>
-                <label className="text-xs text-red-600 font-semibold block mb-1">🛑 Stop Loss</label>
+                <label className="text-xs text-red-600 font-semibold block mb-1">🛑 Stop Loss (2%)</label>
                 <input type="number" value={sl} onChange={e => setSl(e.target.value)} className={inp} />
               </div>
               <div>
-                <label className="text-xs text-green-600 font-semibold block mb-1">✅ Take Profit</label>
+                <label className="text-xs text-green-600 font-semibold block mb-1">✅ Take Profit (4%)</label>
                 <input type="number" value={tp} onChange={e => setTp(e.target.value)} className={inp} />
               </div>
               {rr && (
                 <div className={`rounded-xl px-3 py-2 text-center border ${parseFloat(rr) >= 2 ? "bg-green-50 border-green-200" : parseFloat(rr) >= 1 ? "bg-yellow-50 border-yellow-200" : "bg-red-50 border-red-200"}`}>
                   <p className="text-xs text-gray-500">Risk : Reward</p>
                   <p className={`text-2xl font-bold ${rrColor}`}>1 : {rr}</p>
-                  <div className="flex justify-around mt-1 text-xs text-gray-500">
-                    <span>Risk: <strong className="text-red-600">${risk?.toFixed(5)}</strong></span>
-                    <span>Target: <strong className="text-green-600">${reward?.toFixed(5)}</strong></span>
+                  <div className="flex justify-around mt-1 text-xs">
+                    <span>Risk: <strong className="text-red-600">${risk?.toFixed(smartDecimals(risk!))}</strong></span>
+                    <span>Target: <strong className="text-green-600">${reward?.toFixed(smartDecimals(reward!))}</strong></span>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Manual Signals */}
             <div className="bg-white rounded-2xl p-4 shadow-sm border space-y-2">
               <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">Manual Signals</p>
               <div className="grid grid-cols-2 gap-2">
@@ -363,7 +368,6 @@ export default function SimulatorPage() {
               </div>
             </div>
 
-            {/* Timer */}
             <div className="bg-white rounded-2xl p-4 shadow-sm border space-y-3">
               <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">Timer Trade</p>
               <div className="flex gap-2">
@@ -383,29 +387,26 @@ export default function SimulatorPage() {
                 </div>
               )}
               <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => startTimer("long")}
-                  className={`${btnBase} ${timerRunning === "long" ? "border-orange-500 text-orange-700 bg-orange-50" : "border-green-500 text-green-700 hover:bg-green-50"}`}>
+                <button onClick={() => startTimer("long")} className={`${btnBase} ${timerRunning === "long" ? "border-orange-500 text-orange-700 bg-orange-50" : "border-green-500 text-green-700 hover:bg-green-50"}`}>
                   {timerRunning === "long" ? "⏱ Cancel" : "📈 Long+Exit"}
                 </button>
-                <button onClick={() => startTimer("short")}
-                  className={`${btnBase} ${timerRunning === "short" ? "border-orange-500 text-orange-700 bg-orange-50" : "border-red-500 text-red-700 hover:bg-red-50"}`}>
+                <button onClick={() => startTimer("short")} className={`${btnBase} ${timerRunning === "short" ? "border-orange-500 text-orange-700 bg-orange-50" : "border-red-500 text-red-700 hover:bg-red-50"}`}>
                   {timerRunning === "short" ? "⏱ Cancel" : "📉 Short+Exit"}
                 </button>
               </div>
             </div>
           </div>
 
-          {/* RIGHT: Chart + Log */}
+          {/* RIGHT */}
           <div className="lg:col-span-3 space-y-4">
-
-            {/* Chart */}
             <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
               <div className="px-4 py-3 border-b flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <p className="font-semibold text-[#1E3A5F]">{activeSymbol} — {resolution}</p>
                   {loadingChart && <span className="text-xs text-gray-400 animate-pulse">Loading...</span>}
+                  <span className="text-xs text-gray-400">Drag lines to adjust levels</span>
                 </div>
-                <div className="flex items-center gap-4 text-xs text-gray-500">
+                <div className="flex items-center gap-3 text-xs">
                   <span className="text-blue-600 font-semibold">— Entry</span>
                   <span className="text-red-500 font-semibold">— SL</span>
                   <span className="text-green-500 font-semibold">— TP</span>
@@ -414,7 +415,6 @@ export default function SimulatorPage() {
               <div ref={chartRef} className="w-full" />
             </div>
 
-            {/* Activity Log */}
             <div className="bg-white rounded-2xl p-5 shadow-sm border">
               <div className="flex justify-between items-center mb-3">
                 <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">Activity Log</p>
