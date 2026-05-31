@@ -26,8 +26,23 @@ export async function POST(req: NextRequest, context: { params: Promise<{ symbol
 
   const summary = results.map((r, i) => {
     if (r.status === "rejected") {
-      console.error(`❌ Config ${configs[i].id} failed:`, r.reason);
-      return { configId: configs[i].id, status: "rejected", reason: String(r.reason) };
+      const err = r.reason;
+      let reason = String(err);
+      // Parse Axios 401 errors into human-readable messages
+      if (err?.response?.status === 401) {
+        const errCode = err?.response?.data?.error?.code;
+        const clientIp = err?.response?.data?.error?.context?.client_ip;
+        if (errCode === "ip_not_whitelisted_for_api_key") {
+          return { configId: configs[i].id, status: "fulfilled", value: { success: false, error: { error: { code: "ip_not_whitelisted_for_api_key", context: { client_ip: clientIp } } } } };
+        }
+        reason = "Authentication failed (401) — IP may not be whitelisted in Delta API Keys";
+      } else if (err?.response?.status === 403) {
+        reason = "Access denied (403) — check API key permissions";
+      } else if (err?.code === "ECONNREFUSED" || err?.code === "ENOTFOUND") {
+        reason = "Cannot connect to Delta Exchange — check internet connection";
+      }
+      console.error(`❌ Config ${configs[i].id} failed:`, reason);
+      return { configId: configs[i].id, status: "rejected", reason };
     }
     const val = (r as any).value;
     console.log(`📬 Config ${configs[i].id} result:`, JSON.stringify(val));
