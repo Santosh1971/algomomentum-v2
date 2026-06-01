@@ -29,7 +29,10 @@ export default function SimulatorPage() {
   const [loadingPrice, setLoadingPrice] = useState(false);
   const [outboundIp, setOutboundIp] = useState<string | null>(null);
   const [ipWarning, setIpWarning] = useState<string | null>(null);
-  const [log, setLog] = useState<LogEntry[]>([]);
+  const [log, setLog] = useState<LogEntry[]>(() => {
+    if (typeof window === "undefined") return [];
+    try { return JSON.parse(localStorage.getItem("am_sim_log") || "[]"); } catch { return []; }
+  });
   const [timerValue, setTimerValue] = useState("30");
   const [timerUnit, setTimerUnit] = useState("sec");
   const [timerRunning, setTimerRunning] = useState<"long"|"short"|null>(null);
@@ -254,10 +257,17 @@ export default function SimulatorPage() {
   }
 
   const activeSymbol = customSymbol.trim() || symbol;
-  function addLog(e: LogEntry) { setLog(prev => [e, ...prev].slice(0, 50)); }
+  function addLog(e: LogEntry) {
+    setLog(prev => {
+      const next = [e, ...prev].slice(0, 50);
+      try { localStorage.setItem("am_sim_log", JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }
 
   async function fireSignal(tradeSide: string, trade: string): Promise<boolean> {
     const time = new Date().toTimeString().slice(0, 8);
+    const marketPrice = livePrice;
     addLog({ time, msg: `→ ${trade} ${tradeSide.toUpperCase()} ${activeSymbol} @ ${entry || fmt(livePrice!)}`, status: "pending" });
     setIpWarning(null);
     try {
@@ -287,7 +297,14 @@ export default function SimulatorPage() {
           } else { addLog({ time, msg: `✗ Order rejected: ${errCode}`, status: "err" }); }
           allOk = false;
         } else if (val?.result) {
-          addLog({ time, msg: `✅ ${trade} ${tradeSide.toUpperCase()} ${activeSymbol} — ORDER PLACED`, status: "ok", detail: `Order ID: ${val.result.id ?? "placed"}` });
+          const fillPrice = parseFloat(val.result.avg_fill_price ?? val.result.average_fill_price ?? "0");
+          const slippage = marketPrice && fillPrice ? fillPrice - marketPrice : null;
+          const slippageStr = slippage !== null && Math.abs(slippage) > 0
+            ? ` | Slippage: ${slippage > 0 ? "+" : ""}${fmt(slippage)}`
+            : "";
+          const fillStr = fillPrice > 0 ? ` | Filled @ ${fmt(fillPrice)}` : "";
+          const mktStr = marketPrice ? ` | Mkt @ ${fmt(marketPrice)}` : "";
+          addLog({ time, msg: `✅ ${trade} ${tradeSide.toUpperCase()} ${activeSymbol} — ORDER PLACED`, status: "ok", detail: `Order ID: ${val.result.id ?? "placed"}${mktStr}${fillStr}${slippageStr}` });
           toast.success("Order placed on Delta!");
         } else if (val?.message === "No open position") {
           addLog({ time, msg: `⚠️ No open position to exit`, status: "err" });
@@ -489,7 +506,7 @@ export default function SimulatorPage() {
             <div className="bg-white rounded-2xl p-5 shadow-sm border">
               <div className="flex justify-between items-center mb-3">
                 <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">Activity Log</p>
-                <button onClick={() => setLog([])} className="text-xs text-gray-400 hover:text-red-500">Clear</button>
+                <button onClick={() => { setLog([]); try { localStorage.removeItem("am_sim_log"); } catch {} }} className="text-xs text-gray-400 hover:text-red-500">Clear</button>
               </div>
               {log.length === 0 ? <p className="text-sm text-gray-400">Signals you fire will appear here...</p> : (
                 <div className="space-y-1.5 font-mono text-xs max-h-48 overflow-y-auto">
