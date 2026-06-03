@@ -71,6 +71,9 @@ export default function StrategyPage() {
   const [htfTimeframe, setHtfTimeframe] = useState("120");
   const [retestBuffer, setRetestBuffer] = useState("0.2");
   const [loading, setLoading] = useState(false);
+  const [useDateRange, setUseDateRange] = useState(false);
+  const [startDate, setStartDate] = useState("2026-01-01");
+  const [endDate, setEndDate] = useState(new Date().toISOString().slice(0,10));
   const [result, setResult] = useState<BacktestResult | null>(null);
   const [selectedTrade, setSelectedTrade] = useState<TradeResult | null>(null);
   const chartRef = useRef<HTMLDivElement>(null);
@@ -117,6 +120,7 @@ export default function StrategyPage() {
           targetLongPercent: parseFloat(targetLongPct),
           targetShortPercent: parseFloat(targetShortPct),
           useADX, adxThreshold: parseInt(adxThreshold),
+          useDateRange, startDate, endDate,
           useHTF_ST, htfTimeframe: parseInt(htfTimeframe),
         }),
       });
@@ -231,7 +235,8 @@ export default function StrategyPage() {
 
         {/* Config panel */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {/* Row 1: Symbol, Strategy, TF, RR */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
             <div>
               <label className="text-xs font-semibold text-gray-500 uppercase">Symbol</label>
               <select value={symbol} onChange={e => { setSymbol(e.target.value); persist("am_strat_symbol", e.target.value); }}
@@ -258,6 +263,9 @@ export default function StrategyPage() {
               <input type="number" value={rr} onChange={e => setRr(e.target.value)} step="0.5" min="1"
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
             </div>
+          </div>
+          {/* Row 2: Session + Date Range */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 pb-4 border-b border-gray-100">
             <div>
               <label className="text-xs font-semibold text-gray-500 uppercase">Session Start (IST)</label>
               <input type="time" value={sessionStart} onChange={e => setSessionStart(e.target.value)}
@@ -268,6 +276,27 @@ export default function StrategyPage() {
               <input type="time" value={sessionEnd} onChange={e => setSessionEnd(e.target.value)}
                 className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
             </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-500 uppercase">Start Date</label>
+              <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
+                disabled={!useDateRange}
+                className={`mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F] ${!useDateRange ? "opacity-40" : ""}`} />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-gray-500 uppercase">End Date</label>
+              <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
+                disabled={!useDateRange}
+                className={`mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F] ${!useDateRange ? "opacity-40" : ""}`} />
+            </div>
+            <div className="flex items-end pb-1">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" checked={useDateRange} onChange={e => setUseDateRange(e.target.checked)} className="w-4 h-4" />
+                <span className="font-medium text-gray-700">Date Range</span>
+              </label>
+            </div>
+          </div>
+          {/* Row 3: Strategy-specific params */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {strategy === "pdh_pdl" && (
               <div>
                 <label className="text-xs font-semibold text-gray-500 uppercase">Retest Buffer %</label>
@@ -275,6 +304,7 @@ export default function StrategyPage() {
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
               </div>
             )}
+            {strategy === "pdh_pdl" || strategy === "ema_cross" ? null : null}
             {strategy === "ema_cross" && (<>
               <div>
                 <label className="text-xs font-semibold text-gray-500 uppercase">Fast EMA</label>

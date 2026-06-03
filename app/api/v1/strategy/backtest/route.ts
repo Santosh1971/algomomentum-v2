@@ -7,6 +7,20 @@ import { Candle, StrategyConfig } from "@/lib/strategies/types";
 
 const DELTA_BASE = "https://api.india.delta.exchange";
 
+// Convert minutes to Delta-compatible resolution string
+function minsToResolution(mins: number): string {
+  if (mins < 60) return `${mins}m`;
+  if (mins === 60) return "1h";
+  if (mins === 120) return "2h";
+  if (mins === 240) return "4h";
+  if (mins === 1440) return "1d";
+  // For non-standard: use nearest standard
+  if (mins < 120) return "1h";
+  if (mins < 240) return "2h";
+  if (mins < 1440) return "4h";
+  return "1d";
+}
+
 async function fetchCandles(symbol: string, resolution: string, limit: number): Promise<Candle[]> {
   const resMap: Record<string, number> = {
     "1m": 60, "3m": 180, "5m": 300, "15m": 900, "30m": 1800,
@@ -25,7 +39,7 @@ async function fetchCandles(symbol: string, resolution: string, limit: number): 
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { symbol, strategy, timeframe, rr, sessionStart, sessionEnd,
+  const { symbol, strategy, timeframe, rr, sessionStart, sessionEnd, startDate, endDate, useDateRange,
           emaFast, emaSlow, retestBuffer,
           // ALM3 params
           stTimeframe, atrPeriod, factor,
@@ -59,7 +73,9 @@ export async function POST(req: NextRequest) {
       };
 
       // Fetch all candles in parallel
-      const chartTF = timeframe ?? "30m";
+      const rawTF = timeframe ?? "30m";
+      // Ensure proper format: if pure number, append m
+      const chartTF = /^\d+$/.test(rawTF) ? `${rawTF}m` : rawTF;
       const stMinutes = config.stTimeframe; // 35
       // For 35m: fetch 5m candles (7×5=35), need enough to cover chart range
       // Chart: 500 candles of chartTF
@@ -72,10 +88,20 @@ export async function POST(req: NextRequest) {
       const [chartCandles, stCandles5m, htfCandles] = await Promise.all([
         fetchCandles(symbol, chartTF, 500),
         fetchCandles(symbol, "5m", Math.min(fiveMinsNeeded, 1000)),
-        fetchCandles(symbol, `${htfMins}m`, Math.max(htfNeeded, 100)),
+        fetchCandles(symbol, minsToResolution(htfMins), Math.max(htfNeeded, 100)),
       ]);
 
-      const result = runALM3(chartCandles, stCandles5m, htfCandles, config);
+      // Filter candles by date range if specified
+      const filterCandles = (candles: Candle[]) => {
+        if (!useDateRange) return candles;
+        const start = startDate ? new Date(startDate).getTime() / 1000 : 0;
+        const end = endDate ? new Date(endDate).getTime() / 1000 : Infinity;
+        return candles.filter(c => c.time >= start && c.time <= end);
+      };
+      const filteredChart = filterCandles(chartCandles);
+      const result = runALM3(filteredChart, stCandles5m, htfCandles, config);
+      // Return all chart candles for display but only filtered for backtest
+      result.candleTimes = filteredChart.map(c => c.time);
       return NextResponse.json({ success: true, candles: chartCandles, ...result });
     }
 
