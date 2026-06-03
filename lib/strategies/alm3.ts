@@ -161,10 +161,12 @@ function mapHTF(chartCandles: Candle[], htfCandles: Candle[], htfValues: number[
 
 function makeTrade(side: "long"|"short", entry: number, exit: number, exitTime: number, entryTime: number, sl: number, tp: number, reason: string): TradeResult {
   const pnl = side === "long" ? exit - entry : entry - exit;
+  // Risk = distance from entry to SL (always positive)
   const risk = Math.abs(entry - sl);
+  const exitReason = reason === "tp" ? "tp" : reason === "sl" ? "sl" : "signal";
   return {
     entryTime, exitTime, entryPrice: entry, exitPrice: exit, sl, tp, side,
-    exitReason: reason === "tp" ? "tp" : reason === "sl" ? "sl" : "signal",
+    exitReason,
     pnlPct: entry > 0 ? (pnl/entry)*100 : 0,
     pnlR: risk > 0 ? pnl/risk : 0,
   };
@@ -214,11 +216,19 @@ export function runALM3(chartCandles: Candle[], stCandles5m: Candle[], htfCandle
     const close = c.close, open = c.open;
 
     if (inTrade === "long") {
+      // Update liquidateSL dynamically from current ST (trailing)
+      if (chartST[i] > 0) {
+        const newLiqSL = chartST[i] * (1 - config.liquidatePercent/100);
+        // For long: liquidateSL trails up with ST — only move it UP (tighter)
+        if (newLiqSL > liquidateSL) liquidateSL = newLiqSL;
+      }
+
       if (!switchAchieved && close >= switchSLPrice) switchAchieved = true;
       if (switchAchieved && close < s) {
         trades.push(makeTrade("long", entryPrice, close, c.time, chartCandles[entryIdx].time, drawdownSL, target, "switchSL"));
         inTrade = null; switchAchieved = false; continue;
       }
+      // Pine: stopPrice = math.max(liquidatePrice, drawdownPrice) for long
       const stop = Math.max(liquidateSL, drawdownSL);
       if (c.low <= stop) {
         trades.push(makeTrade("long", entryPrice, stop, c.time, chartCandles[entryIdx].time, drawdownSL, target, "sl"));
@@ -231,11 +241,21 @@ export function runALM3(chartCandles: Candle[], stCandles5m: Candle[], htfCandle
     }
 
     if (inTrade === "short") {
+      // Update liquidateSL dynamically from current ST (trailing)
+      if (chartST[i] > 0) {
+        const newLiqSL = chartST[i] * (1 + config.liquidatePercent/100);
+        // For short: liquidateSL trails down with ST — only move it DOWN (tighter)
+        if (newLiqSL < liquidateSL) liquidateSL = newLiqSL;
+      }
+
       if (!switchAchieved && close <= switchSLPrice) switchAchieved = true;
       if (switchAchieved && close > s) {
         trades.push(makeTrade("short", entryPrice, close, c.time, chartCandles[entryIdx].time, drawdownSL, target, "switchSL"));
         inTrade = null; switchAchieved = false; continue;
       }
+      // stop = the LOWER of the two SL levels (nearer to current price for short going down)
+      // Actually Pine uses: stopPrice = math.min(liquidatePrice, drawdownPrice)
+      // For short both are above entry, min = the one closer to entry = tighter stop
       const stop = Math.min(liquidateSL, drawdownSL);
       if (c.high >= stop) {
         trades.push(makeTrade("short", entryPrice, stop, c.time, chartCandles[entryIdx].time, drawdownSL, target, "sl"));
