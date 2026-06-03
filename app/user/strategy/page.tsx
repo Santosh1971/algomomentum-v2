@@ -25,6 +25,7 @@ const TIMEFRAMES = ["1m","3m","5m","15m","30m","1h","2h","4h"];
 const STRATEGIES = [
   { value: "pdh_pdl", label: "PDH/PDL Breakout + Retest" },
   { value: "ema_cross", label: "EMA Crossover (9/21)" },
+  { value: "alm3", label: "ALM3 (SuperTrend + T3 + ADX)" },
 ];
 
 function fmt(n: number, dec = 4): string {
@@ -53,6 +54,21 @@ export default function StrategyPage() {
   const [sessionEnd, setSessionEnd] = useState("23:30");
   const [emaFast, setEmaFast] = useState("9");
   const [emaSlow, setEmaSlow] = useState("21");
+  // ALM3 params
+  const [stTimeframe, setStTimeframe] = useState("35");
+  const [atrPeriod, setAtrPeriod] = useState("15");
+  const [factor, setFactor] = useState("3.0");
+  const [t3Fast, setT3Fast] = useState("4");
+  const [t3Slow, setT3Slow] = useState("7");
+  const [switchSLPct, setSwitchSLPct] = useState("10");
+  const [drawdownPct, setDrawdownPct] = useState("10");
+  const [liquidatePct, setLiquidatePct] = useState("0.6");
+  const [targetLongPct, setTargetLongPct] = useState("15");
+  const [targetShortPct, setTargetShortPct] = useState("15");
+  const [useADX, setUseADX] = useState(true);
+  const [adxThreshold, setAdxThreshold] = useState("25");
+  const [useHTF_ST, setUseHTF_ST] = useState(true);
+  const [htfTimeframe, setHtfTimeframe] = useState("120");
   const [retestBuffer, setRetestBuffer] = useState("0.2");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<BacktestResult | null>(null);
@@ -89,6 +105,19 @@ export default function StrategyPage() {
           emaFast: parseInt(emaFast),
           emaSlow: parseInt(emaSlow),
           retestBuffer: parseFloat(retestBuffer),
+          // ALM3
+          stTimeframe: parseInt(stTimeframe),
+          atrPeriod: parseInt(atrPeriod),
+          factor: parseFloat(factor),
+          t3Fast: parseInt(t3Fast),
+          t3Slow: parseInt(t3Slow),
+          switchSLPercent: parseFloat(switchSLPct),
+          drawdownPercent: parseFloat(drawdownPct),
+          liquidatePercent: parseFloat(liquidatePct),
+          targetLongPercent: parseFloat(targetLongPct),
+          targetShortPercent: parseFloat(targetShortPct),
+          useADX, adxThreshold: parseInt(adxThreshold),
+          useHTF_ST, htfTimeframe: parseInt(htfTimeframe),
         }),
       });
       const data = await res.json();
@@ -145,6 +174,27 @@ export default function StrategyPage() {
       emaFastSeries.setData(result.candleTimes.map((t, i) => ({ time: t, value: result.emaFast![i] })));
       const emaSlowSeries = chart.addLineSeries({ color: "#f97316", lineWidth: 1, title: `EMA${emaSlow}` });
       emaSlowSeries.setData(result.candleTimes.map((t, i) => ({ time: t, value: result.emaSlow![i] })));
+    }
+
+    // T3 Fast and Slow lines (ALM3)
+    if ((result as any).t3Fast && (result as any).candleTimes) {
+      const t3f = (result as any).t3Fast as number[];
+      const t3s = (result as any).t3Slow as number[];
+      const times = (result as any).candleTimes as number[];
+      const t3FastSeries = chart.addLineSeries({ color: "#22c55e", lineWidth: 1, title: "T3 Fast" });
+      t3FastSeries.setData(times.map((t, i) => ({ time: t, value: t3f[i] })));
+      const t3SlowSeries = chart.addLineSeries({ color: "#ef4444", lineWidth: 1, title: "T3 Slow" });
+      t3SlowSeries.setData(times.map((t, i) => ({ time: t, value: t3s[i] })));
+    }
+    // ST line (ALM3)
+    if ((result as any).stValues && (result as any).candleTimes) {
+      const stVals = (result as any).stValues as number[];
+      const stDirs = (result as any).stDirection as number[];
+      const times = (result as any).candleTimes as number[];
+      const stBull = chart.addLineSeries({ color: "#22c55e", lineWidth: 2, lineStyle: 0, title: "ST Bull" });
+      const stBear = chart.addLineSeries({ color: "#ef4444", lineWidth: 2, lineStyle: 0, title: "ST Bear" });
+      stBull.setData(times.map((t, i) => ({ time: t, value: stDirs[i] < 0 ? stVals[i] : null })).filter((d: any) => d.value !== null));
+      stBear.setData(times.map((t, i) => ({ time: t, value: stDirs[i] > 0 ? stVals[i] : null })).filter((d: any) => d.value !== null));
     }
 
     // Signal markers
@@ -235,6 +285,54 @@ export default function StrategyPage() {
                 <label className="text-xs font-semibold text-gray-500 uppercase">Slow EMA</label>
                 <input type="number" value={emaSlow} onChange={e => setEmaSlow(e.target.value)} min="3"
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
+              </div>
+            </>)}
+            {strategy === "alm3" && (<>
+              <div><label className="text-xs font-semibold text-gray-500 uppercase">ST Timeframe (min)</label>
+                <input type="number" value={stTimeframe} onChange={e => setStTimeframe(e.target.value)} min="1"
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" /></div>
+              <div><label className="text-xs font-semibold text-gray-500 uppercase">ATR Period</label>
+                <input type="number" value={atrPeriod} onChange={e => setAtrPeriod(e.target.value)} min="1"
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" /></div>
+              <div><label className="text-xs font-semibold text-gray-500 uppercase">ST Factor</label>
+                <input type="number" value={factor} onChange={e => setFactor(e.target.value)} step="0.1" min="0.1"
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" /></div>
+              <div><label className="text-xs font-semibold text-gray-500 uppercase">T3 Fast</label>
+                <input type="number" value={t3Fast} onChange={e => setT3Fast(e.target.value)} min="1"
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" /></div>
+              <div><label className="text-xs font-semibold text-gray-500 uppercase">T3 Slow</label>
+                <input type="number" value={t3Slow} onChange={e => setT3Slow(e.target.value)} min="1"
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" /></div>
+              <div><label className="text-xs font-semibold text-gray-500 uppercase">Switch SL %</label>
+                <input type="number" value={switchSLPct} onChange={e => setSwitchSLPct(e.target.value)} step="0.1" min="0"
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" /></div>
+              <div><label className="text-xs font-semibold text-gray-500 uppercase">Drawdown SL %</label>
+                <input type="number" value={drawdownPct} onChange={e => setDrawdownPct(e.target.value)} step="0.1" min="0.1"
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" /></div>
+              <div><label className="text-xs font-semibold text-gray-500 uppercase">Liquidate SL %</label>
+                <input type="number" value={liquidatePct} onChange={e => setLiquidatePct(e.target.value)} step="0.1" min="0.1"
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" /></div>
+              <div><label className="text-xs font-semibold text-gray-500 uppercase">Target Long %</label>
+                <input type="number" value={targetLongPct} onChange={e => setTargetLongPct(e.target.value)} step="0.1" min="0.1"
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" /></div>
+              <div><label className="text-xs font-semibold text-gray-500 uppercase">Target Short %</label>
+                <input type="number" value={targetShortPct} onChange={e => setTargetShortPct(e.target.value)} step="0.1" min="0.1"
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" /></div>
+              <div><label className="text-xs font-semibold text-gray-500 uppercase">HTF ST TF (min)</label>
+                <input type="number" value={htfTimeframe} onChange={e => setHtfTimeframe(e.target.value)} min="1"
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" /></div>
+              <div><label className="text-xs font-semibold text-gray-500 uppercase">ADX Threshold</label>
+                <input type="number" value={adxThreshold} onChange={e => setAdxThreshold(e.target.value)} min="5"
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" /></div>
+              <div className="flex items-center gap-3 mt-4 col-span-2">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input type="checkbox" checked={useADX} onChange={e => setUseADX(e.target.checked)} className="w-4 h-4" />
+                  <span className="font-medium text-gray-700">Use ADX Filter</span>
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input type="checkbox" checked={useHTF_ST} onChange={e => setUseHTF_ST(e.target.checked)} className="w-4 h-4" />
+                  <span className="font-medium text-gray-700">Use HTF SuperTrend</span>
+                </label>
               </div>
             </>)}
           </div>
