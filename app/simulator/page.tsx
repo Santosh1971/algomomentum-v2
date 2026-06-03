@@ -23,8 +23,8 @@ function fmt(n: number): string {
 
 export default function SimulatorPage() {
   const [symbols, setSymbols] = useState<Script[]>([]);
-  const [symbol, setSymbol] = useState("");
-  const [customSymbol, setCustomSymbol] = useState("");
+  const [symbol, setSymbol] = useState(() => { try { return localStorage.getItem("am_sim_symbol") || ""; } catch { return ""; } });
+  const [customSymbol, setCustomSymbol] = useState(() => { try { return localStorage.getItem("am_sim_custom") || ""; } catch { return ""; } });
   const [livePrice, setLivePrice] = useState<number | null>(null);
   const [loadingPrice, setLoadingPrice] = useState(false);
   const [outboundIp, setOutboundIp] = useState<string | null>(null);
@@ -77,7 +77,11 @@ export default function SimulatorPage() {
 
   useEffect(() => {
     fetch("/api/v1/script").then(r => r.json()).then(data => {
-      if (Array.isArray(data) && data.length > 0) { setSymbols(data); setSymbol(data[0].symbol); }
+      if (Array.isArray(data) && data.length > 0) {
+        setSymbols(data);
+        const saved = localStorage.getItem("am_sim_symbol");
+        setSymbol(saved && data.find((s: Script) => s.symbol === saved) ? saved : data[0].symbol);
+      }
     });
     fetch("/api/v1/myip").then(r => r.json()).then(d => { if (d.ip) setOutboundIp(d.ip); });
     if ((window as any).LightweightCharts) { setTimeout(initChart, 100); return; }
@@ -379,10 +383,10 @@ export default function SimulatorPage() {
           <div className="space-y-4">
             <div className="bg-white rounded-2xl p-4 shadow-sm border space-y-3">
               <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">Symbol</p>
-              <select value={symbol} onChange={e => setSymbol(e.target.value)} className={inp}>
+              <select value={symbol} onChange={e => { setSymbol(e.target.value); try { localStorage.setItem("am_sim_symbol", e.target.value); } catch {} }} className={inp}>
                 {symbols.map(s => <option key={s.symbol} value={s.symbol}>{s.symbol}</option>)}
               </select>
-              <input value={customSymbol} onChange={e => setCustomSymbol(e.target.value)} placeholder="Custom e.g. PIUSD" className={inp} />
+              <input value={customSymbol} onChange={e => { setCustomSymbol(e.target.value); try { localStorage.setItem("am_sim_custom", e.target.value); } catch {} }} placeholder="Custom e.g. PIUSD" className={inp} />
               {livePrice && (
                 <div className="bg-blue-50 rounded-xl px-3 py-2 text-center">
                   <p className="text-xs text-blue-500">{loadingPrice ? "Fetching..." : "Live Price"}</p>
