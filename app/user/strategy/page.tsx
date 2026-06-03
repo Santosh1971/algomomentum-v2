@@ -28,13 +28,19 @@ const STRATEGIES = [
   { value: "alm3", label: "ALM3 (SuperTrend + T3 + ADX)" },
 ];
 
-function fmt(n: number, dec = 4): string {
+function decimals(price: number): number {
+  if (!price || isNaN(price)) return 2;
+  if (price >= 10000) return 0;
+  if (price >= 1000) return 1;
+  if (price >= 100) return 2;
+  if (price >= 1) return 3;
+  if (price >= 0.1) return 4;
+  if (price >= 0.01) return 5;
+  return 6;
+}
+function fmt(n: number): string {
   if (!n || isNaN(n)) return "—";
-  if (n >= 10000) return n.toFixed(0);
-  if (n >= 1000) return n.toFixed(1);
-  if (n >= 100) return n.toFixed(2);
-  if (n >= 1) return n.toFixed(3);
-  return n.toFixed(dec);
+  return n.toFixed(decimals(n));
 }
 
 export default function StrategyPage() {

@@ -217,11 +217,10 @@ export function runALM3(chartCandles: Candle[], stCandles5m: Candle[], htfCandle
     const close = c.close, open = c.open;
 
     if (inTrade === "long") {
-      // Update liquidateSL dynamically from current ST (trailing)
-      if (chartST[i] > 0) {
+      // Update liquidateSL dynamically from current ST (trailing up only)
+      if (chartST[i] > 0 && chartSTDir[i] < 0) { // only trail when ST is bullish
         const newLiqSL = chartST[i] * (1 - config.liquidatePercent/100);
-        // For long: liquidateSL trails up with ST — only move it UP (tighter)
-        if (newLiqSL > liquidateSL) liquidateSL = newLiqSL;
+        if (newLiqSL > liquidateSL && newLiqSL < entryPrice) liquidateSL = newLiqSL;
       }
 
       if (!switchAchieved && close >= switchSLPrice) switchAchieved = true;
@@ -242,11 +241,10 @@ export function runALM3(chartCandles: Candle[], stCandles5m: Candle[], htfCandle
     }
 
     if (inTrade === "short") {
-      // Update liquidateSL dynamically from current ST (trailing)
-      if (chartST[i] > 0) {
+      // Update liquidateSL dynamically from current ST (trailing down only)
+      if (chartST[i] > 0 && chartSTDir[i] > 0) { // only trail when ST is bearish
         const newLiqSL = chartST[i] * (1 + config.liquidatePercent/100);
-        // For short: liquidateSL trails down with ST — only move it DOWN (tighter)
-        if (newLiqSL < liquidateSL) liquidateSL = newLiqSL;
+        if (newLiqSL < liquidateSL && newLiqSL > entryPrice) liquidateSL = newLiqSL;
       }
 
       if (!switchAchieved && close <= switchSLPrice) switchAchieved = true;
