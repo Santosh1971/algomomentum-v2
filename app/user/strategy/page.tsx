@@ -258,11 +258,13 @@ export default function StrategyPage() {
                 {TIMEFRAMES.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
-            <div>
-              <label className="text-xs font-semibold text-gray-500 uppercase">R:R Ratio</label>
-              <input type="number" value={rr} onChange={e => setRr(e.target.value)} step="0.5" min="1"
-                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
-            </div>
+            {strategy !== "alm3" && (
+              <div>
+                <label className="text-xs font-semibold text-gray-500 uppercase">R:R Ratio</label>
+                <input type="number" value={rr} onChange={e => setRr(e.target.value)} step="0.5" min="1"
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
+              </div>
+            )}
           </div>
           {/* Row 2: Session + Date Range */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 pb-4 border-b border-gray-100">
@@ -380,10 +382,10 @@ export default function StrategyPage() {
             {[
               { label: "Trades", value: stats.totalTrades.toString(), color: "text-gray-800" },
               { label: "Win Rate", value: `${stats.winRate.toFixed(1)}%`, color: stats.winRate >= 50 ? "text-green-600" : "text-red-500" },
-              { label: "Total P&L", value: `${stats.totalPnlR >= 0 ? "+" : ""}${stats.totalPnlR.toFixed(2)}R`, color: stats.totalPnlR >= 0 ? "text-green-600" : "text-red-500" },
-              { label: "Profit Factor", value: stats.profitFactor.toFixed(2), color: stats.profitFactor >= 1.5 ? "text-green-600" : "text-red-500" },
-              { label: "Avg Win", value: `+${stats.avgWinR.toFixed(2)}R`, color: "text-green-600" },
-              { label: "Max DD", value: `-${stats.maxDrawdownR.toFixed(2)}R`, color: "text-red-500" },
+              { label: "Total P&L", value: strategy === "alm3" ? `${stats.totalPnlR >= 0 ? "+" : ""}${stats.totalPnlR.toFixed(2)}%` : `${stats.totalPnlR >= 0 ? "+" : ""}${stats.totalPnlR.toFixed(2)}R`, color: stats.totalPnlR >= 0 ? "text-green-600" : "text-red-500" },
+              { label: "Profit Factor", value: stats.profitFactor >= 999 ? "∞" : stats.profitFactor.toFixed(2), color: stats.profitFactor >= 1.5 ? "text-green-600" : "text-red-500" },
+              { label: "Avg Win", value: strategy === "alm3" ? `+${stats.avgWinR.toFixed(2)}%` : `+${stats.avgWinR.toFixed(2)}R`, color: "text-green-600" },
+              { label: "Max DD", value: strategy === "alm3" ? `-${stats.maxDrawdownR.toFixed(2)}%` : `-${stats.maxDrawdownR.toFixed(2)}R`, color: "text-red-500" },
             ].map(s => (
               <div key={s.label} className="bg-white rounded-xl p-3 shadow-sm border text-center">
                 <p className="text-xs text-gray-400 uppercase font-medium">{s.label}</p>

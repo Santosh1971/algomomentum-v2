@@ -164,11 +164,12 @@ function makeTrade(side: "long"|"short", entry: number, exit: number, exitTime: 
   // Risk = distance from entry to SL (always positive)
   const risk = Math.abs(entry - sl);
   const exitReason = reason === "tp" ? "tp" : reason === "sl" ? "sl" : "signal";
+  const pnlPct = entry > 0 ? (pnl/entry)*100 : 0;
   return {
     entryTime, exitTime, entryPrice: entry, exitPrice: exit, sl, tp, side,
     exitReason,
-    pnlPct: entry > 0 ? (pnl/entry)*100 : 0,
-    pnlR: risk > 0 ? pnl/risk : 0,
+    pnlPct,
+    pnlR: pnlPct, // ALM3 uses % not R multiples — pnlR = pnlPct for display
   };
 }
 
