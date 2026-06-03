@@ -12,6 +12,7 @@ export default function Navbar() {
     { href: "/user/dashboard", label: "Dashboard" },
     { href: "/user/tradeconfig", label: "Accounts" },
     { href: "/user/pnl-report", label: "PnL Report" },
+    { href: "/user/strategy", label: "Strategy" },
     { href: "/user/payments", label: "Payments" },
   ];
 
