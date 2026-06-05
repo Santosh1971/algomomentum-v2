@@ -31,9 +31,18 @@ export interface PnlReport {
   equityCurve: { date: string; cumPnl: number }[];
 }
 
-/** Convert UTC timestamp (microseconds from Delta API) to IST date string */
-function toISTDate(utcMicros: number): string {
-  const ms = Math.floor(utcMicros / 1000);
+/** Convert UTC timestamp to IST date string
+ * Delta API returns created_at in microseconds (16 digits) or ISO string
+ */
+function toISTDate(createdAt: number | string): string {
+  if (typeof createdAt === "string") {
+    // ISO string format: "2026-06-05T08:45:41.496811Z"
+    return DateTime.fromISO(createdAt, { zone: "UTC" })
+      .setZone("Asia/Kolkata")
+      .toFormat("yyyy-MM-dd");
+  }
+  // Numeric: check if microseconds (16 digits) or milliseconds (13 digits)
+  const ms = createdAt > 1e15 ? Math.floor(createdAt / 1000) : createdAt;
   return DateTime.fromMillis(ms, { zone: "UTC" })
     .setZone("Asia/Kolkata")
     .toFormat("yyyy-MM-dd");
@@ -72,7 +81,7 @@ export async function computePnlReport(
     if (newSize !== 0) continue;
 
     const pnl = parseFloat(fill?.meta_data?.new_position?.realized_pnl ?? "0");
-    const comm = parseFloat(fill?.paid_commission ?? "0");
+    const comm = parseFloat(fill?.paid_commission ?? fill?.commission ?? fill?.fees ?? "0");
     const symbol = fill?.product_symbol ?? product_symbol;
     const dateIST = toISTDate(fill?.created_at ?? 0);
 
