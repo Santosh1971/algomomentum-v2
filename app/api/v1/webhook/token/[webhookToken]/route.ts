@@ -4,7 +4,7 @@
 // Body: { "side": "buy", "trade": "ENTRY 1 buy" }
 
 import { NextRequest, NextResponse } from "next/server";
-import { placeOrder, getPositions, getTicker } from "@/lib/deltaClient";
+import { placeOrder, getPositions, getTicker, setLeverage } from "@/lib/deltaClient";
 import cache from "@/lib/cache";
 import { prisma } from "@/lib/prisma";
 
@@ -88,6 +88,11 @@ async function handleEntry({ config, side, script }: { config: ConfigInfo; side:
   const lot = script.lot || 1;
   const quantity = Math.max(lot, Math.floor(amountUSD / marketPrice / lot) * lot);
   console.log(`📦 Entry: amountINR=${config.amount} amountUSD=${amountUSD.toFixed(2)} price=${marketPrice} qty=${quantity} leverage=${config.leverage}`);
+  // Set leverage on Delta before placing order
+  if (config.leverage && config.leverage > 1) {
+    await setLeverage(config.api_key_enc, config.api_secret_enc, script.productId, config.leverage);
+    console.log(`⚙️ Leverage set to ${config.leverage}x for ${script.exchange_symbol}`);
+  }
   const result = await placeOrder(config.api_key_enc, config.api_secret_enc, {
     product_id: script.productId,
     product_symbol: script.exchange_symbol,

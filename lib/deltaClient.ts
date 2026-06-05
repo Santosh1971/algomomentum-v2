@@ -22,6 +22,23 @@ function headers(apiKey: string, sig: string, ts: string) {
   };
 }
 
+export async function setLeverage(apiKeyEnc: string, apiSecretEnc: string, productId: number, leverage: number) {
+  const apiKey = decrypt(apiKeyEnc);
+  const apiSecret = decrypt(apiSecretEnc);
+  const body = { leverage: String(leverage) };
+  const bodyStr = JSON.stringify(body);
+  const { signature, timestamp } = sign("POST", `/v2/products/${productId}/orders/leverage`, "", bodyStr, apiSecret);
+  try {
+    const r = await axios.post(`${BASE_URL}/v2/products/${productId}/orders/leverage`, body, {
+      headers: headers(apiKey, signature, timestamp),
+    });
+    return r.data;
+  } catch (e: any) {
+    console.error("setLeverage error:", e.response?.data ?? e.message);
+    return { success: false, error: e.response?.data ?? e.message };
+  }
+}
+
 export async function placeOrder(apiKeyEnc: string, apiSecretEnc: string, body: Record<string, any>) {
   const apiKey = decrypt(apiKeyEnc);
   const apiSecret = decrypt(apiSecretEnc);
