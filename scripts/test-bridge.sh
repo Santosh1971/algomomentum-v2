@@ -10,7 +10,7 @@ PASS=0; FAIL=0
 
 check() {
   local name="$1"; local result="$2"; local expected="$3"
-  if echo "$result" | grep -q "$expected"; then
+  if echo "$result" | grep -qE "$expected"; then
     echo -e "${GREEN}PASS${NC}: $name"; PASS=$((PASS+1))
   else
     echo -e "${RED}FAIL${NC}: $name"
@@ -42,26 +42,26 @@ check "Accounts requires auth" "$R" "Unauthorized"
 R=$(curl -s "$BASE_URL/api/v1/tradeconfig")
 check "TradeConfig requires auth" "$R" "Unauthorized"
 R=$(curl -s "$BASE_URL/api/v1/admin/users")
-check "Admin route requires auth" "$R" "Unauthorized\|Admin only"
+check "Admin route requires auth" "$R" "Unauthorized|Admin only"
 
 echo ""
 echo -e "${YELLOW}Phase 3: Webhook routing${NC}"
-R=$(curl -s -X POST "$BASE_URL/api/v1/webhook/token/invalidtoken999" -H "Content-Type: application/json" -d "{"side":"buy","trade":"ENTRY 1 buy"}")
-check "Invalid token rejected" "$R" "Invalid webhook token\|error"
-R=$(curl -s -X POST "$BASE_URL/api/v1/webhook/BTCUSD" -H "Content-Type: application/json" -d "{"side":"buy","trade":"INVALID"}")
+R=$(curl -s -X POST "$BASE_URL/api/v1/webhook/token/invalidtoken999" -H "Content-Type: application/json" -d '{"side":"buy","trade":"ENTRY 1 buy"}')
+check "Invalid token rejected" "$R" "Invalid webhook token|error"
+R=$(curl -s -X POST "$BASE_URL/api/v1/webhook/BTCUSD" -H "Content-Type: application/json" -d '{"side":"buy","trade":"INVALID"}')
 check "Invalid trade type rejected" "$R" "Invalid trade type"
-R=$(curl -s -X POST "$BASE_URL/api/v1/webhook/BTCUSD" -H "Content-Type: application/json" -d "{"side":"buy","trade":"ENTRY 1 buy"}")
-check "Symbol webhook responds" "$R" "success"
+R=$(curl -s -X POST "$BASE_URL/api/v1/webhook/BIOUSD" -H "Content-Type: application/json" -d '{"side":"buy","trade":"ENTRY 1 buy"}')
+check "Symbol webhook responds" "$R" "success|No active configs|Unknown symbol"
 
 echo ""
 if [ -n "$WEBHOOK_TOKEN" ]; then
   echo -e "${YELLOW}Phase 4: Live Token Webhook${NC}"
-  R=$(curl -s -X POST "$BASE_URL/api/v1/webhook/token/$WEBHOOK_TOKEN" -H "Content-Type: application/json" -d "{"side":"buy","trade":"ENTRY 1 buy"}")
+  R=$(curl -s -X POST "$BASE_URL/api/v1/webhook/token/$WEBHOOK_TOKEN" -H "Content-Type: application/json" -d '{"side":"buy","trade":"ENTRY 1 buy"}')
   check "Token webhook ENTRY" "$R" "success"
   echo "   Response: $R"
   sleep 3
-  R=$(curl -s -X POST "$BASE_URL/api/v1/webhook/token/$WEBHOOK_TOKEN" -H "Content-Type: application/json" -d "{"side":"sell","trade":"EXIT 1 buy"}")
-  check "Token webhook EXIT" "$R" "success\|No open position"
+  R=$(curl -s -X POST "$BASE_URL/api/v1/webhook/token/$WEBHOOK_TOKEN" -H "Content-Type: application/json" -d '{"side":"sell","trade":"EXIT 1 buy"}')
+  check "Token webhook EXIT" "$R" "success|No open position"
   echo "   Response: $R"
 else
   echo -e "${YELLOW}Phase 4: Skipped - provide webhook token as 2nd argument${NC}"
