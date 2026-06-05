@@ -76,7 +76,7 @@ export default function AdminBillingReport() {
   async function generateBill() {
     if (!report || !selectedConfigId || !selectedUserId) return;
     setGenerating(true);
-    const monthIST = from.slice(0, 7);
+    const monthIST = to.slice(0, 7); // Use end date month for billing
     try {
       const res = await fetch("/api/v1/billing/generate", {
         method: "POST",
