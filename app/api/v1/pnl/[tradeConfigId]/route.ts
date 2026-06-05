@@ -34,6 +34,8 @@ export async function GET(req: NextRequest, context: { params: Promise<{ tradeCo
     const report = await computePnlReport(config.account.api_key_enc, config.account.api_secret_enc, config.script, from, to);
     return NextResponse.json({ tradeConfigId, symbol: config.script, from, to, ...report });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const detail = err?.response?.data ?? err?.message ?? "Unknown error";
+    console.error("PnL report error:", JSON.stringify(detail));
+    return NextResponse.json({ error: typeof detail === "string" ? detail : JSON.stringify(detail) }, { status: 500 });
   }
 }
