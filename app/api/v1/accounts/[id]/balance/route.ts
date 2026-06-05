@@ -27,10 +27,17 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
     const data = await getBalances(account.api_key_enc, account.api_secret_enc);
     const balances: any[] = data?.result ?? [];
 
-    // Find USDT balance
-    const usdt = balances.find((b: any) => b.asset_symbol === "USDT");
-    const availableUSD = parseFloat(usdt?.available_balance ?? "0");
-    const totalUSD = parseFloat(usdt?.balance ?? "0");
+    // Delta India uses USD or USDT — try both
+    const wallet = balances.find((b: any) => b.asset_symbol === "USD")
+      ?? balances.find((b: any) => b.asset_symbol === "USDT")
+      ?? balances.find((b: any) => (b.available_balance ?? 0) > 0)
+      ?? balances[0];
+
+    // Log what we got for debugging
+    console.log("Balance assets:", balances.map((b: any) => `${b.asset_symbol}:${b.balance}`).join(", "));
+
+    const availableUSD = parseFloat(wallet?.available_balance ?? "0");
+    const totalUSD = parseFloat(wallet?.balance ?? "0");
 
     return NextResponse.json({
       availableUSD: availableUSD,
