@@ -77,15 +77,23 @@ export default function AdminBillingReport() {
     if (!report || !selectedConfigId || !selectedUserId) return;
     setGenerating(true);
     const monthIST = from.slice(0, 7);
-    const res = await fetch("/api/v1/billing/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: selectedUserId, tradeConfigId: selectedConfigId, monthIST }),
-    });
-    const data = await res.json();
-    setGenerating(false);
-    if (res.ok) toast.success(`Bill generated! Amount: $${data.billing.billableAmount.toFixed(2)}`);
-    else toast.error(data.error ?? "Failed to generate bill");
+    try {
+      const res = await fetch("/api/v1/billing/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: selectedUserId, tradeConfigId: selectedConfigId, monthIST }),
+      });
+      const data = await res.json();
+      if (res.ok && data.billing) {
+        toast.success(`Bill generated! Platform fee: $${data.billing.billableAmount.toFixed(2)}`);
+      } else {
+        toast.error(data.error ?? "Failed to generate bill");
+      }
+    } catch (e: any) {
+      toast.error(e.message ?? "Network error");
+    } finally {
+      setGenerating(false);
+    }
   }
 
   const selectedConfig = configs.find((c) => c.id === selectedConfigId);
