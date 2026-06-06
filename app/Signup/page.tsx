@@ -136,9 +136,7 @@ export default function SignupPage() {
                 className="w-full bg-[#1E3A5F] hover:bg-[#152c4a] text-white font-semibold py-3 rounded-xl transition disabled:opacity-50">
                 {loading ? "Verifying..." : "Verify OTP"}
               </button>
-              <button onClick={handleSignup} disabled={loading} className="w-full text-sm text-gray-400 hover:text-gray-600">
-                Resend OTP
-              </button>
+              <button onClick={handleSignup} disabled={loading} className="w-full text-sm text-gray-400 hover:text-gray-600">Resend OTP</button>
             </div>
           )}
 
