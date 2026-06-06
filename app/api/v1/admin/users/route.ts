@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { NEXT_AUTH } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -12,7 +12,7 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
     select: {
       id: true, email: true, name: true, role: true,
-      isVerified: true, createdAt: true, phone: true,
+      isVerified: true, isApproved: true, createdAt: true, phone: true,
     },
   });
   return NextResponse.json(users);
