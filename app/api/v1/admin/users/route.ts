@@ -37,6 +37,15 @@ export async function PATCH(req: NextRequest) {
     data: { isApproved },
     select: { id: true, email: true, name: true, isApproved: true },
   });
+  // Send welcome email on approval
+  if (isApproved) {
+    try {
+      const { sendWelcomeEmail } = await import("@/lib/email");
+      await sendWelcomeEmail(user.email ?? "", user.name ?? "User");
+    } catch (e) {
+      console.error("Welcome email failed:", e);
+    }
+  }
   return NextResponse.json(user);
 }
 
