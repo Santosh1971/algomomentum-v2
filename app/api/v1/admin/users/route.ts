@@ -17,3 +17,19 @@ export async function GET() {
   });
   return NextResponse.json(users);
 }
+
+export async function PATCH(req: NextRequest) {
+  const session = await getServerSession(NEXT_AUTH);
+  if (!session || session.user.role !== "admin") {
+    return NextResponse.json({ error: "Admin only" }, { status: 403 });
+  }
+  const { userId, isApproved } = await req.json();
+  if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
+
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: { isApproved },
+    select: { id: true, email: true, name: true, isApproved: true },
+  });
+  return NextResponse.json(user);
+}

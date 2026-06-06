@@ -11,6 +11,7 @@ interface User {
   name: string | null;
   role: string;
   isVerified: boolean;
+  isApproved: boolean;
   createdAt: string;
   phone: string;
   _count?: { tradeConfigs: number };
@@ -97,10 +98,23 @@ export default function AdminUsersPage() {
                         {new Date(u.createdAt).toLocaleDateString("en-IN")}
                       </td>
                       <td className="px-5 py-3">
-                        <Link href={`/admin/users/${u.id}`}
-                          className="text-xs bg-[#1E3A5F] text-white px-3 py-1.5 rounded-lg hover:bg-[#152c4a] transition">
-                          View
-                        </Link>
+                        <div className="flex items-center gap-2">
+                          <Link href={`/admin/users/${u.id}`}
+                            className="text-xs bg-[#1E3A5F] text-white px-3 py-1.5 rounded-lg hover:bg-[#152c4a] transition">
+                            View
+                          </Link>
+                          {!u.isApproved ? (
+                            <button onClick={() => approveUser(u.id, true)}
+                              className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 transition">
+                              Approve
+                            </button>
+                          ) : (
+                            <button onClick={() => approveUser(u.id, false)}
+                              className="text-xs bg-yellow-500 text-white px-3 py-1.5 rounded-lg hover:bg-yellow-600 transition">
+                              Revoke
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))

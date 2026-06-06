@@ -16,6 +16,7 @@ model User {
   phone      String   @default("")
   createdAt  DateTime @default(now())
   isVerified Boolean  @default(false)
+  isApproved Boolean  @default(false)
 
   details       UserDetails?
   deltaAccounts DeltaAccount[]
