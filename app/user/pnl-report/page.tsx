@@ -231,6 +231,7 @@ export default function PnlReportPage() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-xs text-gray-400 uppercase border-b">
+                        <th className="text-right py-2 pr-3">#</th>
                         <th className="text-left py-2 pr-3">Entry time</th>
                         <th className="text-left py-2 pr-3">Exit time</th>
                         <th className="text-right py-2 pr-3">Entry ₹</th>
@@ -246,6 +247,7 @@ export default function PnlReportPage() {
                     <tbody>
                       {report.trades.map((t, i) => (
                         <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 text-xs">
+                          <td className="py-2 pr-3 text-right text-gray-400 font-mono">{report.trades.length - i}</td>
                           <td className="py-2 pr-3 text-gray-500 whitespace-nowrap">{t.entryTime}</td>
                           <td className="py-2 pr-3 text-gray-500 whitespace-nowrap">{t.exitTime}</td>
                           <td className="py-2 pr-3 text-right font-medium font-mono">{fmtPrice(t.entryPrice)}</td>

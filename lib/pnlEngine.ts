@@ -1,5 +1,6 @@
 // lib/pnlEngine.ts
 import { getAllFills } from "@/lib/deltaClient";
+import { prisma } from "@/lib/prisma";
 import { DateTime } from "luxon";
 
 export interface FillSummary {
@@ -26,6 +27,8 @@ export interface TradeRow {
   exitPrice: number;
   side: string;       // "buy" | "sell"
   size: number;
+  contractSize: number;
+  notionalValue: number; // size × contractSize × exitPrice
   grossPnl: number;
   commission: number;
   netPnl: number;
@@ -132,6 +135,7 @@ export async function computePnlReport(
     const side = entryFill?.side ?? fill?.side ?? "buy";
     const size = parseFloat(fill?.size ?? fill?.quantity ?? "0");
 
+    const notionalValue = parseFloat((size * contractSize * exitPrice).toFixed(2));
     trades.push({
       entryTime: entryFill ? toISTDateTime(entryFill.created_at) : toISTDateTime(fill.created_at),
       exitTime: toISTDateTime(fill.created_at),
@@ -139,6 +143,8 @@ export async function computePnlReport(
       exitPrice,
       side,
       size,
+      contractSize,
+      notionalValue,
       grossPnl: parseFloat(pnl.toFixed(4)),
       commission: parseFloat(comm.toFixed(4)),
       netPnl: parseFloat((pnl - comm).toFixed(4)),
