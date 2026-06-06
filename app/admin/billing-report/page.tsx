@@ -81,26 +81,38 @@ export default function AdminBillingPage() {
   async function generateNow() {
     if (!genUserId) { toast.error("Select a user"); return; }
     setGenerating(true);
-    // Get all trade configs for this user
-    const configsRes = await fetch(`/api/v1/tradeconfig?userId=${genUserId}`);
-    const configs = await configsRes.json();
-    if (!configs.length) { toast.error("No trade configs for this user"); setGenerating(false); return; }
-    let success = 0, skipped = 0;
-    for (const config of configs) {
-      const res = await fetch("/api/v1/billing/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: genUserId, tradeConfigId: config.id, monthIST: genMonth }),
-      });
-      const data = await res.json();
-      if (res.ok) success++;
-      else if (data.error?.includes("already exists")) skipped++;
-      else toast.error(`${config.script}: ${data.error}`);
+    try {
+      const configsRes = await fetch(`/api/v1/tradeconfig?userId=${genUserId}`);
+      const configs = await configsRes.json();
+      if (!Array.isArray(configs) || !configs.length) {
+        toast.error("No trade configs for this user"); return;
+      }
+      let success = 0, skipped = 0, failed = 0;
+      for (const config of configs) {
+        try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout per coin
+          const res = await fetch("/api/v1/billing/generate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ userId: genUserId, tradeConfigId: config.id, monthIST: genMonth }),
+            signal: controller.signal,
+          });
+          clearTimeout(timeout);
+          const data = await res.json();
+          if (res.ok) success++;
+          else if (data.error?.includes("already exists")) skipped++;
+          else { failed++; console.warn(`${config.script}: ${data.error}`); }
+        } catch (e: any) {
+          failed++;
+          console.warn(`${config.script} timed out or failed:`, e.message);
+        }
+      }
+      toast.success(`Done — ${success} generated, ${skipped} already existed${failed > 0 ? `, ${failed} failed` : ""}`);
+      fetch("/api/v1/admin/billing").then(r => r.json()).then(b => setBillings(Array.isArray(b) ? b : []));
+    } finally {
+      setGenerating(false);
     }
-    toast.success(`Done — ${success} generated, ${skipped} already existed`);
-    setGenerating(false);
-    // Reload billings
-    fetch("/api/v1/admin/billing").then(r => r.json()).then(b => setBillings(Array.isArray(b) ? b : []));
   }
 
   async function confirmPayment(paymentId: string, billingId: string) {
