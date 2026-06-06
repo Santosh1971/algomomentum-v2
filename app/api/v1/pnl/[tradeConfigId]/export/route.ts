@@ -26,31 +26,55 @@ export async function GET(req: NextRequest, context: { params: Promise<{ tradeCo
 
   const report = await computePnlReport(config.account.api_key_enc, config.account.api_secret_enc, config.script, from, to);
 
+  // Price: strip trailing zeros, keep up to 8dp
+  const fmtPrice = (p: number) => parseFloat(p.toFixed(8)).toString();
+  const f2 = (n: number) => parseFloat(n.toFixed(2));
+
   const headers_row = ["Entry Time", "Exit Time", "Entry Price", "Exit Price", "Side", "Lot Size", "Gross PnL (USD)", "Delta Fee (USD)", "Net PnL (USD)", "Status"];
   const rows = report.trades.map(t => [
-    t.entryTime, t.exitTime, t.entryPrice, t.exitPrice,
-    t.side, t.size, t.grossPnl, t.commission, t.netPnl, t.status,
+    t.entryTime, t.exitTime, fmtPrice(t.entryPrice), fmtPrice(t.exitPrice),
+    t.side, t.size, f2(t.grossPnl), f2(t.commission), f2(t.netPnl), t.status,
   ]);
 
-  if (format === "csv") {
-    const csv = [headers_row, ...rows].map(r => r.join(",")).join("\n");
-    return new NextResponse(csv, {
-      headers: {
-        "Content-Type": "text/csv",
-        "Content-Disposition": `attachment; filename="pnl-${config.script}-${from}-${to}.csv"`,
-      },
-    });
-  }
-
-  // xlsx — use exceljs (lightweight, no native deps)
+  // Excel only
   try {
     const ExcelJS = (await import("exceljs")).default;
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet("Trade Log");
+
+    // Header row with style
     ws.addRow(headers_row);
-    ws.getRow(1).font = { bold: true };
-    rows.forEach(r => ws.addRow(r));
-    ws.columns.forEach(col => { col.width = 18; });
+    const headerRow = ws.getRow(1);
+    headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
+    headerRow.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1E3A5F" } };
+    headerRow.alignment = { horizontal: "center" };
+
+    // Data rows
+    rows.forEach((r, i) => {
+      const row = ws.addRow(r);
+      const netPnl = r[8] as number;
+      row.getCell(9).font = { color: { argb: netPnl >= 0 ? "FF16a34a" : "FFdc2626" }, bold: true };
+      row.fill = { type: "pattern", pattern: "solid", fgColor: { argb: i % 2 === 0 ? "FFFFFFFF" : "FFF9FAFB" } };
+    });
+
+    // Column widths
+    const colWidths = [20, 20, 12, 12, 8, 8, 14, 14, 14, 8];
+    ws.columns.forEach((col, i) => { col.width = colWidths[i] ?? 14; });
+
+    // Summary sheet
+    const ws2 = wb.addWorksheet("Summary");
+    ws2.addRow(["Metric", "Value"]);
+    ws2.getRow(1).font = { bold: true };
+    ws2.addRow(["Symbol", config.script]);
+    ws2.addRow(["Period", `${from} to ${to}`]);
+    ws2.addRow(["Total Trades", report.totalTrades]);
+    ws2.addRow(["Win Rate %", report.winRate]);
+    ws2.addRow(["Gross PnL (USD)", f2(report.totalGrossPnl)]);
+    ws2.addRow(["Delta Fees (USD)", f2(report.totalCommissions)]);
+    ws2.addRow(["Net PnL (USD)", f2(report.totalNetPnl)]);
+    ws2.addRow(["Max Drawdown (USD)", f2(report.maxDrawdown)]);
+    ws2.columns = [{ width: 22 }, { width: 18 }];
+
     const buf = await wb.xlsx.writeBuffer();
     return new NextResponse(buf as unknown as BodyInit, {
       headers: {
@@ -58,7 +82,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ tradeCo
         "Content-Disposition": `attachment; filename="pnl-${config.script}-${from}-${to}.xlsx"`,
       },
     });
-  } catch {
-    return NextResponse.json({ error: "exceljs not installed. Run: npm install exceljs" }, { status: 500 });
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message ?? "Excel export failed" }, { status: 500 });
   }
 }

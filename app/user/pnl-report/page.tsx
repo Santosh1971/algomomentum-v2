@@ -72,6 +72,13 @@ export default function PnlReportPage() {
     ? `$${usd.toFixed(2)}`
     : `₹${(usd * INR).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 
+  // Price: keep significant decimals, strip trailing zeros, max 8dp
+  const fmtPrice = (p: number) => {
+    if (p === 0) return "0";
+    const s = p.toFixed(8).replace(/\.?0+$/, "");
+    return s;
+  };
+
   function pnlColor(val: number) { return val >= 0 ? "text-green-600" : "text-red-600"; }
 
   function applyQuickRange(val: string) {
@@ -96,15 +103,16 @@ export default function PnlReportPage() {
     finally { setLoading(false); }
   }
 
-  async function downloadReport(type: "csv" | "xlsx") {
+  async function downloadExcel() {
     if (!report) return;
-    const res = await fetch(`/api/v1/pnl/${selectedConfigId}/export?from=${from}&to=${to}&format=${type}`);
+    const coin = allConfigs.find(c => c.id === selectedConfigId)?.script ?? "report";
+    const res = await fetch(`/api/v1/pnl/${selectedConfigId}/export?from=${from}&to=${to}&format=xlsx`);
     if (!res.ok) { toast.error("Export failed"); return; }
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `pnl-report-${from}-${to}.${type}`;
+    a.download = `pnl-${coin}-${from}-${to}.xlsx`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -125,12 +133,8 @@ export default function PnlReportPage() {
           <h1 className="text-2xl font-bold text-[#1E3A5F]">PnL Report</h1>
           <div className="flex items-center gap-3">
             {report && (
-              <div className="flex gap-2">
-                <button onClick={() => downloadReport("csv")}
-                  className="text-sm px-3 py-1.5 rounded-lg border text-gray-600 hover:bg-gray-50 font-medium">⬇ CSV</button>
-                <button onClick={() => downloadReport("xlsx")}
-                  className="text-sm px-3 py-1.5 rounded-lg border text-gray-600 hover:bg-gray-50 font-medium">⬇ Excel</button>
-              </div>
+              <button onClick={downloadExcel}
+                className="text-sm px-3 py-1.5 rounded-lg border text-gray-600 hover:bg-gray-50 font-medium">⬇ Excel</button>
             )}
             <div className="flex bg-white border rounded-lg overflow-hidden text-sm">
               {(["USD", "INR"] as const).map(c => (
@@ -244,17 +248,17 @@ export default function PnlReportPage() {
                         <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 text-xs">
                           <td className="py-2 pr-3 text-gray-500 whitespace-nowrap">{t.entryTime}</td>
                           <td className="py-2 pr-3 text-gray-500 whitespace-nowrap">{t.exitTime}</td>
-                          <td className="py-2 pr-3 text-right font-medium">{t.entryPrice.toFixed(2)}</td>
-                          <td className="py-2 pr-3 text-right font-medium">{t.exitPrice.toFixed(2)}</td>
+                          <td className="py-2 pr-3 text-right font-medium font-mono">{fmtPrice(t.entryPrice)}</td>
+                          <td className="py-2 pr-3 text-right font-medium font-mono">{fmtPrice(t.exitPrice)}</td>
                           <td className="py-2 pr-3 text-center">
                             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${t.side === "buy" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>
                               {t.side}
                             </span>
                           </td>
                           <td className="py-2 pr-3 text-right text-gray-600">{t.size}</td>
-                          <td className={`py-2 pr-3 text-right font-medium ${pnlColor(t.grossPnl)}`}>{fmt(t.grossPnl)}</td>
-                          <td className="py-2 pr-3 text-right text-orange-500">{fmt(t.commission)}</td>
-                          <td className={`py-2 pr-3 text-right font-bold ${pnlColor(t.netPnl)}`}>{fmt(t.netPnl)}</td>
+                          <td className={`py-2 pr-3 text-right font-medium ${pnlColor(t.grossPnl)}`}>{fmtP(t.grossPnl)}</td>
+                          <td className="py-2 pr-3 text-right text-orange-500">{fmtP(t.commission)}</td>
+                          <td className={`py-2 pr-3 text-right font-bold ${pnlColor(t.netPnl)}`}>{fmtP(t.netPnl)}</td>
                           <td className="py-2 text-center">
                             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${t.status === "win" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>
                               {t.status}
