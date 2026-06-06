@@ -20,6 +20,7 @@ export const NEXT_AUTH: NextAuthOptions = {
 
         if (!user || !user.password) return null;
         if (!user.isVerified) throw new Error("Please verify your email first");
+        if (!user.isApproved) throw new Error("Your account is pending admin approval.");
 
         const valid = await bcrypt.compare(credentials.password, user.password);
         if (!valid) return null;
