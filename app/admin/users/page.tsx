@@ -1,4 +1,5 @@
 "use client";
+import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -40,6 +41,20 @@ export default function AdminUsersPage() {
       u.email.toLowerCase().includes(search.toLowerCase()) ||
       (u.name ?? "").toLowerCase().includes(search.toLowerCase())
   );
+
+  async function approveUser(userId: string, approve: boolean) {
+    const res = await fetch("/api/v1/admin/users", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, isApproved: approve }),
+    });
+    if (res.ok) {
+      toast.success(approve ? "User approved!" : "Access revoked");
+      fetch("/api/v1/admin/users").then(r => r.json()).then(d => { setUsers(d); setLoading(false); });
+    } else {
+      toast.error("Failed to update user");
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
