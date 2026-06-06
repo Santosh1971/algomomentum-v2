@@ -15,7 +15,11 @@ interface User {
   isApproved: boolean;
   createdAt: string;
   phone: string;
-  _count?: { tradeConfigs: number };
+  details?: {
+    age: number; gender: string; city: string;
+    district: string; country: string;
+    deltaUserId: string | null; deltaAccountName: string | null;
+  } | null;
 }
 
 export default function AdminUsersPage() {
@@ -30,17 +34,13 @@ export default function AdminUsersPage() {
     if (status === "authenticated" && session.user.role !== "admin") router.push("/user/dashboard");
   }, [status, session, router]);
 
-  useEffect(() => {
+  function loadUsers() {
     fetch("/api/v1/admin/users")
-      .then((r) => r.json())
-      .then((d) => { setUsers(d); setLoading(false); });
-  }, []);
+      .then(r => r.json())
+      .then(d => { setUsers(d); setLoading(false); });
+  }
 
-  const filtered = users.filter(
-    (u) =>
-      u.email.toLowerCase().includes(search.toLowerCase()) ||
-      (u.name ?? "").toLowerCase().includes(search.toLowerCase())
-  );
+  useEffect(() => { loadUsers(); }, []);
 
   async function approveUser(userId: string, approve: boolean) {
     const res = await fetch("/api/v1/admin/users", {
@@ -48,24 +48,36 @@ export default function AdminUsersPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId, isApproved: approve }),
     });
-    if (res.ok) {
-      toast.success(approve ? "User approved!" : "Access revoked");
-      fetch("/api/v1/admin/users").then(r => r.json()).then(d => { setUsers(d); setLoading(false); });
-    } else {
-      toast.error("Failed to update user");
-    }
+    if (res.ok) { toast.success(approve ? "User approved!" : "Access revoked"); loadUsers(); }
+    else toast.error("Failed to update user");
   }
+
+  async function deleteUser(userId: string, name: string) {
+    if (!confirm(`Delete user ${name}? This cannot be undone.`)) return;
+    const res = await fetch("/api/v1/admin/users", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId }),
+    });
+    if (res.ok) { toast.success("User deleted"); loadUsers(); }
+    else toast.error("Failed to delete user");
+  }
+
+  const filtered = users.filter(u =>
+    u.email.toLowerCase().includes(search.toLowerCase()) ||
+    (u.name ?? "").toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      <div className="max-w-6xl mx-auto p-6 space-y-5">
+      <div className="max-w-7xl mx-auto p-6 space-y-5">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-[#1E3A5F]">All Users</h1>
             <p className="text-sm text-gray-500 mt-1">{users.length} registered clients</p>
           </div>
-          <input value={search} onChange={(e) => setSearch(e.target.value)}
+          <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search by name or email..."
             className="border rounded-xl px-4 py-2 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
         </div>
@@ -75,65 +87,71 @@ export default function AdminUsersPage() {
             <div className="w-8 h-8 border-4 border-[#1E3A5F] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
-          <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-sm border overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-[#1E3A5F] text-white text-xs">
-                  {["Name", "Email", "Role", "Verified", "Joined", "Actions"].map((h) => (
-                    <th key={h} className="px-5 py-3 text-left font-medium">{h}</th>
+                  {["#", "Name", "Email", "Phone", "Age", "Gender", "City", "Delta ID", "Country", "Status", "Actions"].map(h => (
+                    <th key={h} className="px-4 py-3 text-left font-medium whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
-                  <tr><td colSpan={6} className="px-5 py-10 text-center text-gray-400">No users found</td></tr>
-                ) : (
-                  filtered.map((u, i) => (
-                    <tr key={u.id} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                      <td className="px-5 py-3 font-medium text-gray-800">
-                        <div className="flex items-center gap-2">
-                          <div className="w-7 h-7 rounded-full bg-[#1E3A5F] text-white flex items-center justify-center text-xs font-bold">
-                            {(u.name ?? u.email)[0].toUpperCase()}
-                          </div>
-                          {u.name ?? "—"}
+                  <tr><td colSpan={11} className="px-5 py-10 text-center text-gray-400">No users found</td></tr>
+                ) : filtered.map((u, i) => (
+                  <tr key={u.id} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                    <td className="px-4 py-3 text-gray-400">{i + 1}</td>
+                    <td className="px-4 py-3 font-medium text-gray-800 whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full bg-[#1E3A5F] text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
+                          {(u.name ?? u.email)[0].toUpperCase()}
                         </div>
-                      </td>
-                      <td className="px-5 py-3 text-gray-600">{u.email}</td>
-                      <td className="px-5 py-3">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                          u.role === "admin" ? "bg-yellow-100 text-yellow-700" : "bg-blue-100 text-blue-700"
-                        }`}>{u.role}</span>
-                      </td>
-                      <td className="px-5 py-3">
-                        <span className={`text-xs font-medium ${u.isVerified ? "text-green-600" : "text-red-500"}`}>
-                          {u.isVerified ? "✓ Yes" : "✗ No"}
+                        {u.name ?? "—"}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">{u.email}</td>
+                    <td className="px-4 py-3 text-green-600 whitespace-nowrap">{u.phone || "—"}</td>
+                    <td className="px-4 py-3">{u.details?.age || "—"}</td>
+                    <td className="px-4 py-3">{u.details?.gender || "—"}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">{u.details?.city || "—"}</td>
+                    <td className="px-4 py-3 text-xs font-mono">{u.details?.deltaUserId || "—"}</td>
+                    <td className="px-4 py-3">{u.details?.country || "—"}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col gap-1">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium w-fit ${u.role === "admin" ? "bg-yellow-100 text-yellow-700" : "bg-blue-100 text-blue-700"}`}>
+                          {u.role}
                         </span>
-                      </td>
-                      <td className="px-5 py-3 text-gray-500 text-xs">
-                        {new Date(u.createdAt).toLocaleDateString("en-IN")}
-                      </td>
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-2">
-                          <Link href={`/admin/users/${u.id}`}
-                            className="text-xs bg-[#1E3A5F] text-white px-3 py-1.5 rounded-lg hover:bg-[#152c4a] transition">
-                            View
-                          </Link>
-                          {!u.isApproved ? (
-                            <button onClick={() => approveUser(u.id, true)}
-                              className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 transition">
-                              Approve
-                            </button>
-                          ) : (
-                            <button onClick={() => approveUser(u.id, false)}
-                              className="text-xs bg-yellow-500 text-white px-3 py-1.5 rounded-lg hover:bg-yellow-600 transition">
-                              Revoke
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium w-fit ${u.isApproved ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
+                          {u.isApproved ? "✓ Active" : "⏳ Pending"}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1 whitespace-nowrap">
+                        <Link href={`/admin/users/${u.id}`}
+                          className="text-xs bg-blue-600 text-white px-2 py-1 rounded-lg hover:bg-blue-700 transition">
+                          Bots
+                        </Link>
+                        {!u.isApproved ? (
+                          <button onClick={() => approveUser(u.id, true)}
+                            className="text-xs bg-green-600 text-white px-2 py-1 rounded-lg hover:bg-green-700 transition">
+                            Approve
+                          </button>
+                        ) : (
+                          <button onClick={() => approveUser(u.id, false)}
+                            className="text-xs bg-yellow-500 text-white px-2 py-1 rounded-lg hover:bg-yellow-600 transition">
+                            Revoke
+                          </button>
+                        )}
+                        <button onClick={() => deleteUser(u.id, u.name ?? u.email)}
+                          className="text-xs bg-red-600 text-white px-2 py-1 rounded-lg hover:bg-red-700 transition">
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

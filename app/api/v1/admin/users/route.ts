@@ -13,6 +13,12 @@ export async function GET() {
     select: {
       id: true, email: true, name: true, role: true,
       isVerified: true, isApproved: true, createdAt: true, phone: true,
+      details: {
+        select: {
+          age: true, gender: true, city: true, district: true,
+          country: true, deltaUserId: true, deltaAccountName: true,
+        },
+      },
     },
   });
   return NextResponse.json(users);
@@ -32,4 +38,17 @@ export async function PATCH(req: NextRequest) {
     select: { id: true, email: true, name: true, isApproved: true },
   });
   return NextResponse.json(user);
+}
+
+export async function DELETE(req: NextRequest) {
+  const session = await getServerSession(NEXT_AUTH);
+  if (!session || session.user.role !== "admin") {
+    return NextResponse.json({ error: "Admin only" }, { status: 403 });
+  }
+  const { userId } = await req.json();
+  if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
+  // Prevent deleting yourself
+  if (userId === session.user.id) return NextResponse.json({ error: "Cannot delete yourself" }, { status: 400 });
+  await prisma.user.delete({ where: { id: userId } });
+  return NextResponse.json({ message: "User deleted" });
 }
