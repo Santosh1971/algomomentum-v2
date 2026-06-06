@@ -29,6 +29,7 @@ export default function AdminBillingPage() {
   const qrInputRef = useRef<HTMLInputElement>(null);
   const [generating, setGenerating] = useState(false);
   const [genUserId, setGenUserId] = useState("");
+  const [allUsers, setAllUsers] = useState<{ id: string; email: string; name: string | null }[]>([]);
   const [genMonth, setGenMonth] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -43,7 +44,9 @@ export default function AdminBillingPage() {
     Promise.all([
       fetch("/api/v1/admin/billing").then(r => r.json()),
       fetch("/api/v1/admin/settings").then(r => r.json()),
-    ]).then(([b, s]) => {
+      fetch("/api/v1/admin/users").then(r => r.json()),
+    ]).then(([b, s, u]) => {
+      setAllUsers(Array.isArray(u) ? u : []);
       setBillings(Array.isArray(b) ? b : []);
       setSettings(s);
       setFeeEdit(String(s.platformFeePercent ?? 20));
@@ -184,8 +187,8 @@ export default function AdminBillingPage() {
               <select value={genUserId} onChange={e => setGenUserId(e.target.value)}
                 className="border rounded-lg px-3 py-2 text-sm w-52 focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]">
                 <option value="">Select user...</option>
-                {billings.filter((b, i, arr) => arr.findIndex(x => x.user.id === b.user.id) === i).map(b => (
-                  <option key={b.user.id} value={b.user.id}>{b.user.name ?? b.user.email}</option>
+                {allUsers.map(u => (
+                  <option key={u.id} value={u.id}>{u.name ?? u.email}</option>
                 ))}
               </select>
             </div>
