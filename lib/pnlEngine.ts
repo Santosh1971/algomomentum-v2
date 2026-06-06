@@ -187,19 +187,22 @@ export async function computePnlReport(
 
   const dailyBreakdown = Array.from(dailyMap.values()).sort((a, b) => a.date.localeCompare(b.date));
 
-  // Build equity curve with both cumPnl and equity (starting from 0)
+  // Build equity curve:
+  // equity = absolute notional value (size × contractSize × exitPrice) per closing trade
+  // cumPnl = running net PnL from 0
   let cum = 0;
   let peak = 0;
   let maxDrawdown = 0;
-  const equityCurve = dailyBreakdown.map((d) => {
-    cum += d.netPnl;
+  const sortedTrades = trades.slice().sort((a, b) => a.exitTime.localeCompare(b.exitTime));
+  const equityCurve = sortedTrades.map((t) => {
+    cum += t.netPnl;
     if (cum > peak) peak = cum;
     const dd = cum - peak;
     if (dd < maxDrawdown) maxDrawdown = dd;
     return {
-      date: d.date,
-      cumPnl: parseFloat(cum.toFixed(4)),
-      equity: parseFloat(cum.toFixed(4)),
+      date: t.exitTime.slice(0, 10),
+      cumPnl: parseFloat(cum.toFixed(2)),
+      equity: t.notionalValue,
     };
   });
 
