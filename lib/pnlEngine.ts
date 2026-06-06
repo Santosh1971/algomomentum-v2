@@ -101,8 +101,8 @@ export async function computePnlReport(
   let totalTrades = 0;
   let wins = 0;
 
-  // Track open position to match entry fill
-  let entryFill: any = null;
+  // Track open position per symbol to avoid cross-symbol contamination
+  const entryFillMap = new Map<string, any>();
 
   // Sort fills oldest-first for entry/exit matching
   const sorted = [...fills].sort((a, b) => {
@@ -115,9 +115,10 @@ export async function computePnlReport(
     const newSize = fill?.meta_data?.new_position?.size;
     const prevSize = fill?.meta_data?.previous_position?.size ?? fill?.meta_data?.old_position?.size ?? null;
 
-    // Track entry fill: position opens when prev size is 0 or null and new size != 0
+    // Track entry fill per symbol: position opens when prev size is 0 or null and new size != 0
+    const fillSymbol = fill?.product_symbol ?? product_symbol;
     if ((prevSize === 0 || prevSize === null || prevSize === undefined) && newSize !== 0) {
-      entryFill = fill;
+      entryFillMap.set(fillSymbol, fill);
     }
 
     // Closing fill: new position size === 0
@@ -134,6 +135,8 @@ export async function computePnlReport(
     if (pnl > 0) wins++;
 
     // Build trade row
+    const closingSymbol = fill?.product_symbol ?? product_symbol;
+    const entryFill = entryFillMap.get(closingSymbol) ?? null;
     const exitPrice = parseFloat(fill?.price ?? fill?.fill_price ?? "0");
     const entryPrice = entryFill ? parseFloat(entryFill?.price ?? entryFill?.fill_price ?? "0") : 0;
     const side = entryFill?.side ?? fill?.side ?? "buy";
@@ -155,7 +158,7 @@ export async function computePnlReport(
       status: pnl > 0 ? "win" : "loss",
     });
 
-    entryFill = null;
+    entryFillMap.delete(closingSymbol);
 
     // Daily breakdown
     if (!dailyMap.has(dateIST)) {
@@ -229,3 +232,4 @@ export async function computeMonthlyPnl(
   }
   return parseFloat(totalNetPnl.toFixed(4));
 }
+
