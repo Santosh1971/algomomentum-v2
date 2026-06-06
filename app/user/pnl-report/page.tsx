@@ -15,6 +15,7 @@ interface DeltaAccount { id: string; accountName: string; tradeConfigs: TradeCon
 interface TradeRow {
   entryTime: string; exitTime: string; entryPrice: number; exitPrice: number;
   side: string; size: number; grossPnl: number; commission: number; netPnl: number; status: string;
+  contractSize?: number; notionalValue?: number;
 }
 interface DayRow { date: string; symbol: string; grossPnl: number; commissions: number; netPnl: number; fillsCount: number; }
 interface CoinRow { symbol: string; grossPnl: number; commissions: number; netPnl: number; tradesCount: number; }
@@ -208,16 +209,20 @@ export default function PnlReportPage() {
             {chartData.length > 0 && (
               <div className="bg-white rounded-2xl p-5 shadow-sm border">
                 <p className="font-semibold text-gray-700 mb-3">Equity Curve & Cumulative PnL</p>
+                <div className="flex gap-4 text-xs text-gray-400 mb-1">
+                  <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-[#1E3A5F] inline-block"></span> Equity (notional $)</span>
+                  <span className="flex items-center gap-1"><span className="w-3 h-3 bg-green-400 opacity-70 inline-block rounded-sm"></span> Cumulative PnL ($)</span>
+                </div>
                 <ResponsiveContainer width="100%" height={240}>
                   <ComposedChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                    <YAxis yAxisId="left" tick={{ fontSize: 11 }} />
-                    <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} />
-                    <Tooltip formatter={(v: any) => [currency === "INR" ? `₹${Number(v).toLocaleString("en-IN")}` : `$${v}`, ""]} />
+                    <YAxis yAxisId="equity" tick={{ fontSize: 11 }} label={{ value: "Equity $", angle: -90, position: "insideLeft", style: { fontSize: 10 } }} />
+                    <YAxis yAxisId="pnl" orientation="right" tick={{ fontSize: 11 }} label={{ value: "PnL $", angle: 90, position: "insideRight", style: { fontSize: 10 } }} />
+                    <Tooltip formatter={(v: any, name: string) => [currency === "INR" ? `₹${(Number(v)*INR).toLocaleString("en-IN")}` : `$${Number(v).toFixed(2)}`, name]} />
                     <Legend />
-                    <Line yAxisId="left" type="monotone" dataKey="Equity" stroke="#1E3A5F" dot={false} strokeWidth={2} />
-                    <Bar yAxisId="right" dataKey="Net PnL" fill="#22c55e" opacity={0.7} radius={[2, 2, 0, 0]} />
+                    <Line yAxisId="equity" type="monotone" dataKey="Equity" stroke="#1E3A5F" dot={false} strokeWidth={2} />
+                    <Bar yAxisId="pnl" dataKey="Net PnL" fill="#22c55e" opacity={0.7} radius={[2, 2, 0, 0]} />
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
@@ -241,6 +246,7 @@ export default function PnlReportPage() {
                         <th className="text-right py-2 pr-3">Gross PnL</th>
                         <th className="text-right py-2 pr-3">Delta fee</th>
                         <th className="text-right py-2 pr-3">Net PnL</th>
+                        <th className="text-right py-2 pr-3">Cum PnL</th>
                         <th className="text-center py-2">Status</th>
                       </tr>
                     </thead>
@@ -261,6 +267,9 @@ export default function PnlReportPage() {
                           <td className={`py-2 pr-3 text-right font-medium ${pnlColor(t.grossPnl)}`}>{fmtP(t.grossPnl)}</td>
                           <td className="py-2 pr-3 text-right text-orange-500">{fmtP(t.commission)}</td>
                           <td className={`py-2 pr-3 text-right font-bold ${pnlColor(t.netPnl)}`}>{fmtP(t.netPnl)}</td>
+                          <td className={`py-2 pr-3 text-right font-bold ${(() => { const cum = report.trades.slice(i).reduce((s, x) => s + x.netPnl, 0); return cum >= 0 ? "text-green-600" : "text-red-600"; })()}`}>
+                            {fmtP(report.trades.slice(i).reduce((s, x) => s + x.netPnl, 0))}
+                          </td>
                           <td className="py-2 text-center">
                             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${t.status === "win" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>
                               {t.status}
