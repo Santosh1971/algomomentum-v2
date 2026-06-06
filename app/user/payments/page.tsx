@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
@@ -20,8 +20,7 @@ export default function UserBillingPage() {
   const [billings, setBillings] = useState<BillingRow[]>([]);
   const [settings, setSettings] = useState<Settings | null>(null);
   const [loading, setLoading] = useState(true);
-  const [uploadingId, setUploadingId] = useState<string | null>(null);
-  const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const [markingId, setMarkingId] = useState<string | null>(null);
 
   useEffect(() => { if (status === "unauthenticated") router.push("/Signup"); }, [status, router]);
 
@@ -31,22 +30,20 @@ export default function UserBillingPage() {
       .then(d => { setBillings(d.billings ?? []); setSettings(d.settings ?? null); setLoading(false); });
   }, []);
 
-  async function uploadScreenshot(billingId: string, file: File) {
-    setUploadingId(billingId);
+  async function markAsPaid(billingId: string) {
+    setMarkingId(billingId);
     const billing = billings.find(b => b.id === billingId);
-    const fd = new FormData();
-    fd.append("billingId", billingId);
-    fd.append("amountPaid", String(billing?.billableAmount ?? 0));
-    fd.append("screenshot", file);
-    const res = await fetch("/api/v1/user/billing", { method: "POST", body: fd });
+    const res = await fetch("/api/v1/user/billing", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ billingId, amountPaid: billing?.billableAmount ?? 0 }),
+    });
     const data = await res.json();
     if (res.ok) {
-      toast.success("Screenshot uploaded! Awaiting admin confirmation.");
-      setBillings(prev => prev.map(b => b.id === billingId
-        ? { ...b, status: "pending_confirmation", Payment: [{ id: data.payment.id, amountPaid: data.payment.amountPaid, confirmedByAdmin: false, screenshotUrl: data.payment.screenshotUrl, paymentDate: data.payment.paymentDate ?? new Date().toISOString() }] }
-        : b));
-    } else toast.error(data.error ?? "Upload failed");
-    setUploadingId(null);
+      toast.success("Marked as paid! Amit will confirm shortly.");
+      setBillings(prev => prev.map(b => b.id === billingId ? { ...b, status: "pending_confirmation" } : b));
+    } else toast.error(data.error ?? "Failed");
+    setMarkingId(null);
   }
 
   function statusBadge(s: string) {
@@ -91,7 +88,6 @@ export default function UserBillingPage() {
               const isPaid = b.status === "paid";
               return (
                 <div key={b.id} className="bg-white rounded-2xl shadow-sm border overflow-hidden">
-                  {/* Billing summary */}
                   <div className="p-5">
                     <div className="flex items-start justify-between mb-3">
                       <div>
@@ -107,70 +103,46 @@ export default function UserBillingPage() {
                       </div>
                     </div>
 
-                    {/* Last payment status */}
-                    {lastPay && (
-                      <div className={`rounded-lg px-3 py-2 text-sm mb-3 ${lastPay.confirmedByAdmin ? "bg-green-50 text-green-700" : "bg-yellow-50 text-yellow-700"}`}>
-                        {lastPay.confirmedByAdmin
-                          ? `✓ Payment of $${lastPay.amountPaid.toFixed(2)} confirmed by admin on ${new Date(lastPay.paymentDate).toLocaleDateString("en-IN")}`
-                          : `⏳ Screenshot submitted — waiting for admin confirmation`}
+                    {/* Payment status */}
+                    {isPaid && (
+                      <div className="rounded-lg px-3 py-2 text-sm bg-green-50 text-green-700 mb-3">
+                        ✓ Payment confirmed by admin
+                      </div>
+                    )}
+                    {isPending && (
+                      <div className="rounded-lg px-3 py-2 text-sm bg-yellow-50 text-yellow-700 mb-3">
+                        ⏳ Payment marked — waiting for Amit to confirm
                       </div>
                     )}
 
-                    {/* Pay section — only if unpaid */}
+                    {/* Pay instructions — only if unpaid */}
                     {!isPaid && !isPending && settings && (
                       <div className="border border-gray-100 rounded-xl p-4 space-y-3">
-                        <p className="text-sm font-semibold text-gray-700">Pay via UPI</p>
+                        <p className="text-sm font-semibold text-gray-700">How to pay</p>
                         <div className="flex gap-4 items-start">
                           {settings.upiQrImageUrl ? (
                             <img src={settings.upiQrImageUrl} alt="UPI QR" className="w-28 h-28 rounded-lg border object-contain" />
                           ) : (
                             <div className="w-28 h-28 rounded-lg border bg-gray-50 flex items-center justify-center text-xs text-gray-400">QR pending</div>
                           )}
-                          <div className="flex-1 space-y-2">
+                          <div className="flex-1 space-y-2 text-sm text-gray-600">
                             {settings.upiId && (
-                              <div>
-                                <p className="text-xs text-gray-400">UPI ID</p>
-                                <p className="font-mono font-medium text-gray-700">{settings.upiId}</p>
-                              </div>
+                              <p>UPI ID: <span className="font-mono font-medium text-gray-800">{settings.upiId}</span></p>
                             )}
-                            <p className="text-xs text-gray-500">
-                              1. Pay <span className="font-bold text-gray-800">${b.billableAmount.toFixed(2)}</span> using the QR or UPI ID above<br />
-                              2. Take a screenshot of the payment confirmation<br />
-                              3. Upload the screenshot below
-                              {settings.adminWhatsapp && <><br />4. Also send to WhatsApp: <span className="font-medium">{settings.adminWhatsapp}</span></>}
-                            </p>
+                            <p>Amount: <span className="font-bold text-gray-800">${b.billableAmount.toFixed(2)}</span></p>
+                            <ol className="list-decimal list-inside space-y-1 text-xs text-gray-500">
+                              <li>Pay using the QR code or UPI ID above</li>
+                              <li>Take a screenshot of the payment confirmation</li>
+                              {settings.adminWhatsapp && <li>Send screenshot to WhatsApp: <span className="font-medium text-gray-700">{settings.adminWhatsapp}</span></li>}
+                              <li>Click "I've Paid" below</li>
+                            </ol>
                           </div>
                         </div>
-                        <div>
-                          <input
-                            type="file" accept="image/*"
-                            ref={el => { fileRefs.current[b.id] = el; }}
-                            className="hidden"
-                            onChange={e => { if (e.target.files?.[0]) uploadScreenshot(b.id, e.target.files[0]); }}
-                          />
-                          <button
-                            onClick={() => fileRefs.current[b.id]?.click()}
-                            disabled={uploadingId === b.id}
-                            className="w-full bg-[#1E3A5F] text-white py-2 rounded-lg text-sm font-semibold hover:bg-[#152c4a] disabled:opacity-50">
-                            {uploadingId === b.id ? "Uploading..." : "Upload Payment Screenshot"}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Re-upload if pending */}
-                    {isPending && !isPaid && (
-                      <div className="mt-2">
-                        <input
-                          type="file" accept="image/*"
-                          ref={el => { fileRefs.current[b.id] = el; }}
-                          className="hidden"
-                          onChange={e => { if (e.target.files?.[0]) uploadScreenshot(b.id, e.target.files[0]); }}
-                        />
-                        <button onClick={() => fileRefs.current[b.id]?.click()}
-                          disabled={uploadingId === b.id}
-                          className="text-xs text-gray-400 hover:text-gray-600 underline">
-                          Re-upload screenshot
+                        <button
+                          onClick={() => markAsPaid(b.id)}
+                          disabled={markingId === b.id}
+                          className="w-full bg-[#1E3A5F] text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-[#152c4a] disabled:opacity-50">
+                          {markingId === b.id ? "Marking..." : "✓ I've Paid — Notify Amit"}
                         </button>
                       </div>
                     )}

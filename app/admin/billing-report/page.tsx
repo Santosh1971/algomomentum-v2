@@ -27,6 +27,12 @@ export default function AdminBillingPage() {
   const [savingSettings, setSavingSettings] = useState(false);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const qrInputRef = useRef<HTMLInputElement>(null);
+  const [generating, setGenerating] = useState(false);
+  const [genUserId, setGenUserId] = useState("");
+  const [genMonth, setGenMonth] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  });
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/Signup");
@@ -67,6 +73,31 @@ export default function AdminBillingPage() {
     const data = await res.json();
     if (res.ok) { setSettings(prev => prev ? { ...prev, upiQrImageUrl: data.url } : prev); toast.success("QR updated"); }
     else toast.error("Upload failed");
+  }
+
+  async function generateNow() {
+    if (!genUserId) { toast.error("Select a user"); return; }
+    setGenerating(true);
+    // Get all trade configs for this user
+    const configsRes = await fetch(`/api/v1/tradeconfig?userId=${genUserId}`);
+    const configs = await configsRes.json();
+    if (!configs.length) { toast.error("No trade configs for this user"); setGenerating(false); return; }
+    let success = 0, skipped = 0;
+    for (const config of configs) {
+      const res = await fetch("/api/v1/billing/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: genUserId, tradeConfigId: config.id, monthIST: genMonth }),
+      });
+      const data = await res.json();
+      if (res.ok) success++;
+      else if (data.error?.includes("already exists")) skipped++;
+      else toast.error(`${config.script}: ${data.error}`);
+    }
+    toast.success(`Done — ${success} generated, ${skipped} already existed`);
+    setGenerating(false);
+    // Reload billings
+    fetch("/api/v1/admin/billing").then(r => r.json()).then(b => setBillings(Array.isArray(b) ? b : []));
   }
 
   async function confirmPayment(paymentId: string, billingId: string) {
@@ -141,6 +172,33 @@ export default function AdminBillingPage() {
               className="bg-[#1E3A5F] text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-[#152c4a] disabled:opacity-50">
               {savingSettings ? "Saving..." : "Save"}
             </button>
+          </div>
+        </div>
+
+        {/* Manual bill generation */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm border">
+          <h2 className="text-sm font-semibold text-gray-700 mb-4">Generate Bill Now <span className="text-xs font-normal text-gray-400 ml-1">(for testing or manual run)</span></h2>
+          <div className="flex flex-wrap gap-4 items-end">
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">User</label>
+              <select value={genUserId} onChange={e => setGenUserId(e.target.value)}
+                className="border rounded-lg px-3 py-2 text-sm w-52 focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]">
+                <option value="">Select user...</option>
+                {billings.filter((b, i, arr) => arr.findIndex(x => x.user.id === b.user.id) === i).map(b => (
+                  <option key={b.user.id} value={b.user.id}>{b.user.name ?? b.user.email}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">Month</label>
+              <input type="month" value={genMonth} onChange={e => setGenMonth(e.target.value)}
+                className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
+            </div>
+            <button onClick={generateNow} disabled={generating}
+              className="bg-green-600 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-green-700 disabled:opacity-50">
+              {generating ? "Generating..." : "⚡ Generate Now"}
+            </button>
+            <p className="text-xs text-gray-400 self-center">Generates bills for all active coins of the selected user for the selected month.</p>
           </div>
         </div>
 
