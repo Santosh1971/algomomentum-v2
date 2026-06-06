@@ -1,266 +1,229 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { toast } from "sonner";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
-interface TradeConfig {
-  id: string;
-  script: string;
-  amount: number;
-  account: { delta_account_name: string | null } | null;
-  platformFeePercent: number;
+interface Payment { id: string; amountPaid: number; confirmedByAdmin: boolean; screenshotUrl: string | null; paymentDate: string; }
+interface BillingRow {
+  id: string; month: string; netPnl: number; billableAmount: number;
+  platformFeePercent: number; status: string; generatedAt: string;
+  user: { id: string; email: string; name: string | null };
+  tradeConfig: { script: string };
+  Payment: Payment[];
 }
+interface Settings { platformFeePercent: number; upiId: string | null; adminWhatsapp: string | null; upiQrImageUrl: string | null; }
 
-interface DayRow {
-  date: string; symbol: string; grossPnl: number;
-  commissions: number; netPnl: number; fillsCount: number;
-}
-
-interface CoinRow {
-  symbol: string; grossPnl: number;
-  commissions: number; netPnl: number; tradesCount: number;
-}
-
-interface Report {
-  totalGrossPnl: number; totalCommissions: number;
-  totalNetPnl: number; totalTrades: number;
-  dailyBreakdown: DayRow[]; coinBreakdown: CoinRow[];
-  equityCurve: { date: string; cumPnl: number }[];
-}
-
-export default function AdminBillingReport() {
+export default function AdminBillingPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [users, setUsers] = useState<{ id: string; email: string; name: string | null }[]>([]);
-  const [selectedUserId, setSelectedUserId] = useState("");
-  const [configs, setConfigs] = useState<TradeConfig[]>([]);
-  const [selectedConfigId, setSelectedConfigId] = useState("");
-  const [from, setFrom] = useState(() =>
-    new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10)
-  );
-  const [to, setTo] = useState(() => new Date().toISOString().slice(0, 10));
-  const [report, setReport] = useState<Report | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [generating, setGenerating] = useState(false);
+  const [billings, setBillings] = useState<BillingRow[]>([]);
+  const [settings, setSettings] = useState<Settings | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [feeEdit, setFeeEdit] = useState("");
+  const [upiEdit, setUpiEdit] = useState("");
+  const [waEdit, setWaEdit] = useState("");
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const qrInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/Signup");
-    if (status === "authenticated" && session.user.role !== "admin") router.push("/user/dashboard");
+    if (status === "authenticated" && session?.user?.role !== "admin") router.push("/user/dashboard");
   }, [status, session, router]);
 
   useEffect(() => {
-    fetch("/api/v1/admin/users").then((r) => r.json()).then(setUsers);
+    Promise.all([
+      fetch("/api/v1/admin/billing").then(r => r.json()),
+      fetch("/api/v1/admin/settings").then(r => r.json()),
+    ]).then(([b, s]) => {
+      setBillings(Array.isArray(b) ? b : []);
+      setSettings(s);
+      setFeeEdit(String(s.platformFeePercent ?? 20));
+      setUpiEdit(s.upiId ?? "");
+      setWaEdit(s.adminWhatsapp ?? "");
+      setLoading(false);
+    });
   }, []);
 
-  useEffect(() => {
-    if (!selectedUserId) return;
-    fetch(`/api/v1/tradeconfig?userId=${selectedUserId}`)
-      .then((r) => r.json()).then((d) => { setConfigs(d); setSelectedConfigId(""); setReport(null); });
-  }, [selectedUserId]);
-
-  async function loadReport() {
-    if (!selectedConfigId) { toast.error("Select a trade config"); return; }
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/v1/pnl/${selectedConfigId}?from=${from}&to=${to}`);
-      const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? "Failed"); return; }
-      setReport(data);
-    } catch { toast.error("Failed to load report"); }
-    finally { setLoading(false); }
+  async function saveSettings() {
+    setSavingSettings(true);
+    const res = await fetch("/api/v1/admin/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ platformFeePercent: parseFloat(feeEdit), upiId: upiEdit, adminWhatsapp: waEdit }),
+    });
+    const data = await res.json();
+    if (res.ok) { setSettings(data); toast.success("Settings saved"); }
+    else toast.error("Failed to save");
+    setSavingSettings(false);
   }
 
-  async function generateBill() {
-    if (!report || !selectedConfigId || !selectedUserId) return;
-    setGenerating(true);
-    const monthIST = to.slice(0, 7); // Use end date month for billing
-    try {
-      const res = await fetch("/api/v1/billing/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: selectedUserId, tradeConfigId: selectedConfigId, monthIST }),
-      });
-      const data = await res.json();
-      if (res.ok && data.billing) {
-        toast.success(`Bill generated! Platform fee: $${data.billing.billableAmount.toFixed(2)}`);
-      } else {
-        toast.error(data.error ?? "Failed to generate bill");
-      }
-    } catch (e: any) {
-      toast.error(e.message ?? "Network error");
-    } finally {
-      setGenerating(false);
-    }
+  async function uploadQR(file: File) {
+    const fd = new FormData();
+    fd.append("qr", file);
+    const res = await fetch("/api/v1/admin/settings/qr", { method: "POST", body: fd });
+    const data = await res.json();
+    if (res.ok) { setSettings(prev => prev ? { ...prev, upiQrImageUrl: data.url } : prev); toast.success("QR updated"); }
+    else toast.error("Upload failed");
   }
 
-  const selectedConfig = configs.find((c) => c.id === selectedConfigId);
-  const feePercent = selectedConfig?.platformFeePercent ?? 20;
-  const billableAmount = report ? Math.max(0, report.totalNetPnl) * (feePercent / 100) : 0;
+  async function confirmPayment(paymentId: string, billingId: string) {
+    setConfirmingId(paymentId);
+    const res = await fetch("/api/v1/admin/billing", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ paymentId, billingId }),
+    });
+    if (res.ok) {
+      toast.success("Payment confirmed");
+      setBillings(prev => prev.map(b => b.id === billingId
+        ? { ...b, status: "paid", Payment: b.Payment.map(p => p.id === paymentId ? { ...p, confirmedByAdmin: true } : p) }
+        : b));
+    } else toast.error("Failed to confirm");
+    setConfirmingId(null);
+  }
+
+  function statusBadge(s: string) {
+    const map: Record<string, string> = {
+      unpaid: "bg-red-100 text-red-700", paid: "bg-green-100 text-green-700",
+      no_bill: "bg-gray-100 text-gray-500", pending_confirmation: "bg-yellow-100 text-yellow-700",
+    };
+    return map[s] ?? "bg-gray-100 text-gray-500";
+  }
+
+  // Group by month
+  const months = [...new Set(billings.map(b => b.month))].sort((a, b) => b.localeCompare(a));
+
   const pnlColor = (v: number) => v >= 0 ? "text-green-600" : "text-red-600";
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      <div className="max-w-6xl mx-auto p-6 space-y-5">
-        <h1 className="text-2xl font-bold text-[#1E3A5F]">Billing Report</h1>
+      <div className="max-w-6xl mx-auto p-6 space-y-6">
+        <h1 className="text-2xl font-bold text-[#1E3A5F]">Billing — Admin</h1>
 
-        {/* Filters */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm border space-y-4">
-          <h2 className="text-sm font-semibold text-gray-600">Select Account & Period</h2>
+        {/* Settings */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm border">
+          <h2 className="text-sm font-semibold text-gray-700 mb-4">Platform Settings</h2>
           <div className="flex flex-wrap gap-4 items-end">
             <div>
-              <label className="text-xs text-gray-500 block mb-1">Client</label>
-              <select value={selectedUserId} onChange={(e) => setSelectedUserId(e.target.value)}
-                className="border rounded-xl px-3 py-2 text-sm w-56 focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]">
-                <option value="">Select client...</option>
-                {users.filter(u => u.id !== session?.user?.id || session?.user?.role === "admin").map((u) => (
-                  <option key={u.id} value={u.id}>{u.name ?? u.email}</option>
-                ))}
-              </select>
+              <label className="text-xs text-gray-500 block mb-1">Platform fee %</label>
+              <input type="number" value={feeEdit} onChange={e => setFeeEdit(e.target.value)} min="0" max="100"
+                className="border rounded-lg px-3 py-2 text-sm w-28 focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
             </div>
-            {configs.length > 0 && (
-              <div>
-                <label className="text-xs text-gray-500 block mb-1">Trade Config</label>
-                <select value={selectedConfigId} onChange={(e) => setSelectedConfigId(e.target.value)}
-                  className="border rounded-xl px-3 py-2 text-sm w-56 focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]">
-                  <option value="">Select config...</option>
-                  {configs.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.script} — {c.account?.delta_account_name ?? "Not connected"}
-                    </option>
-                  ))}
-                </select>
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">UPI ID</label>
+              <input value={upiEdit} onChange={e => setUpiEdit(e.target.value)} placeholder="amit@upi"
+                className="border rounded-lg px-3 py-2 text-sm w-52 focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">WhatsApp number</label>
+              <input value={waEdit} onChange={e => setWaEdit(e.target.value)} placeholder="+91XXXXXXXXXX"
+                className="border rounded-lg px-3 py-2 text-sm w-44 focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">UPI QR image</label>
+              <div className="flex items-center gap-2">
+                {settings?.upiQrImageUrl && (
+                  <img src={settings.upiQrImageUrl} alt="QR" className="w-10 h-10 rounded border object-contain" />
+                )}
+                <button onClick={() => qrInputRef.current?.click()}
+                  className="text-xs px-3 py-2 rounded-lg border text-gray-600 hover:bg-gray-50">
+                  {settings?.upiQrImageUrl ? "Replace QR" : "Upload QR"}
+                </button>
+                <input ref={qrInputRef} type="file" accept="image/*" className="hidden"
+                  onChange={e => { if (e.target.files?.[0]) uploadQR(e.target.files[0]); }} />
               </div>
-            )}
-            <div>
-              <label className="text-xs text-gray-500 block mb-1">From (IST)</label>
-              <input type="date" value={from} onChange={(e) => setFrom(e.target.value)}
-                className="border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
             </div>
-            <div>
-              <label className="text-xs text-gray-500 block mb-1">To (IST)</label>
-              <input type="date" value={to} onChange={(e) => setTo(e.target.value)}
-                className="border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
-            </div>
-            <button onClick={loadReport} disabled={loading || !selectedConfigId}
-              className="bg-[#1E3A5F] text-white px-5 py-2 rounded-xl text-sm font-semibold hover:bg-[#152c4a] disabled:opacity-40 transition">
-              {loading ? "Loading..." : "Generate Report"}
+            <button onClick={saveSettings} disabled={savingSettings}
+              className="bg-[#1E3A5F] text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-[#152c4a] disabled:opacity-50">
+              {savingSettings ? "Saving..." : "Save"}
             </button>
           </div>
         </div>
 
-        {report && (
-          <>
-            {/* Summary Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              {[
-                { label: "Net PnL", value: `$${report.totalNetPnl.toFixed(2)}`, color: pnlColor(report.totalNetPnl), bg: "bg-white" },
-                { label: "Gross PnL", value: `$${report.totalGrossPnl.toFixed(2)}`, color: pnlColor(report.totalGrossPnl), bg: "bg-white" },
-                { label: "Commissions", value: `$${report.totalCommissions.toFixed(2)}`, color: "text-orange-600", bg: "bg-white" },
-                { label: "Total Trades", value: String(report.totalTrades), color: "text-blue-600", bg: "bg-white" },
-                { label: `Platform Fee (${feePercent}%)`, value: `$${billableAmount.toFixed(2)}`, color: billableAmount > 0 ? "text-green-700" : "text-gray-400", bg: "bg-green-50" },
-              ].map((card) => (
-                <div key={card.label} className={`${card.bg} rounded-2xl p-4 shadow-sm border text-center`}>
-                  <p className="text-xs text-gray-400 mb-1">{card.label}</p>
-                  <p className={`text-xl font-bold ${card.color}`}>{card.value}</p>
+        {/* Month-wise billing tables */}
+        {loading ? (
+          <div className="flex justify-center py-20">
+            <div className="w-8 h-8 border-4 border-[#1E3A5F] border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : months.length === 0 ? (
+          <div className="bg-white rounded-2xl p-12 text-center shadow-sm border">
+            <p className="text-3xl mb-3">🧾</p>
+            <p className="text-gray-600 font-medium">No billing records yet</p>
+            <p className="text-sm text-gray-400 mt-1">Bills are auto-generated on 1st of each month at 00:01</p>
+          </div>
+        ) : (
+          months.map(month => {
+            const rows = billings.filter(b => b.month === month);
+            const totalNet = rows.reduce((s, b) => s + b.netPnl, 0);
+            const totalFee = rows.reduce((s, b) => s + b.billableAmount, 0);
+            return (
+              <div key={month} className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+                <div className="px-5 py-3 bg-[#1E3A5F] flex items-center justify-between">
+                  <span className="text-white font-semibold">{month}</span>
+                  <div className="flex gap-6 text-sm">
+                    <span className="text-blue-200">Net PnL: <span className={`font-bold ${totalNet >= 0 ? "text-green-300" : "text-red-300"}`}>${totalNet.toFixed(2)}</span></span>
+                    <span className="text-blue-200">Platform fees: <span className="font-bold text-white">${totalFee.toFixed(2)}</span></span>
+                  </div>
                 </div>
-              ))}
-            </div>
-
-            {/* Equity Curve */}
-            {report.equityCurve.length > 0 && (
-              <div className="bg-white rounded-2xl p-5 shadow-sm border">
-                <h2 className="text-sm font-semibold text-gray-700 mb-4">Equity Curve</h2>
-                <ResponsiveContainer width="100%" height={180}>
-                  <LineChart data={report.equityCurve}>
-                    <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-                    <YAxis tick={{ fontSize: 10 }} />
-                    <Tooltip formatter={(v: any) => `$${Number(v).toFixed(2)}`} />
-                    <Line type="monotone" dataKey="cumPnl" stroke="#1E3A5F" dot={false} strokeWidth={2} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-
-            {/* Coin Breakdown */}
-            <div className="bg-white rounded-2xl p-5 shadow-sm border">
-              <h2 className="text-sm font-semibold text-gray-700 mb-3">Coin-wise Breakdown</h2>
-              {report.coinBreakdown.length === 0 ? (
-                <p className="text-sm text-gray-400 py-4 text-center">No closing trades found in this period</p>
-              ) : (
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-[#1E3A5F] text-white text-xs">
-                      {["Symbol", "Trades", "Gross PnL", "Commissions", "Net PnL"].map((h) => (
-                        <th key={h} className="px-4 py-2 text-left font-medium">{h}</th>
-                      ))}
+                    <tr className="text-xs text-gray-400 uppercase border-b bg-gray-50">
+                      <th className="text-left px-4 py-2">User</th>
+                      <th className="text-left px-4 py-2">Coin</th>
+                      <th className="text-right px-4 py-2">Gross PnL</th>
+                      <th className="text-right px-4 py-2">Delta fees</th>
+                      <th className="text-right px-4 py-2">Net PnL</th>
+                      <th className="text-right px-4 py-2">Fee %</th>
+                      <th className="text-right px-4 py-2">Platform ₹</th>
+                      <th className="text-center px-4 py-2">Status</th>
+                      <th className="text-center px-4 py-2">Action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {report.coinBreakdown.map((row, i) => (
-                      <tr key={row.symbol} className={i % 2 === 0 ? "bg-gray-50" : "bg-white"}>
-                        <td className="px-4 py-2 font-semibold">{row.symbol}</td>
-                        <td className="px-4 py-2">{row.tradesCount}</td>
-                        <td className={`px-4 py-2 font-medium ${pnlColor(row.grossPnl)}`}>${row.grossPnl.toFixed(2)}</td>
-                        <td className="px-4 py-2 text-orange-600">${row.commissions.toFixed(2)}</td>
-                        <td className={`px-4 py-2 font-bold ${pnlColor(row.netPnl)}`}>${row.netPnl.toFixed(2)}</td>
-                      </tr>
-                    ))}
+                    {rows.map((b, i) => {
+                      const lastPay = b.Payment[0];
+                      return (
+                        <tr key={b.id} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                          <td className="px-4 py-2.5 text-gray-700">{b.user.name ?? b.user.email}</td>
+                          <td className="px-4 py-2.5 font-bold text-gray-800">{b.tradeConfig.script}</td>
+                          <td className={`px-4 py-2.5 text-right font-medium ${pnlColor(b.netPnl)}`}>${b.netPnl.toFixed(2)}</td>
+                          <td className="px-4 py-2.5 text-right text-orange-500">—</td>
+                          <td className={`px-4 py-2.5 text-right font-bold ${pnlColor(b.netPnl)}`}>${b.netPnl.toFixed(2)}</td>
+                          <td className="px-4 py-2.5 text-right text-gray-500">{b.platformFeePercent}%</td>
+                          <td className="px-4 py-2.5 text-right font-bold text-gray-800">${b.billableAmount.toFixed(2)}</td>
+                          <td className="px-4 py-2.5 text-center">
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusBadge(b.status)}`}>{b.status}</span>
+                          </td>
+                          <td className="px-4 py-2.5 text-center">
+                            {lastPay && !lastPay.confirmedByAdmin && (
+                              <div className="flex items-center justify-center gap-2">
+                                {lastPay.screenshotUrl && (
+                                  <a href={lastPay.screenshotUrl} target="_blank" rel="noreferrer"
+                                    className="text-xs text-blue-500 hover:underline">Screenshot</a>
+                                )}
+                                <button onClick={() => confirmPayment(lastPay.id, b.id)}
+                                  disabled={confirmingId === lastPay.id}
+                                  className="text-xs px-3 py-1 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 font-medium">
+                                  {confirmingId === lastPay.id ? "..." : "Confirm"}
+                                </button>
+                              </div>
+                            )}
+                            {lastPay?.confirmedByAdmin && (
+                              <span className="text-xs text-green-600 font-medium">✓ Confirmed</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
-              )}
-            </div>
-
-            {/* Daily Breakdown */}
-            <div className="bg-white rounded-2xl p-5 shadow-sm border">
-              <h2 className="text-sm font-semibold text-gray-700 mb-3">Daily Breakdown (IST)</h2>
-              {report.dailyBreakdown.length === 0 ? (
-                <p className="text-sm text-gray-400 py-4 text-center">No trades in this period</p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="bg-[#1E3A5F] text-white text-xs">
-                        {["Date (IST)", "Symbol", "Trades", "Gross PnL", "Commissions", "Net PnL"].map((h) => (
-                          <th key={h} className="px-4 py-2 text-left font-medium">{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {report.dailyBreakdown.map((row, i) => (
-                        <tr key={`${row.date}-${row.symbol}`} className={i % 2 === 0 ? "bg-gray-50" : "bg-white"}>
-                          <td className="px-4 py-2 font-mono text-xs">{row.date}</td>
-                          <td className="px-4 py-2 font-semibold">{row.symbol}</td>
-                          <td className="px-4 py-2">{row.fillsCount}</td>
-                          <td className={`px-4 py-2 ${pnlColor(row.grossPnl)}`}>${row.grossPnl.toFixed(2)}</td>
-                          <td className="px-4 py-2 text-orange-600">${row.commissions.toFixed(2)}</td>
-                          <td className={`px-4 py-2 font-bold ${pnlColor(row.netPnl)}`}>${row.netPnl.toFixed(2)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-
-            {/* Generate Bill */}
-            <div className="bg-white rounded-2xl p-5 shadow-sm border flex items-center justify-between">
-              <div>
-                <p className="font-semibold text-gray-800">Ready to generate invoice?</p>
-                <p className="text-sm text-gray-500 mt-0.5">
-                  Platform fee: <span className="font-medium text-green-700">${billableAmount.toFixed(2)}</span>
-                  {billableAmount <= 0 && " — No bill (net loss period)"}
-                </p>
               </div>
-              <button onClick={generateBill} disabled={generating || billableAmount <= 0}
-                className="bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-40 transition">
-                {generating ? "Generating..." : "Generate Bill"}
-              </button>
-            </div>
-          </>
+            );
+          })
         )}
       </div>
     </div>

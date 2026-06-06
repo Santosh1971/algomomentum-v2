@@ -148,6 +148,18 @@ model Payment {
   method            String?
   razorpayPaymentId String?
   reference         String?
+  screenshotUrl     String?
+  confirmedByAdmin  Boolean  @default(false)
+  confirmedAt       DateTime?
   user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   billing Billing? @relation(fields: [billingId], references: [id], onDelete: Cascade)
+}
+
+model PlatformSettings {
+  id                 String   @id @default("singleton")
+  platformFeePercent Float    @default(20)
+  upiQrImageUrl      String?
+  upiId              String?
+  adminWhatsapp      String?
+  updatedAt          DateTime @updatedAt
 }

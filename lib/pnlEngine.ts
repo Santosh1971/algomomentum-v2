@@ -1,11 +1,9 @@
 // lib/pnlEngine.ts
-// Computes PnL from Delta Exchange fills API — no local trade storage
-
 import { getAllFills } from "@/lib/deltaClient";
 import { DateTime } from "luxon";
 
 export interface FillSummary {
-  date: string;        // IST date "YYYY-MM-DD"
+  date: string;
   symbol: string;
   grossPnl: number;
   commissions: number;
@@ -21,63 +19,101 @@ export interface CoinSummary {
   tradesCount: number;
 }
 
+export interface TradeRow {
+  entryTime: string;
+  exitTime: string;
+  entryPrice: number;
+  exitPrice: number;
+  side: string;       // "buy" | "sell"
+  size: number;
+  grossPnl: number;
+  commission: number;
+  netPnl: number;
+  status: string;     // "win" | "loss"
+}
+
 export interface PnlReport {
   totalGrossPnl: number;
   totalCommissions: number;
   totalNetPnl: number;
   totalTrades: number;
+  winRate: number;        // percentage 0-100
+  maxDrawdown: number;    // in USD, negative value
   dailyBreakdown: FillSummary[];
   coinBreakdown: CoinSummary[];
-  equityCurve: { date: string; cumPnl: number }[];
+  equityCurve: { date: string; cumPnl: number; equity: number }[];
+  trades: TradeRow[];
 }
 
-/** Convert UTC timestamp to IST date string
- * Delta API returns created_at in microseconds (16 digits) or ISO string
- */
 function toISTDate(createdAt: number | string): string {
   if (typeof createdAt === "string") {
-    // ISO string format: "2026-06-05T08:45:41.496811Z"
     return DateTime.fromISO(createdAt, { zone: "UTC" })
       .setZone("Asia/Kolkata")
       .toFormat("yyyy-MM-dd");
   }
-  // Numeric: check if microseconds (16 digits) or milliseconds (13 digits)
   const ms = createdAt > 1e15 ? Math.floor(createdAt / 1000) : createdAt;
   return DateTime.fromMillis(ms, { zone: "UTC" })
     .setZone("Asia/Kolkata")
     .toFormat("yyyy-MM-dd");
 }
 
-/** Core: compute PnL report from Delta fills for a given symbol + date range */
+function toISTDateTime(createdAt: number | string): string {
+  if (typeof createdAt === "string") {
+    return DateTime.fromISO(createdAt, { zone: "UTC" })
+      .setZone("Asia/Kolkata")
+      .toFormat("yyyy-MM-dd HH:mm:ss");
+  }
+  const ms = createdAt > 1e15 ? Math.floor(createdAt / 1000) : createdAt;
+  return DateTime.fromMillis(ms, { zone: "UTC" })
+    .setZone("Asia/Kolkata")
+    .toFormat("yyyy-MM-dd HH:mm:ss");
+}
+
 export async function computePnlReport(
   apiKeyEnc: string,
   apiSecretEnc: string,
   product_symbol: string,
-  fromIST: string,   // "YYYY-MM-DD"
-  toIST: string,     // "YYYY-MM-DD"
+  fromIST: string,
+  toIST: string,
 ): Promise<PnlReport> {
-  // Convert IST date range to UTC timestamps (microseconds)
   const startUTC = DateTime.fromISO(fromIST, { zone: "Asia/Kolkata" }).startOf("day").toUTC().toMillis();
   const endUTC = DateTime.fromISO(toIST, { zone: "Asia/Kolkata" }).endOf("day").toUTC().toMillis();
 
   const fills = await getAllFills(apiKeyEnc, apiSecretEnc, {
     product_symbol,
-    start_time: startUTC * 1000, // Delta uses microseconds
+    start_time: startUTC * 1000,
     end_time: endUTC * 1000,
   });
 
   const dailyMap = new Map<string, FillSummary>();
   const coinMap = new Map<string, CoinSummary>();
+  const trades: TradeRow[] = [];
 
   let totalGross = 0;
   let totalComm = 0;
   let totalTrades = 0;
+  let wins = 0;
 
-  for (const fill of fills) {
-    // Only closing fills count for PnL
+  // Track open position to match entry fill
+  let entryFill: any = null;
+
+  // Sort fills oldest-first for entry/exit matching
+  const sorted = [...fills].sort((a, b) => {
+    const ta = typeof a.created_at === "string" ? new Date(a.created_at).getTime() : a.created_at;
+    const tb = typeof b.created_at === "string" ? new Date(b.created_at).getTime() : b.created_at;
+    return ta - tb;
+  });
+
+  for (const fill of sorted) {
     const newSize = fill?.meta_data?.new_position?.size;
-    if (newSize === undefined) continue;
-    // IMPORTANT: strict equality — 0 is falsy in JS, must use === 0
+    const prevSize = fill?.meta_data?.previous_position?.size ?? fill?.meta_data?.old_position?.size ?? null;
+
+    // Track entry fill: position opens when prev size is 0 or null and new size != 0
+    if ((prevSize === 0 || prevSize === null || prevSize === undefined) && newSize !== 0) {
+      entryFill = fill;
+    }
+
+    // Closing fill: new position size === 0
     if (newSize !== 0) continue;
 
     const pnl = parseFloat(fill?.meta_data?.new_position?.realized_pnl ?? "0");
@@ -88,6 +124,28 @@ export async function computePnlReport(
     totalGross += pnl;
     totalComm += comm;
     totalTrades++;
+    if (pnl > 0) wins++;
+
+    // Build trade row
+    const exitPrice = parseFloat(fill?.price ?? fill?.fill_price ?? "0");
+    const entryPrice = entryFill ? parseFloat(entryFill?.price ?? entryFill?.fill_price ?? "0") : 0;
+    const side = entryFill?.side ?? fill?.side ?? "buy";
+    const size = parseFloat(fill?.size ?? fill?.quantity ?? "0");
+
+    trades.push({
+      entryTime: entryFill ? toISTDateTime(entryFill.created_at) : toISTDateTime(fill.created_at),
+      exitTime: toISTDateTime(fill.created_at),
+      entryPrice,
+      exitPrice,
+      side,
+      size,
+      grossPnl: parseFloat(pnl.toFixed(4)),
+      commission: parseFloat(comm.toFixed(4)),
+      netPnl: parseFloat((pnl - comm).toFixed(4)),
+      status: pnl > 0 ? "win" : "loss",
+    });
+
+    entryFill = null;
 
     // Daily breakdown
     if (!dailyMap.has(dateIST)) {
@@ -110,33 +168,45 @@ export async function computePnlReport(
     coin.tradesCount++;
   }
 
-  // Sort daily by date
   const dailyBreakdown = Array.from(dailyMap.values()).sort((a, b) => a.date.localeCompare(b.date));
 
-  // Build equity curve
+  // Build equity curve with both cumPnl and equity (starting from 0)
   let cum = 0;
+  let peak = 0;
+  let maxDrawdown = 0;
   const equityCurve = dailyBreakdown.map((d) => {
     cum += d.netPnl;
-    return { date: d.date, cumPnl: parseFloat(cum.toFixed(4)) };
+    if (cum > peak) peak = cum;
+    const dd = cum - peak;
+    if (dd < maxDrawdown) maxDrawdown = dd;
+    return {
+      date: d.date,
+      cumPnl: parseFloat(cum.toFixed(4)),
+      equity: parseFloat(cum.toFixed(4)),
+    };
   });
+
+  const winRate = totalTrades > 0 ? parseFloat(((wins / totalTrades) * 100).toFixed(1)) : 0;
 
   return {
     totalGrossPnl: parseFloat(totalGross.toFixed(4)),
     totalCommissions: parseFloat(totalComm.toFixed(4)),
     totalNetPnl: parseFloat((totalGross - totalComm).toFixed(4)),
     totalTrades,
+    winRate,
+    maxDrawdown: parseFloat(maxDrawdown.toFixed(4)),
     dailyBreakdown,
     coinBreakdown: Array.from(coinMap.values()),
     equityCurve,
+    trades: trades.sort((a, b) => b.exitTime.localeCompare(a.exitTime)), // newest first
   };
 }
 
-/** Compute PnL for ALL symbols of a user's trade configs for a month */
 export async function computeMonthlyPnl(
   apiKeyEnc: string,
   apiSecretEnc: string,
   symbols: string[],
-  monthIST: string, // "YYYY-MM"
+  monthIST: string,
 ): Promise<number> {
   const [year, month] = monthIST.split("-").map(Number);
   const from = DateTime.local(year, month, 1, { zone: "Asia/Kolkata" }).toFormat("yyyy-MM-dd");

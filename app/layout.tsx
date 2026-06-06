@@ -5,6 +5,9 @@ import "./globals.css";
 import { Toaster } from "sonner";
 import { Providers } from "./providers";
 
+import { startBillingCron } from "@/lib/billingCron";
+if (typeof window === "undefined") { startBillingCron(); }
+
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {

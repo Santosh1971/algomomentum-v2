@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
 
   const isAdmin = session.user.role === "admin";
   const body = await req.json();
-  const { amount, script, accountId, mode, strategy, platformFeePercent, leverage, compoundMode, userId: reqUserId } = body;
+  const { amount, script, accountId, mode, strategy, platformFeePercent, leverage, compoundMode, userId: reqUserId, forceAccount } = body;
 
   const userId = isAdmin && reqUserId ? reqUserId : session.user.id;
 
@@ -47,17 +47,84 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "amount, script and accountId are required" }, { status: 400 });
   }
 
+  const upperScript = script.toUpperCase();
+
   // Verify account belongs to user
   const account = await prisma.deltaAccount.findFirst({ where: { id: accountId, userId } });
   if (!account) return NextResponse.json({ error: "Account not found" }, { status: 404 });
 
+  // ── 1. Same-coin conflict check ──────────────────────────────────────────
+  const existingInAccount = await prisma.tradeConfig.findFirst({
+    where: { accountId, script: upperScript },
+  });
+
+  if (existingInAccount && !forceAccount) {
+    const allAccounts = await prisma.deltaAccount.findMany({
+      where: { userId, isActive: true },
+      include: { tradeConfigs: { where: { script: upperScript }, select: { id: true } } },
+      orderBy: { createdAt: "asc" },
+    });
+    const freeAccount = allAccounts.find(a => a.id !== accountId && a.tradeConfigs.length === 0);
+    if (!freeAccount) {
+      return NextResponse.json({
+        error: `${upperScript} already exists in this account and no other account is available. Add a new sub-account first.`,
+        conflict: true,
+      }, { status: 409 });
+    }
+    return NextResponse.json({
+      conflict: true,
+      suggestedAccountId: freeAccount.id,
+      suggestedAccountName: freeAccount.accountName,
+      message: `${upperScript} already exists in "${account.accountName}". Assign to "${freeAccount.accountName}" instead?`,
+    }, { status: 409 });
+  }
+
+  // ── 2. Live balance check ────────────────────────────────────────────────
+  const targetAccountId = forceAccount ?? accountId;
+  const targetAccount = forceAccount
+    ? await prisma.deltaAccount.findFirst({ where: { id: forceAccount, userId } })
+    : account;
+
+  if (targetAccount && targetAccount.api_key_enc && targetAccount.api_key_enc !== "") {
+    try {
+      const { getBalances } = await import("@/lib/deltaClient");
+      const INR_PER_USD = 85;
+      const data = await getBalances(targetAccount.api_key_enc, targetAccount.api_secret_enc);
+      const balances: any[] = data?.result ?? [];
+      const wallet = balances.find((b: any) => b.asset_symbol === "USD")
+        ?? balances.find((b: any) => b.asset_symbol === "USDT")
+        ?? balances.find((b: any) => (b.available_balance ?? 0) > 0)
+        ?? balances[0];
+      const availableUSD = parseFloat(wallet?.available_balance ?? "0");
+      const availableINR = availableUSD * INR_PER_USD;
+
+      const existing = await prisma.tradeConfig.findMany({
+        where: { accountId: targetAccountId },
+        select: { amount: true },
+      });
+      const totalAllocated = existing.reduce((sum: number, c: any) => sum + c.amount, 0) + amount;
+
+      if (totalAllocated > availableINR) {
+        return NextResponse.json({
+          error: `Insufficient balance. Available: ₹${availableINR.toFixed(0)}, Total allocated after adding: ₹${totalAllocated.toFixed(0)}. Please reduce the amount or top up your Delta account.`,
+          balanceError: true,
+          availableINR,
+          totalAllocated,
+        }, { status: 400 });
+      }
+    } catch (e) {
+      console.warn("Balance check skipped:", e);
+    }
+  }
+
+  // ── 3. Create config ─────────────────────────────────────────────────────
   const config = await prisma.tradeConfig.create({
     data: {
       userId,
-      accountId,
+      accountId: targetAccountId,
       amount,
       initial_amount: amount,
-      script: script.toUpperCase(),
+      script: upperScript,
       mode: mode ?? "bridge",
       strategy: strategy ?? null,
       platformFeePercent: platformFeePercent ?? 20,

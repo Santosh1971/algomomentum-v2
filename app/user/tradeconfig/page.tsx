@@ -123,20 +123,35 @@ export default function TradeConfigPage() {
     else toast.error("Failed to delete");
   }
 
-  async function addSymbol() {
+  async function addSymbol(overrideAccountId?: string) {
     if (!symbolForm.script || !symbolForm.amount) { toast.error("Symbol and amount required"); return; }
-    if (!activeAccountId) return;
+    const targetAccountId = overrideAccountId ?? activeAccountId;
+    if (!targetAccountId) return;
     const res = await fetch("/api/v1/tradeconfig", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        accountId: activeAccountId, script: symbolForm.script.toUpperCase(),
-        amount: parseFloat(symbolForm.amount), leverage: parseInt(symbolForm.leverage),
-        compoundMode: symbolForm.compoundMode, mode: symbolForm.mode,
+        accountId: targetAccountId,
+        script: symbolForm.script.toUpperCase(),
+        amount: parseFloat(symbolForm.amount),
+        leverage: 1,
+        compoundMode: "fixed",
+        mode: "bridge",
+        forceAccount: overrideAccountId ?? undefined,
       }),
     });
     const data = await res.json();
-    if (res.ok) { toast.success("Symbol added"); closeModal(); loadAccounts(); }
-    else toast.error(data.error ?? "Failed to add symbol");
+    if (res.status === 409 && data.conflict && data.suggestedAccountId) {
+      const confirmed = confirm(data.message);
+      if (confirmed) await addSymbol(data.suggestedAccountId);
+      return;
+    }
+    if (res.status === 409 && data.conflict && !data.suggestedAccountId) {
+      toast.error(data.error); return;
+    }
+    if (!res.ok) { toast.error(data.error ?? "Failed to add symbol"); return; }
+    toast.success("Symbol added");
+    closeModal();
+    loadAccounts();
   }
 
   async function updateSymbol() {
@@ -425,7 +440,8 @@ export default function TradeConfigPage() {
       {modal === "addSymbol" && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl">
-            <h2 className="text-lg font-bold text-gray-800 mb-4">Add Symbol</h2>
+            <h2 className="text-lg font-bold text-gray-800 mb-1">Add Symbol</h2>
+            <p className="text-xs text-gray-400 mb-4">Bot settings (leverage, mode, compound) are configured by the admin.</p>
             <div className="space-y-3">
               <div>
                 <label className="text-sm font-medium text-gray-700">Symbol</label>
@@ -438,35 +454,12 @@ export default function TradeConfigPage() {
                 <input type="number" value={symbolForm.amount} onChange={e => setSymbolForm({ ...symbolForm, amount: e.target.value })}
                   placeholder="e.g. 5000"
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Leverage</label>
-                  <input type="number" min="1" max="100" value={symbolForm.leverage}
-                    onChange={e => setSymbolForm({ ...symbolForm, leverage: e.target.value })}
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">P&L Mode</label>
-                  <select value={symbolForm.compoundMode} onChange={e => setSymbolForm({ ...symbolForm, compoundMode: e.target.value })}
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]">
-                    <option value="fixed">Fixed amount</option>
-                    <option value="compound">Compound P&L</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">Signal Source</label>
-                <select value={symbolForm.mode} onChange={e => setSymbolForm({ ...symbolForm, mode: e.target.value })}
-                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]">
-                  <option value="bridge">Bridge (TradingView signals)</option>
-                  <option value="standalone">Standalone (Built-in strategy)</option>
-                </select>
+                <p className="text-xs text-gray-400 mt-1">Must be within your available Delta account balance.</p>
               </div>
             </div>
             <div className="flex gap-3 mt-5">
               <button onClick={closeModal} className="flex-1 border rounded-lg py-2 text-sm text-gray-600">Cancel</button>
-              <button onClick={addSymbol} className="flex-1 bg-[#1E3A5F] text-white rounded-lg py-2 text-sm font-semibold">Add Symbol</button>
+              <button onClick={() => addSymbol()} className="flex-1 bg-[#1E3A5F] text-white rounded-lg py-2 text-sm font-semibold">Add Symbol</button>
             </div>
           </div>
         </div>
