@@ -219,7 +219,7 @@ export default function PnlReportPage() {
                     <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                     <YAxis yAxisId="equity" tick={{ fontSize: 11 }} label={{ value: "Equity $", angle: -90, position: "insideLeft", style: { fontSize: 10 } }} />
                     <YAxis yAxisId="pnl" orientation="right" tick={{ fontSize: 11 }} label={{ value: "PnL $", angle: 90, position: "insideRight", style: { fontSize: 10 } }} />
-                    <Tooltip formatter={(v: any, name: string) => [currency === "INR" ? `₹${(Number(v)*INR).toLocaleString("en-IN")}` : `$${Number(v).toFixed(2)}`, name]} />
+                    <Tooltip formatter={(v: any, name: any) => [currency === "INR" ? `₹${(Number(v)*INR).toLocaleString("en-IN")}` : `$${Number(v).toFixed(2)}`, name]} />
                     <Legend />
                     <Line yAxisId="equity" type="monotone" dataKey="Equity" stroke="#1E3A5F" dot={false} strokeWidth={2} />
                     <Bar yAxisId="pnl" dataKey="Net PnL" fill="#22c55e" opacity={0.7} radius={[2, 2, 0, 0]} />
