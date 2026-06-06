@@ -112,6 +112,10 @@ export async function computePnlReport(
   });
 
   for (const fill of sorted) {
+    // Strict symbol filter — skip fills that don't match the requested symbol
+    const fillProductSymbol = fill?.product_symbol ?? "";
+    if (fillProductSymbol && fillProductSymbol !== product_symbol) continue;
+
     const newSize = fill?.meta_data?.new_position?.size;
     const prevSize = fill?.meta_data?.previous_position?.size ?? fill?.meta_data?.old_position?.size ?? null;
 
