@@ -88,6 +88,10 @@ export async function computePnlReport(
     end_time: endUTC * 1000,
   });
 
+  // Fetch contract size (lot) from Script table — e.g. DUSK=100, SOL=1, ETH=0.01
+  const scriptRecord = await prisma.script.findUnique({ where: { symbol: product_symbol } });
+  const contractSize = scriptRecord?.lot ?? 1;
+
   const dailyMap = new Map<string, FillSummary>();
   const coinMap = new Map<string, CoinSummary>();
   const trades: TradeRow[] = [];
