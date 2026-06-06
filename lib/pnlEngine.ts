@@ -190,11 +190,15 @@ export async function computePnlReport(
   // Build equity curve:
   // equity = absolute notional value (size × contractSize × exitPrice) per closing trade
   // cumPnl = running net PnL from 0
+  // Filter out tiny/test trades (notionalValue < $50) from equity curve to avoid noise spikes
+  const MIN_NOTIONAL_FOR_EQUITY = 50;
   let cum = 0;
   let peak = 0;
   let maxDrawdown = 0;
   const sortedTrades = trades.slice().sort((a, b) => a.exitTime.localeCompare(b.exitTime));
-  const equityCurve = sortedTrades.map((t) => {
+  const equityCurve = sortedTrades
+    .filter((t) => t.notionalValue >= MIN_NOTIONAL_FOR_EQUITY)
+    .map((t) => {
     cum += t.netPnl;
     if (cum > peak) peak = cum;
     const dd = cum - peak;
