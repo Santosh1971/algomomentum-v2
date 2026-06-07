@@ -25,6 +25,8 @@ export default function AdminDashboard() {
     { title: "Total Clients", value: stats.users, icon: "👥", href: "/admin/users", color: "bg-blue-50 border-blue-200" },
     { title: "Billing Reports", value: "Generate", icon: "🧾", href: "/admin/billing-report", color: "bg-green-50 border-green-200" },
     { title: "Bot Status", value: "Live", icon: "🤖", href: "/admin/bot-status", color: "bg-purple-50 border-purple-200" },
+    { title: "Manage Symbols", value: "Configure", icon: "⚙️", href: "/admin/managesymbols", color: "bg-yellow-50 border-yellow-200" },
+    { title: "Signal Simulator", value: "Test", icon: "🚀", href: "/simulator", color: "bg-purple-50 border-purple-200" },
     { title: "Emergency Exit", value: "⚠️ All Positions", icon: "🚨", href: "/admin/EMERGENCY_EXIT", color: "bg-red-50 border-red-200" },
   ];
 
@@ -36,7 +38,7 @@ export default function AdminDashboard() {
           <h1 className="text-2xl font-bold text-[#1E3A5F]">Admin Dashboard</h1>
           <p className="text-gray-500 text-sm mt-1">AlgoMomentum Bridge v2 — Platform Overview</p>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {cards.map((card) => (
             <Link key={card.href} href={card.href}
               className={`${card.color} border rounded-2xl p-5 hover:shadow-md transition-shadow`}>
