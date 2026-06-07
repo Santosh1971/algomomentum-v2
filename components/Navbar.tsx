@@ -22,12 +22,12 @@ export default function Navbar() {
     { href: "/admin/bot-status", label: "Bot Status" },
   ];
 
-  const links = isAdmin && path.startsWith("/admin") ? adminLinks : userLinks;
+  const links = isAdmin && !path.startsWith("/user") ? adminLinks : userLinks;
 
   return (
     <nav className="bg-[#1E3A5F] text-white px-6 py-3 flex items-center justify-between shadow-lg sticky top-0 z-40">
       <div className="flex items-center gap-6">
-        <Link href="/user/dashboard" className="font-bold text-lg">
+        <Link href={isAdmin && !path.startsWith("/user") ? "/admin/dashboard" : "/user/dashboard"} className="font-bold text-lg">
           AlgoMomentum <span className="text-blue-300 text-sm font-normal">v2</span>
         </Link>
         <div className="hidden md:flex items-center gap-1">
@@ -45,9 +45,9 @@ export default function Navbar() {
       </div>
       <div className="flex items-center gap-3">
         {isAdmin && (
-          <Link href={path.startsWith("/admin") ? "/user/dashboard" : "/admin/dashboard"}
+          <Link href={path.startsWith("/user") ? "/admin/dashboard" : "/user/dashboard"}
             className="text-xs bg-yellow-500 text-black px-3 py-1.5 rounded-full font-semibold hover:bg-yellow-400 transition">
-            {path.startsWith("/admin") ? "User View" : "Admin Panel"}
+            {path.startsWith("/user") ? "⚙ Admin Panel" : "👤 User View"}
           </Link>
         )}
         <span className="text-xs text-blue-300 hidden md:block">{session?.user?.email}</span>
