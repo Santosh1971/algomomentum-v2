@@ -227,8 +227,8 @@ export default function AdminUserDetailPage() {
                               className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium">
                               ✎ Edit
                             </button>
-                            {/* View trades */}
-                            <Link href={`/admin/position/${tc.id}?userId=${userId}`}
+                            {/* View trades — opens PnL report for this config */}
+                            <Link href={`/admin/pnl?configId=${tc.id}&userId=${userId}`}
                               className="text-xs px-2 py-1 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 font-medium">
                               Trades
                             </Link>
