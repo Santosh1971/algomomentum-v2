@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { NEXT_AUTH } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(NEXT_AUTH);
@@ -14,19 +12,17 @@ export async function POST(req: NextRequest) {
   const file = formData.get("qr") as File;
   if (!file) return NextResponse.json({ error: "No file" }, { status: 400 });
 
+  // Store as base64 data URL in DB — survives Railway redeploys
   const bytes = await file.arrayBuffer();
-  const buffer = Buffer.from(bytes);
-  const uploadsDir = path.join(process.cwd(), "public", "uploads", "qr");
-  await mkdir(uploadsDir, { recursive: true });
-  const filename = `upi-qr${path.extname(file.name)}`;
-  await writeFile(path.join(uploadsDir, filename), buffer);
-  const url = `/uploads/qr/${filename}`;
+  const base64 = Buffer.from(bytes).toString("base64");
+  const mimeType = file.type || "image/png";
+  const dataUrl = `data:${mimeType};base64,${base64}`;
 
   await prisma.platformSettings.upsert({
     where: { id: "singleton" },
-    create: { id: "singleton", upiQrImageUrl: url },
-    update: { upiQrImageUrl: url },
+    create: { id: "singleton", upiQrImageUrl: dataUrl },
+    update: { upiQrImageUrl: dataUrl },
   });
 
-  return NextResponse.json({ url });
+  return NextResponse.json({ url: dataUrl });
 }

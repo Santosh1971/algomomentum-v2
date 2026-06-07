@@ -158,7 +158,7 @@ model Payment {
 model PlatformSettings {
   id                 String   @id @default("singleton")
   platformFeePercent Float    @default(20)
-  upiQrImageUrl      String?
+  upiQrImageUrl      String?  @db.Text
   upiId              String?
   adminWhatsapp      String?
   updatedAt          DateTime @updatedAt
