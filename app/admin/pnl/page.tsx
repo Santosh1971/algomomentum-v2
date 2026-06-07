@@ -31,6 +31,19 @@ function AdminPnlInner() {
   const [loading, setLoading] = useState(false);
   const [currency, setCurrency] = useState<"USD" | "INR">("USD");
   const [symbol, setSymbol] = useState("");
+  const [quickRange, setQuickRange] = useState("custom");
+
+  const CUR_FY_START = new Date().getMonth() >= 3 ? new Date().getFullYear() : new Date().getFullYear() - 1;
+
+  function applyQuickRange(val: string) {
+    setQuickRange(val);
+    const today = new Date();
+    if (val === "7d") { const f = new Date(); f.setDate(f.getDate()-6); setFrom(f.toISOString().slice(0,10)); setTo(today.toISOString().slice(0,10)); }
+    else if (val === "30d") { const f = new Date(); f.setDate(f.getDate()-29); setFrom(f.toISOString().slice(0,10)); setTo(today.toISOString().slice(0,10)); }
+    else if (val === "90d") { const f = new Date(); f.setDate(f.getDate()-89); setFrom(f.toISOString().slice(0,10)); setTo(today.toISOString().slice(0,10)); }
+    else if (val === "fy0") { setFrom(`${CUR_FY_START}-04-01`); setTo(`${CUR_FY_START+1}-03-31`); }
+    else if (val === "fy1") { setFrom(`${CUR_FY_START-1}-04-01`); setTo(`${CUR_FY_START}-03-31`); }
+  }
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/Signup");
@@ -95,13 +108,25 @@ function AdminPnlInner() {
 
         <div className="bg-white rounded-2xl p-5 shadow-sm border flex flex-wrap gap-4 items-end">
           <div>
+            <label className="text-xs font-medium text-gray-500 block mb-1">Quick range</label>
+            <select value={quickRange} onChange={e => applyQuickRange(e.target.value)}
+              className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]">
+              <option value="custom">Custom</option>
+              <option value="7d">Last 7 days</option>
+              <option value="30d">Last 30 days</option>
+              <option value="90d">Last 90 days</option>
+              <option value="fy0">FY {CUR_FY_START}-{CUR_FY_START+1}</option>
+              <option value="fy1">FY {CUR_FY_START-1}-{CUR_FY_START}</option>
+            </select>
+          </div>
+          <div>
             <label className="text-xs font-medium text-gray-500 block mb-1">From (IST)</label>
-            <input type="date" value={from} onChange={e => setFrom(e.target.value)}
+            <input type="date" value={from} onChange={e => { setFrom(e.target.value); setQuickRange("custom"); }}
               className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
           </div>
           <div>
             <label className="text-xs font-medium text-gray-500 block mb-1">To (IST)</label>
-            <input type="date" value={to} onChange={e => setTo(e.target.value)}
+            <input type="date" value={to} onChange={e => { setTo(e.target.value); setQuickRange("custom"); }}
               className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
           </div>
           <button onClick={loadReport} disabled={loading}
