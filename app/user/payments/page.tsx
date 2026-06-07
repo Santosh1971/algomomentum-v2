@@ -115,10 +115,9 @@ export default function UserBillingPage() {
                       </div>
                     )}
 
-                    {/* Pay instructions — only if unpaid */}
-                    {!isPaid && !isPending && settings && (
+                    {/* QR always visible */}
+                    {settings && (
                       <div className="border border-gray-100 rounded-xl p-4 space-y-3">
-                        <p className="text-sm font-semibold text-gray-700">How to pay</p>
                         <div className="flex gap-4 items-start">
                           {settings.upiQrImageUrl ? (
                             <img src={settings.upiQrImageUrl} alt="UPI QR" className="w-48 h-48 rounded-lg border object-contain" />
@@ -129,21 +128,18 @@ export default function UserBillingPage() {
                             {settings.upiId && (
                               <p>UPI ID: <span className="font-mono font-medium text-gray-800">{settings.upiId}</span></p>
                             )}
-                            <p>Amount: <span className="font-bold text-gray-800">${b.billableAmount.toFixed(2)}</span></p>
-                            <ol className="list-decimal list-inside space-y-1 text-xs text-gray-500">
-                              <li>Pay using the QR code or UPI ID above</li>
-                              <li>Take a screenshot of the payment confirmation</li>
-                              {settings.adminWhatsapp && <li>Send screenshot to WhatsApp: <span className="font-medium text-gray-700">{settings.adminWhatsapp}</span></li>}
-                              <li>Click "I've Paid" below</li>
-                            </ol>
+                            {!isPaid && <p>Amount due: <span className="font-bold text-gray-800">${b.billableAmount.toFixed(2)}</span></p>}
+                            {settings.adminWhatsapp && <p className="text-xs text-gray-500">Send payment screenshot to WhatsApp: <span className="font-medium text-gray-700">{settings.adminWhatsapp}</span></p>}
                           </div>
                         </div>
-                        <button
-                          onClick={() => markAsPaid(b.id)}
-                          disabled={markingId === b.id}
-                          className="w-full bg-[#1E3A5F] text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-[#152c4a] disabled:opacity-50">
-                          {markingId === b.id ? "Marking..." : "✓ I've Paid — Notify Amit"}
-                        </button>
+                        {!isPaid && !isPending && (
+                          <button
+                            onClick={() => markAsPaid(b.id)}
+                            disabled={markingId === b.id}
+                            className="w-full bg-[#1E3A5F] text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-[#152c4a] disabled:opacity-50">
+                            {markingId === b.id ? "Marking..." : "✓ I've Paid — Notify Amit"}
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>

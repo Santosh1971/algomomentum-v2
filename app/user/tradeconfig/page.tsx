@@ -367,8 +367,7 @@ export default function TradeConfigPage() {
                                     <button onClick={() => exitPosition(account.id, tc.id, tc.script)}
                                       className="text-xs px-2 py-1 rounded bg-red-50 text-red-500 hover:bg-red-100 font-medium">Exit</button>
                                   )}
-                                  <button onClick={() => copyWebhook(tc.webhookToken)}
-                                    className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-500 hover:bg-gray-200" title="Copy webhook URL">🔗</button>
+
                                   <button onClick={() => {
                                     setActiveConfig(tc);
                                     setSymbolForm({ script: tc.script, amount: String(tc.amount), leverage: String(tc.leverage), compoundMode: tc.compoundMode, mode: tc.mode });
@@ -469,7 +468,7 @@ export default function TradeConfigPage() {
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl">
             <h2 className="text-lg font-bold text-gray-800 mb-1">Edit {activeConfig.script}</h2>
-            <p className="text-xs text-gray-400 mb-4">Webhook: <button onClick={() => copyWebhook(activeConfig.webhookToken)} className="text-blue-500 hover:underline">Copy URL 🔗</button></p>
+
             <div className="space-y-3">
               <div>
                 <label className="text-sm font-medium text-gray-700">Allocated Amount (₹)</label>
@@ -478,18 +477,12 @@ export default function TradeConfigPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Leverage</label>
-                  <input type="number" min="1" max="100" value={symbolForm.leverage}
-                    onChange={e => setSymbolForm({ ...symbolForm, leverage: e.target.value })}
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
+                  <label className="text-sm font-medium text-gray-500 text-xs">Leverage (set by admin)</label>
+                  <div className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-400">{activeConfig.leverage}x</div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700">P&L Mode</label>
-                  <select value={symbolForm.compoundMode} onChange={e => setSymbolForm({ ...symbolForm, compoundMode: e.target.value })}
-                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]">
-                    <option value="fixed">Fixed amount</option>
-                    <option value="compound">Compound P&L</option>
-                  </select>
+                  <label className="text-sm font-medium text-gray-500 text-xs">P&L Mode (set by admin)</label>
+                  <div className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-400 capitalize">{activeConfig.compoundMode}</div>
                 </div>
               </div>
             </div>
