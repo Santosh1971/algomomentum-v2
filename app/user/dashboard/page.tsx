@@ -11,6 +11,7 @@ export default function DashboardPage() {
   useEffect(() => { if (status === "unauthenticated") router.push("/Signup"); }, [status, router]);
   if (status === "loading") return null;
   const isAdmin = session?.user?.role === "admin";
+  const showAdminCards = false; // /user/dashboard is always user view
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -37,7 +38,7 @@ export default function DashboardPage() {
             <p className="text-sm text-gray-500 mt-1">View invoices and billing history</p>
           </Link>
         </div>
-        {isAdmin && (
+        {showAdminCards && (
           <>
             <p className="text-xs text-gray-400 uppercase tracking-widest font-semibold">Admin</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
