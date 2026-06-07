@@ -103,6 +103,7 @@ export async function computePnlReport(
 
   // Track open position per symbol to avoid cross-symbol contamination
   const entryFillMap = new Map<string, any>();
+  const entryLotsMap = new Map<string, number>(); // accumulated lots per position
 
   // Sort fills oldest-first for entry/exit matching
   const sorted = [...fills].sort((a, b) => {
@@ -123,6 +124,11 @@ export async function computePnlReport(
     const fillSymbol = fill?.product_symbol ?? product_symbol;
     if ((prevSize === 0 || prevSize === null || prevSize === undefined) && newSize !== 0) {
       entryFillMap.set(fillSymbol, fill);
+      entryLotsMap.set(fillSymbol, parseFloat(fill?.size ?? fill?.quantity ?? "0"));
+    } else if (newSize !== 0 && prevSize !== 0 && prevSize !== null && prevSize !== undefined) {
+      // Accumulate lots for partial fills that add to existing position
+      const existing = entryLotsMap.get(fillSymbol) ?? 0;
+      entryLotsMap.set(fillSymbol, existing + parseFloat(fill?.size ?? fill?.quantity ?? "0"));
     }
 
     // Closing fill: new position size === 0
@@ -144,7 +150,8 @@ export async function computePnlReport(
     const exitPrice = parseFloat(fill?.price ?? fill?.fill_price ?? "0");
     const entryPrice = entryFill ? parseFloat(entryFill?.price ?? entryFill?.fill_price ?? "0") : 0;
     const side = entryFill?.side ?? fill?.side ?? "buy";
-    const size = parseFloat(fill?.size ?? fill?.quantity ?? "0");
+    // Use accumulated entry lots if available, otherwise use closing fill size
+    const size = entryLotsMap.get(closingSymbol) ?? parseFloat(fill?.size ?? fill?.quantity ?? "0");
 
     const notionalValue = parseFloat((size * contractSize * exitPrice).toFixed(2));
     trades.push({
@@ -163,6 +170,7 @@ export async function computePnlReport(
     });
 
     entryFillMap.delete(closingSymbol);
+    entryLotsMap.delete(closingSymbol);
 
     // Daily breakdown
     if (!dailyMap.has(dateIST)) {
