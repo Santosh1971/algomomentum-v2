@@ -20,6 +20,7 @@ export default function Navbar() {
     { href: "/admin/users", label: "Users" },
     { href: "/admin/billing-report", label: "Billing" },
     { href: "/admin/bot-status", label: "Bot Status" },
+    { href: "/admin/positions", label: "Positions" },
     { href: "/admin/managesymbols", label: "Symbols" },
     { href: "/simulator", label: "Simulator" },
   ];
