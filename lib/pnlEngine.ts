@@ -150,6 +150,13 @@ export async function computePnlReport(
     const exitPrice = parseFloat(fill?.price ?? fill?.fill_price ?? "0");
     const entryPrice = entryFill ? parseFloat(entryFill?.price ?? entryFill?.fill_price ?? "0") : 0;
     const side = entryFill?.side ?? fill?.side ?? "buy";
+    // Debug prev position
+    if (trades.length < 3) console.log("[PrevDebug]", JSON.stringify({
+      meta_data_keys: Object.keys(fill?.meta_data ?? {}).join(","),
+      prev_pos: fill?.meta_data?.previous_position,
+      new_pos: fill?.meta_data?.new_position,
+      old_pos: fill?.meta_data?.old_position,
+    }));
     // Position lot size = previous position size (before close) ÷ contractSize
     // meta_data.previous_position.size = total position size in raw contracts
     const prevPositionSize = Math.abs(parseFloat(
