@@ -320,7 +320,7 @@ export default function TradeConfigPage() {
                       {account.tradeConfigs.length === 0 ? (
                         <div className="p-6 text-center text-sm text-gray-400">
                           No symbols yet —
-                          <button onClick={() => { setActiveAccountId(account.id); setModal("addSymbol"); }}
+                          <button onClick={() => { setActiveAccountId(account.id); setActiveBalance(balances[account.id] ?? null); setModal("addSymbol"); }}
                             className="ml-1 text-blue-500 hover:underline">add one</button>
                         </div>
                       ) : (
