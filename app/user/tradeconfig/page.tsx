@@ -452,11 +452,24 @@ export default function TradeConfigPage() {
             <h2 className="text-lg font-bold text-gray-800 mb-1">Add Symbol</h2>
             <p className="text-xs text-gray-400 mb-4">Bot settings (leverage, mode, compound) are configured by the admin.</p>
             <div className="space-y-3">
+              {activeBalance && (
+                <div className="bg-blue-50 rounded-lg px-3 py-2 text-sm">
+                  <span className="text-gray-500">Available: </span>
+                  <span className="font-semibold text-blue-700">₹{activeBalance.availableINR.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</span>
+                  <span className="text-gray-400 mx-2">·</span>
+                  <span className="text-gray-500">Total: </span>
+                  <span className="font-medium text-gray-700">₹{activeBalance.totalINR.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</span>
+                </div>
+              )}
               <div>
                 <label className="text-sm font-medium text-gray-700">Symbol</label>
-                <input value={symbolForm.script} onChange={e => setSymbolForm({ ...symbolForm, script: e.target.value })}
-                  placeholder="e.g. BTCUSD"
-                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
+                <select value={symbolForm.script} onChange={e => setSymbolForm({ ...symbolForm, script: e.target.value })}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]">
+                  <option value="">Select symbol...</option>
+                  {scripts.map(s => (
+                    <option key={s.symbol} value={s.symbol}>{s.symbol}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-700">Allocated Amount (₹)</label>
