@@ -150,19 +150,17 @@ export async function computePnlReport(
     const exitPrice = parseFloat(fill?.price ?? fill?.fill_price ?? "0");
     const entryPrice = entryFill ? parseFloat(entryFill?.price ?? entryFill?.fill_price ?? "0") : 0;
     const side = entryFill?.side ?? fill?.side ?? "buy";
-    // Use accumulated entry lots if available, otherwise use closing fill size
-    const size = entryLotsMap.get(closingSymbol) ?? parseFloat(fill?.size ?? fill?.quantity ?? "0");
-    // Debug notional and size
-    if (trades.length < 3) console.log("[NotionalDebug]", JSON.stringify({
-      size: fill?.size,
-      notional: fill?.notional,
-      price: fill?.price,
-      contractSize,
-      notionalDivPrice: fill?.notional && fill?.price ? (parseFloat(fill.notional)/parseFloat(fill.price)).toFixed(2) : null,
-      sizeDivContractSize: (parseFloat(fill?.size??0)/contractSize).toFixed(2),
-      metaNewSize: fill?.meta_data?.new_position?.size,
-      metaPrevSize: fill?.meta_data?.previous_position?.size,
-    }));
+    // Position lot size = previous position size (before close) ÷ contractSize
+    // meta_data.previous_position.size = total position size in raw contracts
+    const prevPositionSize = Math.abs(parseFloat(
+      fill?.meta_data?.previous_position?.size ??
+      fill?.meta_data?.old_position?.size ??
+      "0"
+    ));
+    const size = prevPositionSize > 0
+      ? Math.round(prevPositionSize / contractSize)  // e.g. 56500 ÷ 100 = 565 lots
+      : parseFloat(fill?.size ?? fill?.quantity ?? "0");
+
 
     const notionalValue = parseFloat((size * contractSize * exitPrice).toFixed(2));
     trades.push({
