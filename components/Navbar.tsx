@@ -20,6 +20,8 @@ export default function Navbar() {
     { href: "/admin/users", label: "Users" },
     { href: "/admin/billing-report", label: "Billing" },
     { href: "/admin/bot-status", label: "Bot Status" },
+    { href: "/admin/managesymbols", label: "Symbols" },
+    { href: "/simulator", label: "Simulator" },
   ];
 
   const links = isAdmin && !path.startsWith("/user") ? adminLinks : userLinks;

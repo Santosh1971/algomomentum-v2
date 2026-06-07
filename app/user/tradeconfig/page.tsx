@@ -20,6 +20,7 @@ interface DeltaAccount {
   isActive: boolean; createdAt: string; tradeConfigs: TradeConfig[];
 }
 interface Balance { availableUSD: number; totalUSD: number; availableINR: number; totalINR: number; }
+interface Script { symbol: string; lot: number; }
 interface Position {
   symbol: string; side: string; size: number; entryPrice: number;
   markPrice: number; upnlUSD: number; upnlINR: number;
@@ -49,6 +50,8 @@ export default function TradeConfigPage() {
   const [currency, setCurrency] = useState<CurrencyMode>("USD");
   const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set());
   const [modal, setModal] = useState<ModalType>(null);
+  const [scripts, setScripts] = useState<Script[]>([]);
+  const [activeBalance, setActiveBalance] = useState<Balance | null>(null);
   const [activeAccountId, setActiveAccountId] = useState<string | null>(null);
   const [activeConfig, setActiveConfig] = useState<TradeConfig | null>(null);
   const [accountForm, setAccountForm] = useState({ accountName: "", accountType: "main" });
@@ -89,6 +92,9 @@ export default function TradeConfigPage() {
   }
 
   useEffect(() => { loadAccounts(); }, []);
+  useEffect(() => {
+    fetch("/api/v1/script").then(r => r.json()).then(d => setScripts(Array.isArray(d) ? d : []));
+  }, []);
   useEffect(() => {
     accounts.forEach(a => { if (a.delta_account_name) { loadBalance(a.id); loadPositions(a.id); } });
   }, [accounts]);
@@ -292,7 +298,11 @@ export default function TradeConfigPage() {
                           className="text-xs px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium">
                           {account.delta_account_name ? "Reconnect" : "Connect"}
                         </button>
-                        <button onClick={() => { setActiveAccountId(account.id); setModal("addSymbol"); }}
+                        <button onClick={() => {
+                            setActiveAccountId(account.id);
+                            setActiveBalance(balances[account.id] ?? null);
+                            setModal("addSymbol");
+                          }}
                           className="text-xs px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 font-medium">+ Symbol</button>
                         <button onClick={() => deleteAccount(account.id)}
                           className="text-xs px-3 py-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 font-medium">Delete</button>

@@ -70,6 +70,20 @@ export default function UserBillingPage() {
           )}
         </div>
 
+        {/* QR always visible on left */}
+        {settings && (
+          <div className="bg-white rounded-2xl shadow-sm border p-4 flex flex-col items-center gap-2">
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Pay via UPI</p>
+            {settings.upiQrImageUrl ? (
+              <img src={settings.upiQrImageUrl} alt="UPI QR" className="w-48 h-48 rounded-lg border object-contain" />
+            ) : (
+              <div className="w-48 h-48 rounded-lg border bg-gray-50 flex items-center justify-center text-xs text-gray-400">QR not set yet</div>
+            )}
+            {settings.upiId && <p className="text-xs font-mono text-gray-700">{settings.upiId}</p>}
+            {settings.adminWhatsapp && <p className="text-xs text-gray-500">WhatsApp: {settings.adminWhatsapp}</p>}
+          </div>
+        )}
+
         {loading ? (
           <div className="flex justify-center py-20">
             <div className="w-8 h-8 border-4 border-[#1E3A5F] border-t-transparent rounded-full animate-spin" />
@@ -115,32 +129,13 @@ export default function UserBillingPage() {
                       </div>
                     )}
 
-                    {/* QR always visible */}
-                    {settings && (
-                      <div className="border border-gray-100 rounded-xl p-4 space-y-3">
-                        <div className="flex gap-4 items-start">
-                          {settings.upiQrImageUrl ? (
-                            <img src={settings.upiQrImageUrl} alt="UPI QR" className="w-48 h-48 rounded-lg border object-contain" />
-                          ) : (
-                            <div className="w-48 h-48 rounded-lg border bg-gray-50 flex items-center justify-center text-xs text-gray-400">QR not set yet</div>
-                          )}
-                          <div className="flex-1 space-y-2 text-sm text-gray-600">
-                            {settings.upiId && (
-                              <p>UPI ID: <span className="font-mono font-medium text-gray-800">{settings.upiId}</span></p>
-                            )}
-                            {!isPaid && <p>Amount due: <span className="font-bold text-gray-800">${b.billableAmount.toFixed(2)}</span></p>}
-                            {settings.adminWhatsapp && <p className="text-xs text-gray-500">Send payment screenshot to WhatsApp: <span className="font-medium text-gray-700">{settings.adminWhatsapp}</span></p>}
-                          </div>
-                        </div>
-                        {!isPaid && !isPending && (
-                          <button
-                            onClick={() => markAsPaid(b.id)}
-                            disabled={markingId === b.id}
-                            className="w-full bg-[#1E3A5F] text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-[#152c4a] disabled:opacity-50">
-                            {markingId === b.id ? "Marking..." : "✓ I've Paid — Notify Amit"}
-                          </button>
-                        )}
-                      </div>
+                    {!isPaid && !isPending && (
+                      <button
+                        onClick={() => markAsPaid(b.id)}
+                        disabled={markingId === b.id}
+                        className="w-full bg-[#1E3A5F] text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-[#152c4a] disabled:opacity-50">
+                        {markingId === b.id ? "Marking..." : "✓ I've Paid — Notify Amit"}
+                      </button>
                     )}
                   </div>
                 </div>
