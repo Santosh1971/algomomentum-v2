@@ -121,9 +121,9 @@ export default function UserBillingPage() {
                         <p className="text-sm font-semibold text-gray-700">How to pay</p>
                         <div className="flex gap-4 items-start">
                           {settings.upiQrImageUrl ? (
-                            <img src={settings.upiQrImageUrl} alt="UPI QR" className="w-28 h-28 rounded-lg border object-contain" />
+                            <img src={settings.upiQrImageUrl} alt="UPI QR" className="w-48 h-48 rounded-lg border object-contain" />
                           ) : (
-                            <div className="w-28 h-28 rounded-lg border bg-gray-50 flex items-center justify-center text-xs text-gray-400">QR pending</div>
+                            <div className="w-48 h-48 rounded-lg border bg-gray-50 flex items-center justify-center text-xs text-gray-400">QR not set yet</div>
                           )}
                           <div className="flex-1 space-y-2 text-sm text-gray-600">
                             {settings.upiId && (

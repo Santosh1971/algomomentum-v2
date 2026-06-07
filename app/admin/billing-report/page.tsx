@@ -173,7 +173,7 @@ export default function AdminBillingPage() {
               <label className="text-xs text-gray-500 block mb-1">UPI QR image</label>
               <div className="flex items-center gap-2">
                 {settings?.upiQrImageUrl && (
-                  <img src={settings.upiQrImageUrl} alt="QR" className="w-10 h-10 rounded border object-contain" />
+                  <img src={settings.upiQrImageUrl} alt="QR" className="w-20 h-20 rounded border object-contain" />
                 )}
                 <button onClick={() => qrInputRef.current?.click()}
                   className="text-xs px-3 py-2 rounded-lg border text-gray-600 hover:bg-gray-50">
