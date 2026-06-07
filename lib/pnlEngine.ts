@@ -145,6 +145,8 @@ export async function computePnlReport(
     const entryPrice = entryFill ? parseFloat(entryFill?.price ?? entryFill?.fill_price ?? "0") : 0;
     const side = entryFill?.side ?? fill?.side ?? "buy";
     const size = parseFloat(fill?.size ?? fill?.quantity ?? "0");
+    // Debug: log fill fields to understand size field
+    if (trades.length < 3) console.log("[FillDebug]", JSON.stringify({ size: fill?.size, quantity: fill?.quantity, meta_size: fill?.meta_data?.new_position?.size, prev_size: fill?.meta_data?.previous_position?.size, symbol: fill?.product_symbol }));
 
     const notionalValue = parseFloat((size * contractSize * exitPrice).toFixed(2));
     trades.push({
