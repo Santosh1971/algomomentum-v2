@@ -152,14 +152,16 @@ export async function computePnlReport(
     const side = entryFill?.side ?? fill?.side ?? "buy";
     // Use accumulated entry lots if available, otherwise use closing fill size
     const size = entryLotsMap.get(closingSymbol) ?? parseFloat(fill?.size ?? fill?.quantity ?? "0");
-    // Debug size fields
-    if (trades.length < 3) console.log("[SizeDebug]", JSON.stringify({
-      size: fill?.size, qty: fill?.qty, quantity: fill?.quantity,
-      filled_size: fill?.filled_size, order_size: fill?.order_size,
-      meta_new_size: fill?.meta_data?.new_position?.size,
-      meta_prev_size: fill?.meta_data?.previous_position?.size,
-      entryLots: entryLotsMap.get(closingSymbol),
-      allKeys: Object.keys(fill ?? {}).join(",")
+    // Debug notional and size
+    if (trades.length < 3) console.log("[NotionalDebug]", JSON.stringify({
+      size: fill?.size,
+      notional: fill?.notional,
+      price: fill?.price,
+      contractSize,
+      notionalDivPrice: fill?.notional && fill?.price ? (parseFloat(fill.notional)/parseFloat(fill.price)).toFixed(2) : null,
+      sizeDivContractSize: (parseFloat(fill?.size??0)/contractSize).toFixed(2),
+      metaNewSize: fill?.meta_data?.new_position?.size,
+      metaPrevSize: fill?.meta_data?.previous_position?.size,
     }));
 
     const notionalValue = parseFloat((size * contractSize * exitPrice).toFixed(2));
