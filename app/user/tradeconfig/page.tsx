@@ -466,9 +466,13 @@ export default function TradeConfigPage() {
                 <select value={symbolForm.script} onChange={e => setSymbolForm({ ...symbolForm, script: e.target.value })}
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]">
                   <option value="">Select symbol...</option>
-                  {scripts.map(s => (
-                    <option key={s.symbol} value={s.symbol}>{s.symbol}</option>
-                  ))}
+                  {scripts
+                    .filter(s => !accounts
+                      .find(a => a.id === activeAccountId)
+                      ?.tradeConfigs.some(tc => tc.script === s.symbol))
+                    .map(s => (
+                      <option key={s.symbol} value={s.symbol}>{s.symbol}</option>
+                    ))}
                 </select>
               </div>
               <div>
