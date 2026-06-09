@@ -57,7 +57,7 @@ export default function SignupPage() {
     else toast.error(data.error ?? "Invalid OTP");
   }
 
-  const inp = "w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F] bg-gray-50";
+  const inp = "w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F] bg-gray-50 placeholder-gray-500";
   const set = (k: string) => (e: any) => setForm({...form, [k]: e.target.value});
 
   return (
