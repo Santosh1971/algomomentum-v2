@@ -199,10 +199,10 @@ export default function ManageSymbolsPage() {
                       <p className="text-xs font-semibold text-gray-600 mb-2">📏 Horizontal Line Alert — Messages (hardcoded side)</p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {[
-                          { label: "🟢 Buy Entry", side: "buy" as const, trade: "entry" as const },
-                          { label: "🔴 Sell Entry", side: "sell" as const, trade: "entry" as const },
-                          { label: "⬆️ Buy Exit", side: "buy" as const, trade: "exit" as const },
-                          { label: "⬇️ Sell Exit", side: "sell" as const, trade: "exit" as const },
+                          { label: "📈 Long (Buy Entry)", side: "buy" as const, trade: "entry" as const },
+                          { label: "📉 Short (Sell Entry)", side: "sell" as const, trade: "entry" as const },
+                          { label: "🚪 Exit Short (Buy to close)", side: "buy" as const, trade: "exit" as const },
+                          { label: "🚪 Exit Long (Sell to close)", side: "sell" as const, trade: "exit" as const },
                         ].map(({ label, side, trade }) => {
                           const payload = hLinePayload(s.symbol, side, trade);
                           return (
