@@ -60,7 +60,7 @@ export async function verifyKeys(apiKey: string, apiSecret: string) {
     const r = await axios.get(`${BASE_URL}/v2/profile`, { 
       headers: headers(apiKey, signature, timestamp) 
     });
-    if (r.data?.success) return r.data;
+    if (r.data?.success) { console.log("Delta profile:", JSON.stringify(r.data.result)); return r.data; }
   } catch (e: any) {
     // Sub-accounts may not have /v2/profile access, try balances
     console.log("Profile failed, trying balances for sub-account...");
