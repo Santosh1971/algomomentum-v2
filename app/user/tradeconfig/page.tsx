@@ -230,7 +230,7 @@ export default function TradeConfigPage() {
               ))}
             </div>
             {availableTypes.length > 0 && (
-              <button onClick={() => setModal("addAccount")}
+              <button onClick={() => { const available = ACCOUNT_TYPES.filter(t => !accounts.map(a => a.accountType).includes(t.value)); setAccountForm({ accountName: "", accountType: available[0]?.value ?? "sub1" }); setModal("addAccount"); }}
                 className="bg-[#1E3A5F] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#152c4a] transition">
                 + Add Account
               </button>
@@ -247,7 +247,7 @@ export default function TradeConfigPage() {
             <p className="text-4xl mb-3">📡</p>
             <p className="text-gray-600 font-medium">No accounts yet</p>
             <p className="text-sm text-gray-400 mt-1">Add your first Delta Exchange account to start trading</p>
-            <button onClick={() => setModal("addAccount")} className="mt-4 bg-[#1E3A5F] text-white px-5 py-2 rounded-lg text-sm font-semibold">
+            <button onClick={() => { const available = ACCOUNT_TYPES.filter(t => !accounts.map(a => a.accountType).includes(t.value)); setAccountForm({ accountName: "", accountType: available[0]?.value ?? "sub1" }); setModal("addAccount"); }} className="mt-4 bg-[#1E3A5F] text-white px-5 py-2 rounded-lg text-sm font-semibold">
               + Add Account
             </button>
           </div>
