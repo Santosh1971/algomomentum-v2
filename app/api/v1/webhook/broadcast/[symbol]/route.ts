@@ -83,7 +83,7 @@ async function handleEntry({ config, side, script }: { config: ConfigInfo; side:
   if (!marketPrice) throw new Error(`Could not fetch market price for ${script.exchange_symbol}`);
   const amountUSD = config.amount / INR_TO_USD;
   const lot = script.lot || 1;
-  const quantity = Math.max(lot, Math.floor(amountUSD / marketPrice / lot) * lot);
+  const quantity = Math.max(1, Math.floor(amountUSD / marketPrice / lot));
   if (config.leverage && config.leverage > 1) {
     await setLeverage(config.api_key_enc, config.api_secret_enc, script.productId, config.leverage);
   }
