@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
 
     // Save verified credentials to DeltaAccount
     if (accountId) {
-      await prisma.deltaAccount.update({
+      const acct = await prisma.deltaAccount.update({
         where: { id: accountId },
         data: {
           api_key_enc: encrypt(api_key),
@@ -38,6 +38,14 @@ export async function POST(req: NextRequest) {
           delta_user_id: deltaUserId,
         },
       });
+      // Also save Delta user ID to UserDetails for main accounts
+      const account = await prisma.deltaAccount.findUnique({ where: { id: accountId } });
+      if (account?.accountType === 'main') {
+        await prisma.userDetails.updateMany({
+          where: { userId: account.userId },
+          data: { deltaUserId, deltaAccountName: accountName },
+        });
+      }
     }
 
     return NextResponse.json({
