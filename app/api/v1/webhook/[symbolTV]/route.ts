@@ -73,7 +73,7 @@ async function handleEntry({ config, side, script }: { config: ConfigInfo; side:
   if (!marketPrice) throw new Error(`Could not fetch market price for ${script.exchange_symbol}`);
   const amountUSD = config.amount / INR_TO_USD;
   const lot = script.lot || 1;
-  const quantity = Math.max(lot, Math.floor(amountUSD / marketPrice / lot) * lot);
+  const quantity = Math.max(1, Math.floor(amountUSD / marketPrice / lot));
   console.log(`📦 Entry: amountINR=${config.amount} amountUSD=${amountUSD.toFixed(2)} price=${marketPrice} qty=${quantity}`);
   const body = {
     product_id: script.productId,
