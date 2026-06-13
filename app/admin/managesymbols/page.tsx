@@ -59,6 +59,20 @@ export default function ManageSymbolsPage() {
     toast.success("Deleted"); load();
   }
 
+  function getBroadcastUrl(symbol: string) {
+    const secret = process.env.NEXT_PUBLIC_BROADCAST_SECRET ?? "changeme";
+    return `${window.location.origin}/api/v1/webhook/broadcast/${symbol}?secret=${secret}`;
+  }
+
+  function getPayload(symbol: string, side: "buy" | "sell", trade: "entry" | "exit") {
+    return JSON.stringify({ symbol, side, trade, price: "{{close}}", trigger_time: "{{timenow}}" });
+  }
+
+  function copyText(text: string, label: string) {
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copied!`);
+  }
+
   const inp = "w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]";
 
   return (
@@ -137,6 +151,70 @@ export default function ManageSymbolsPage() {
             </table>
           </div>
         </div>
+
+        {/* Broadcast Webhook Section */}
+        <div className="bg-white rounded-2xl shadow-sm border p-5 space-y-4">
+          <div>
+            <h2 className="text-lg font-bold text-[#1E3A5F]">📡 Broadcast Webhooks</h2>
+            <p className="text-sm text-gray-500 mt-1">One URL fires trades for ALL active users on that symbol simultaneously.</p>
+          </div>
+          {loading ? (
+            <p className="text-sm text-gray-400">Loading...</p>
+          ) : scripts.length === 0 ? (
+            <p className="text-sm text-gray-400">No symbols configured yet.</p>
+          ) : (
+            <div className="space-y-4">
+              {scripts.map((s) => {
+                const url = getBroadcastUrl(s.symbol);
+                return (
+                  <div key={s.symbol} className="border rounded-xl p-4 space-y-3 bg-gray-50">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-[#1E3A5F] text-sm">{s.symbol}</span>
+                      <span className="text-xs text-gray-400 bg-white border px-2 py-0.5 rounded-full">broadcast</span>
+                    </div>
+
+                    {/* Webhook URL */}
+                    <div>
+                      <p className="text-xs text-gray-500 mb-1 font-medium">Webhook URL</p>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 text-xs bg-white border rounded-lg px-3 py-2 text-gray-700 truncate">
+                          {url}
+                        </code>
+                        <button onClick={() => copyText(url, "URL")}
+                          className="text-xs bg-[#1E3A5F] text-white px-3 py-2 rounded-lg hover:bg-[#152c4a] whitespace-nowrap">
+                          Copy URL
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Payloads */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {[
+                        { label: "🟢 Buy Entry", side: "buy" as const, trade: "entry" as const },
+                        { label: "🔴 Sell Entry", side: "sell" as const, trade: "entry" as const },
+                        { label: "⬆️ Buy Exit", side: "buy" as const, trade: "exit" as const },
+                        { label: "⬇️ Sell Exit", side: "sell" as const, trade: "exit" as const },
+                      ].map(({ label, side, trade }) => {
+                        const payload = getPayload(s.symbol, side, trade);
+                        return (
+                          <div key={`${side}-${trade}`} className="bg-white border rounded-lg p-3 space-y-1">
+                            <p className="text-xs font-medium text-gray-600">{label} — Message</p>
+                            <code className="text-xs text-gray-500 block break-all">{payload}</code>
+                            <button onClick={() => copyText(payload, `${label} payload`)}
+                              className="text-xs text-blue-600 hover:text-blue-800 font-medium">
+                              Copy Message
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   );
