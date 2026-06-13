@@ -19,13 +19,17 @@ export default function ManageSymbolsPage() {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState(blank);
   const [editSymbol, setEditSymbol] = useState<string | null>(null);
+  const [broadcastSecret, setBroadcastSecret] = useState("");
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/Signup");
     if (status === "authenticated" && session.user.role !== "admin") router.push("/user/dashboard");
   }, [status, session, router]);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    fetch("/api/v1/broadcast-secret").then(r => r.json()).then(d => setBroadcastSecret(d.secret ?? ""));
+  }, []);
 
   async function load() {
     const res = await fetch("/api/v1/script");
@@ -60,17 +64,18 @@ export default function ManageSymbolsPage() {
   }
 
   function getBroadcastUrl(symbol: string) {
-    const secret = process.env.NEXT_PUBLIC_BROADCAST_SECRET ?? "changeme";
-    return `${window.location.origin}/api/v1/webhook/broadcast/${symbol}?secret=${secret}`;
-  }
-
-  function getPayload(symbol: string, side: "buy" | "sell", trade: "entry" | "exit") {
-    return JSON.stringify({ symbol, side, trade, price: "{{close}}", trigger_time: "{{timenow}}" });
+    return `${window.location.origin}/api/v1/webhook/broadcast/${symbol}?secret=${broadcastSecret}`;
   }
 
   function copyText(text: string, label: string) {
     navigator.clipboard.writeText(text);
     toast.success(`${label} copied!`);
+  }
+
+  const strategyPayload = `{"symbol":"{{ticker}}","side":"{{strategy.order.action}}","trade":"{{strategy.order.comment}}","price":"{{strategy.order.price}}","trigger_time":"{{timenow}}"}`;
+
+  function hLinePayload(symbol: string, side: "buy" | "sell", trade: "entry" | "exit") {
+    return `{"symbol":"${symbol}","side":"${side}","trade":"${trade}","price":"{{close}}","trigger_time":"{{timenow}}"}`;
   }
 
   const inp = "w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]";
@@ -136,14 +141,8 @@ export default function ManageSymbolsPage() {
                     <td className="px-3 py-2">{s.lot}</td>
                     <td className="px-3 py-2">{s.Max_pos_size}</td>
                     <td className="px-3 py-2 flex gap-2">
-                      <button onClick={() => startEdit(s)}
-                        className="text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded-lg hover:bg-blue-100">
-                        Edit
-                      </button>
-                      <button onClick={() => deleteScript(s.symbol)}
-                        className="text-xs bg-red-50 text-red-600 px-3 py-1 rounded-lg hover:bg-red-100">
-                        Delete
-                      </button>
+                      <button onClick={() => startEdit(s)} className="text-xs bg-blue-50 text-blue-600 px-3 py-1 rounded-lg hover:bg-blue-100">Edit</button>
+                      <button onClick={() => deleteScript(s.symbol)} className="text-xs bg-red-50 text-red-600 px-3 py-1 rounded-lg hover:bg-red-100">Delete</button>
                     </td>
                   </tr>
                 ))}
@@ -158,6 +157,16 @@ export default function ManageSymbolsPage() {
             <h2 className="text-lg font-bold text-[#1E3A5F]">📡 Broadcast Webhooks</h2>
             <p className="text-sm text-gray-500 mt-1">One URL fires trades for ALL active users on that symbol simultaneously.</p>
           </div>
+
+          {/* Strategy Payload — common for all symbols */}
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-2">
+            <p className="text-sm font-semibold text-blue-800">📈 Pine Script Strategy Alert — Message (same for all symbols)</p>
+            <p className="text-xs text-blue-600 mb-1">Use this when alert is triggered from a Pine Script strategy. Side and trade are dynamic.</p>
+            <code className="text-xs text-gray-700 block break-all bg-white border rounded-lg px-3 py-2">{strategyPayload}</code>
+            <button onClick={() => copyText(strategyPayload, "Strategy payload")}
+              className="text-xs text-blue-600 hover:text-blue-800 font-medium">Copy Message</button>
+          </div>
+
           {loading ? (
             <p className="text-sm text-gray-400">Loading...</p>
           ) : scripts.length === 0 ? (
@@ -175,11 +184,9 @@ export default function ManageSymbolsPage() {
 
                     {/* Webhook URL */}
                     <div>
-                      <p className="text-xs text-gray-500 mb-1 font-medium">Webhook URL</p>
+                      <p className="text-xs text-gray-500 mb-1 font-medium">Webhook URL (use for both Strategy & H-Line alerts)</p>
                       <div className="flex items-center gap-2">
-                        <code className="flex-1 text-xs bg-white border rounded-lg px-3 py-2 text-gray-700 truncate">
-                          {url}
-                        </code>
+                        <code className="flex-1 text-xs bg-white border rounded-lg px-3 py-2 text-gray-700 truncate">{url}</code>
                         <button onClick={() => copyText(url, "URL")}
                           className="text-xs bg-[#1E3A5F] text-white px-3 py-2 rounded-lg hover:bg-[#152c4a] whitespace-nowrap">
                           Copy URL
@@ -187,26 +194,27 @@ export default function ManageSymbolsPage() {
                       </div>
                     </div>
 
-                    {/* Payloads */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {[
-                        { label: "🟢 Buy Entry", side: "buy" as const, trade: "entry" as const },
-                        { label: "🔴 Sell Entry", side: "sell" as const, trade: "entry" as const },
-                        { label: "⬆️ Buy Exit", side: "buy" as const, trade: "exit" as const },
-                        { label: "⬇️ Sell Exit", side: "sell" as const, trade: "exit" as const },
-                      ].map(({ label, side, trade }) => {
-                        const payload = getPayload(s.symbol, side, trade);
-                        return (
-                          <div key={`${side}-${trade}`} className="bg-white border rounded-lg p-3 space-y-1">
-                            <p className="text-xs font-medium text-gray-600">{label} — Message</p>
-                            <code className="text-xs text-gray-500 block break-all">{payload}</code>
-                            <button onClick={() => copyText(payload, `${label} payload`)}
-                              className="text-xs text-blue-600 hover:text-blue-800 font-medium">
-                              Copy Message
-                            </button>
-                          </div>
-                        );
-                      })}
+                    {/* H-Line Payloads */}
+                    <div>
+                      <p className="text-xs font-semibold text-gray-600 mb-2">📏 Horizontal Line Alert — Messages (hardcoded side)</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {[
+                          { label: "🟢 Buy Entry", side: "buy" as const, trade: "entry" as const },
+                          { label: "🔴 Sell Entry", side: "sell" as const, trade: "entry" as const },
+                          { label: "⬆️ Buy Exit", side: "buy" as const, trade: "exit" as const },
+                          { label: "⬇️ Sell Exit", side: "sell" as const, trade: "exit" as const },
+                        ].map(({ label, side, trade }) => {
+                          const payload = hLinePayload(s.symbol, side, trade);
+                          return (
+                            <div key={`${side}-${trade}`} className="bg-white border rounded-lg p-3 space-y-1">
+                              <p className="text-xs font-medium text-gray-600">{label}</p>
+                              <code className="text-xs text-gray-500 block break-all">{payload}</code>
+                              <button onClick={() => copyText(payload, `${label} message`)}
+                                className="text-xs text-blue-600 hover:text-blue-800 font-medium">Copy Message</button>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 );
