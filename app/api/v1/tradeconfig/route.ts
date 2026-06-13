@@ -169,7 +169,7 @@ export async function PUT(req: NextRequest) {
   const { id, ...rest } = await req.json();
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
-  const updateData: any = { ...rest, lastEditAt: new Date() };
+  const updateData: any = { ...rest, lastEditAt: new Date(), ...(rest.amount !== undefined && { initial_amount: rest.amount }) };
 
   const updated = await prisma.tradeConfig.update({
     where: { id },
