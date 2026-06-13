@@ -89,6 +89,9 @@ export default function SignupPage() {
                 className="w-full bg-[#1E3A5F] hover:bg-[#152c4a] text-white font-semibold py-3 rounded-xl transition disabled:opacity-50">
                 {loading ? "Signing in..." : "Sign In"}
               </button>
+              <div className="text-center">
+                <a href="/ForgotPassword" className="text-sm text-[#1E3A5F] hover:underline font-medium">Forgot password?</a>
+              </div>
             </div>
           )}
 

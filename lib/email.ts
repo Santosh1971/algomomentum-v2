@@ -41,7 +41,7 @@ export async function sendWelcomeEmail(email: string, name: string) {
         <h2 style="color:#1E3A5F">Welcome aboard, ${name}!</h2>
         <p style="color:#6b7280">Your account is now active. Connect your Delta Exchange API keys to start trading.</p>
         <div style="text-align:center;margin-top:24px">
-          <a href="https://algomomentum-v2-production-7e76.up.railway.app/user/tradeconfig"
+          <a href="https://www.algomomentum.in/user/tradeconfig"
              style="background:#1E3A5F;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold">
             Get Started
           </a>
@@ -50,5 +50,32 @@ export async function sendWelcomeEmail(email: string, name: string) {
     });
   } catch (e) {
     console.error("Welcome email failed:", e);
+  }
+}
+
+export async function sendPasswordResetEmail(email: string, name: string, resetUrl: string) {
+  try {
+    await resend.emails.send({
+      from: FROM, to: email,
+      subject: "Reset your AlgoMomentum password",
+      html: `<div style="font-family:Arial;max-width:480px;margin:0 auto;padding:32px;background:#f9fafb;border-radius:12px">
+        <div style="background:#1E3A5F;padding:24px;border-radius:8px;text-align:center;margin-bottom:24px">
+          <h1 style="color:white;margin:0;font-size:24px">AlgoMomentum</h1>
+          <p style="color:#93c5fd;margin:4px 0 0;font-size:14px">Bridge Platform v2</p>
+        </div>
+        <h2 style="color:#1E3A5F">Password Reset Request</h2>
+        <p style="color:#6b7280">Hi ${name}, we received a request to reset your password. Click the button below to set a new password.</p>
+        <div style="text-align:center;margin:32px 0">
+          <a href="${resetUrl}" style="background:#1E3A5F;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:16px">
+            Reset Password
+          </a>
+        </div>
+        <p style="color:#9ca3af;font-size:12px;text-align:center">This link expires in 1 hour. If you did not request this, ignore this email.</p>
+        <p style="color:#9ca3af;font-size:12px;text-align:center;word-break:break-all">Or copy this link: ${resetUrl}</p>
+      </div>`,
+    });
+    console.log("Password reset email sent to", email);
+  } catch (e) {
+    console.error("Password reset email failed:", e);
   }
 }
