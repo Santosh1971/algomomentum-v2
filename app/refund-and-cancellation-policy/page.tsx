@@ -9,8 +9,8 @@ export default function RefundPolicy() {
     { title: "5. Service Suspension", content: "If payment is not completed after a billing cycle, automated trading will be temporarily disabled until dues are cleared." },
   ];
   return (
-    <div className="min-h-screen bg-[#0A0F1E] text-white">
-      <nav className="w-full bg-[#0F172A] border-b border-slate-700/60 px-6 py-3 flex items-center justify-between sticky top-0 z-50">
+    <div className="min-h-screen bg-[#0D1117] text-white">
+      <nav className="w-full bg-[#0D1117] border-b border-slate-700/60 px-6 py-3 flex items-center justify-between sticky top-0 z-50">
         <Link href="/" className="flex items-center gap-2.5">
           <Image src="/alm-logo.png" alt="AlgoMomentum" width={36} height={36} className="rounded-lg object-cover" />
           <div className="flex flex-col leading-tight">
@@ -25,7 +25,7 @@ export default function RefundPolicy() {
         <p className="text-slate-400 text-sm mb-8 leading-relaxed">At AlgoMomentum, we operate on a postpaid billing model, meaning users are only charged after profits are realized.</p>
         <div className="space-y-6">
           {sections.map((s) => (
-            <div key={s.title} className="bg-[#0F172A] border border-slate-700/50 rounded-xl p-5">
+            <div key={s.title} className="bg-[#0D1117] border border-slate-700/50 rounded-xl p-5">
               <h2 className="text-white font-semibold text-sm mb-2">{s.title}</h2>
               <p className="text-slate-400 text-sm leading-relaxed">{s.content}</p>
             </div>

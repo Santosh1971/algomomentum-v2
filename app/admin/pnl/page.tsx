@@ -93,14 +93,14 @@ function AdminPnlInner() {
         <div className="flex items-center justify-between">
           <div>
             <button onClick={() => router.back()} className="text-sm text-gray-400 hover:text-gray-600 mb-1 block">← Back</button>
-            <h1 className="text-2xl font-bold text-[#1E3A5F]">Trade History {symbol && `— ${symbol}`}</h1>
+            <h1 className="text-2xl font-bold text-[#161B22]">Trade History {symbol && `— ${symbol}`}</h1>
           </div>
           <div className="flex items-center gap-3">
             {report && <button onClick={downloadExcel} className="text-sm px-3 py-1.5 rounded-lg border text-gray-600 hover:bg-gray-50">⬇ Excel</button>}
             <div className="flex bg-white border rounded-lg overflow-hidden text-sm">
               {(["USD", "INR"] as const).map(c => (
                 <button key={c} onClick={() => setCurrency(c)}
-                  className={`px-3 py-1.5 font-medium transition ${currency === c ? "bg-[#1E3A5F] text-white" : "text-gray-600 hover:bg-gray-50"}`}>{c}</button>
+                  className={`px-3 py-1.5 font-medium transition ${currency === c ? "bg-[#161B22] text-white" : "text-gray-600 hover:bg-gray-50"}`}>{c}</button>
               ))}
             </div>
           </div>
@@ -110,7 +110,7 @@ function AdminPnlInner() {
           <div>
             <label className="text-xs font-medium text-gray-500 block mb-1">Quick range</label>
             <select value={quickRange} onChange={e => applyQuickRange(e.target.value)}
-              className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]">
+              className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#161B22]">
               <option value="custom">Custom</option>
               <option value="7d">Last 7 days</option>
               <option value="30d">Last 30 days</option>
@@ -122,15 +122,15 @@ function AdminPnlInner() {
           <div>
             <label className="text-xs font-medium text-gray-500 block mb-1">From (IST)</label>
             <input type="date" value={from} onChange={e => { setFrom(e.target.value); setQuickRange("custom"); }}
-              className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
+              className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#161B22]" />
           </div>
           <div>
             <label className="text-xs font-medium text-gray-500 block mb-1">To (IST)</label>
             <input type="date" value={to} onChange={e => { setTo(e.target.value); setQuickRange("custom"); }}
-              className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
+              className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#161B22]" />
           </div>
           <button onClick={loadReport} disabled={loading}
-            className="bg-[#1E3A5F] text-white px-5 py-2 rounded-xl font-semibold text-sm hover:bg-[#152c4a] disabled:opacity-50">
+            className="bg-[#161B22] text-white px-5 py-2 rounded-xl font-semibold text-sm hover:bg-[#161B22] disabled:opacity-50">
             {loading ? "Loading..." : "Load Report"}
           </button>
         </div>
@@ -164,7 +164,7 @@ function AdminPnlInner() {
                     <YAxis yAxisId="pnl" orientation="right" tick={{ fontSize: 11 }} />
                     <Tooltip formatter={(v: any, name: any) => [currency === "INR" ? `₹${(Number(v)*INR).toLocaleString("en-IN")}` : `$${Number(v).toFixed(2)}`, name]} />
                     <Legend />
-                    <Line yAxisId="equity" type="monotone" dataKey="Equity" stroke="#1E3A5F" dot={false} strokeWidth={2} />
+                    <Line yAxisId="equity" type="monotone" dataKey="Equity" stroke="#161B22" dot={false} strokeWidth={2} />
                     <Bar yAxisId="pnl" dataKey="Net PnL" fill="#22c55e" opacity={0.7} radius={[2,2,0,0]} />
                   </ComposedChart>
                 </ResponsiveContainer>

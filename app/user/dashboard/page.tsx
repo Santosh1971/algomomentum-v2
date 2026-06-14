@@ -18,7 +18,7 @@ export default function DashboardPage() {
       <Navbar />
       <div className="max-w-5xl mx-auto p-6 space-y-6">
         <div className="bg-white rounded-2xl p-6 shadow-sm border">
-          <h1 className="text-2xl font-bold text-[#1E3A5F]">Welcome back, {session?.user?.name || session?.user?.email} 👋</h1>
+          <h1 className="text-2xl font-bold text-[#161B22]">Welcome back, {session?.user?.name || session?.user?.email} 👋</h1>
           <p className="text-gray-500 mt-1">{isAdmin ? "Viewing as User — click Admin Panel to switch back" : "User Dashboard"}</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

@@ -24,7 +24,7 @@ export default function Navbar() {
   ];
   const links = isAdmin && !path.startsWith("/user") ? adminLinks : userLinks;
   return (
-    <nav className="bg-[#0F172A] text-white px-6 py-2 flex items-center justify-between shadow-lg sticky top-0 z-40">
+    <nav className="bg-[#0D1117] text-white px-6 py-2 flex items-center justify-between shadow-lg sticky top-0 z-40">
       <div className="flex items-center gap-6">
         <Link href={isAdmin && !path.startsWith("/user") ? "/admin/dashboard" : "/user/dashboard"}
           className="flex items-center gap-2.5 select-none">
@@ -40,7 +40,7 @@ export default function Navbar() {
               className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
                 path === l.href
                   ? "bg-white/20 text-white font-medium"
-                  : "text-blue-200 hover:text-white hover:bg-white/10"
+                  : "text-cyan-300 hover:text-white hover:bg-white/10"
               }`}>
               {l.label}
             </Link>
@@ -54,7 +54,7 @@ export default function Navbar() {
             {path.startsWith("/user") ? "⚙ Admin Panel" : "👤 User View"}
           </Link>
         )}
-        <span className="text-xs text-blue-300 hidden md:block">{session?.user?.email}</span>
+        <span className="text-xs text-cyan-400 hidden md:block">{session?.user?.email}</span>
         <button onClick={() => signOut({ callbackUrl: "/Signup" })}
           className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition">
           Sign Out

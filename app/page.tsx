@@ -3,8 +3,8 @@ import Link from "next/link";
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[#0A0F1E] text-white flex flex-col">
-      <nav className="w-full bg-[#0F172A] border-b border-slate-700/60 px-6 py-3 flex items-center justify-between sticky top-0 z-50 shadow-lg">
+    <div className="min-h-screen bg-[#0D1117] text-white flex flex-col">
+      <nav className="w-full bg-[#0D1117] border-b border-slate-700/60 px-6 py-3 flex items-center justify-between sticky top-0 z-50 shadow-lg">
         <div className="flex items-center gap-2.5">
           <Image src="/alm-logo.png" alt="AlgoMomentum" width={40} height={40} className="rounded-lg object-cover" priority />
           <div className="flex flex-col leading-tight">
@@ -14,7 +14,7 @@ export default function LandingPage() {
         </div>
         <Link href="/Signup" className="bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-sm px-5 py-2 rounded-lg transition">Sign In</Link>
       </nav>
-      <section className="flex flex-col items-center justify-center text-center px-6 py-24 bg-gradient-to-b from-[#0F172A] to-[#0A0F1E]">
+      <section className="flex flex-col items-center justify-center text-center px-6 py-24 bg-gradient-to-b from-[#0D1117] to-[#0D1117]">
         <Image src="/alm-logo.png" alt="ALM" width={100} height={100} className="rounded-2xl object-cover mx-auto shadow-2xl shadow-cyan-500/20 mb-8" />
         <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-4">
           Automate Your <span className="text-cyan-400">Crypto Trading</span>
@@ -38,7 +38,7 @@ export default function LandingPage() {
             { icon: "🤖", title: "Strategy Backtester", desc: "Test PDH/PDL, EMA Cross, and ALM3 strategies on historical data before going live." },
             { icon: "🇮🇳", title: "Built for India", desc: "Designed for Delta Exchange India. Postpaid billing, Indian support, Indian servers." },
           ].map((f) => (
-            <div key={f.title} className="bg-[#0F172A] border border-slate-700/50 rounded-2xl p-6 hover:border-cyan-500/40 transition">
+            <div key={f.title} className="bg-[#0D1117] border border-slate-700/50 rounded-2xl p-6 hover:border-cyan-500/40 transition">
               <div className="text-3xl mb-3">{f.icon}</div>
               <h3 className="font-semibold text-white mb-2">{f.title}</h3>
               <p className="text-slate-400 text-sm leading-relaxed">{f.desc}</p>
@@ -46,7 +46,7 @@ export default function LandingPage() {
           ))}
         </div>
       </section>
-      <section className="px-6 py-20 bg-[#0F172A] w-full">
+      <section className="px-6 py-20 bg-[#0D1117] w-full">
         <div className="max-w-4xl mx-auto">
           <h2 className="text-3xl font-bold text-center mb-12">How It Works</h2>
           <div className="grid md:grid-cols-4 gap-6 text-center">
@@ -66,7 +66,7 @@ export default function LandingPage() {
         </div>
       </section>
       <section className="px-6 py-16 text-center max-w-3xl mx-auto">
-        <div className="bg-[#0F172A] border border-cyan-500/20 rounded-2xl p-8">
+        <div className="bg-[#0D1117] border border-cyan-500/20 rounded-2xl p-8">
           <div className="text-4xl mb-4">💰</div>
           <h2 className="text-2xl font-bold mb-3">Postpaid. No Upfront Cost.</h2>
           <p className="text-slate-400 text-sm leading-relaxed">We operate on a postpaid model. No upfront payment required. You are charged a fixed monthly fee per active trading bot, billed at the end of each month. Stop anytime, no strings attached.</p>
@@ -77,7 +77,7 @@ export default function LandingPage() {
         <p className="text-slate-400 mb-8 max-w-xl mx-auto">Join AlgoMomentum and let your strategies run while you sleep. Powered by Delta Exchange India.</p>
         <Link href="/Signup" className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold px-10 py-4 rounded-xl text-base transition shadow-lg shadow-cyan-500/30">Create Your Account</Link>
       </section>
-      <footer className="bg-[#0F172A] border-t border-slate-700/60 px-6 py-10 mt-auto">
+      <footer className="bg-[#0D1117] border-t border-slate-700/60 px-6 py-10 mt-auto">
         <div className="max-w-6xl mx-auto">
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div>

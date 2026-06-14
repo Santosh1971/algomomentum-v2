@@ -50,7 +50,7 @@ export default function BotStatusPage() {
       <div className="max-w-6xl mx-auto p-6 space-y-5">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-[#1E3A5F]">Bot Status</h1>
+            <h1 className="text-2xl font-bold text-[#161B22]">Bot Status</h1>
             <p className="text-sm text-gray-500 mt-1">
               {activeCount} active · {bots.length - activeCount} inactive · {bots.length} total
             </p>
@@ -58,7 +58,7 @@ export default function BotStatusPage() {
           <div className="flex bg-white border rounded-lg overflow-hidden text-sm">
             {(["all", "active", "inactive"] as const).map(f => (
               <button key={f} onClick={() => setFilter(f)}
-                className={`px-3 py-1.5 font-medium capitalize transition ${filter === f ? "bg-[#1E3A5F] text-white" : "text-gray-600 hover:bg-gray-50"}`}>
+                className={`px-3 py-1.5 font-medium capitalize transition ${filter === f ? "bg-[#161B22] text-white" : "text-gray-600 hover:bg-gray-50"}`}>
                 {f}
               </button>
             ))}
@@ -67,13 +67,13 @@ export default function BotStatusPage() {
 
         {loading ? (
           <div className="flex justify-center py-20">
-            <div className="w-8 h-8 border-4 border-[#1E3A5F] border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-4 border-[#161B22] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
           <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-[#1E3A5F] text-white text-xs">
+                <tr className="bg-[#161B22] text-white text-xs">
                   {["User", "Account", "Symbol", "Amount", "Lev", "Mode", "Status", "Actions"].map(h => (
                     <th key={h} className="px-4 py-3 text-left font-medium">{h}</th>
                   ))}
@@ -119,7 +119,7 @@ export default function BotStatusPage() {
                         </td>
                         <td className="px-4 py-3">
                           <Link href={`/admin/users/${b.user.id}`}
-                            className="text-xs bg-[#1E3A5F] text-white px-3 py-1.5 rounded-lg hover:bg-[#152c4a]">
+                            className="text-xs bg-[#161B22] text-white px-3 py-1.5 rounded-lg hover:bg-[#161B22]">
                             Manage
                           </Link>
                         </td>

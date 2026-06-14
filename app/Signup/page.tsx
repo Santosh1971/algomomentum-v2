@@ -57,13 +57,13 @@ export default function SignupPage() {
     else toast.error(data.error ?? "Invalid OTP");
   }
 
-  const inp = "w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F] bg-gray-50 placeholder-gray-500";
+  const inp = "w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#161B22] bg-gray-50 placeholder-gray-500";
   const set = (k: string) => (e: any) => setForm({...form, [k]: e.target.value});
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#1E3A5F] to-[#0f2440] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-[#161B22] to-[#0D1117] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-        <div className="bg-[#0F172A] px-8 py-6 flex flex-col items-center gap-3">
+        <div className="bg-[#0D1117] px-8 py-6 flex flex-col items-center gap-3">
           <img src="/alm-logo.png" alt="AlgoMomentum" width="64" height="64" style={{borderRadius:"12px", objectFit:"cover"}} />
           <div className="text-center">
             <h1 className="text-xl font-bold text-white">AlgoMomentum</h1>
@@ -76,7 +76,7 @@ export default function SignupPage() {
             <div className="flex bg-gray-100 rounded-xl p-1 mb-5">
               {(["login", "signup"] as const).map(m => (
                 <button key={m} onClick={() => setMode(m)}
-                  className={`flex-1 py-2 rounded-lg text-sm font-medium transition ${mode === m ? "bg-white shadow text-[#1E3A5F]" : "text-gray-500"}`}>
+                  className={`flex-1 py-2 rounded-lg text-sm font-medium transition ${mode === m ? "bg-white shadow text-[#161B22]" : "text-gray-500"}`}>
                   {m === "login" ? "Sign In" : "Sign Up"}
                 </button>
               ))}
@@ -89,11 +89,11 @@ export default function SignupPage() {
               <input value={form.password} onChange={set("password")} placeholder="Password" type="password" className={inp}
                 onKeyDown={e => e.key === "Enter" && handleLogin()} />
               <button onClick={handleLogin} disabled={loading}
-                className="w-full bg-[#1E3A5F] hover:bg-[#152c4a] text-white font-semibold py-3 rounded-xl transition disabled:opacity-50">
+                className="w-full bg-[#161B22] hover:bg-[#161B22] text-white font-semibold py-3 rounded-xl transition disabled:opacity-50">
                 {loading ? "Signing in..." : "Sign In"}
               </button>
               <div className="text-center">
-                <a href="/ForgotPassword" className="text-sm text-[#1E3A5F] hover:underline font-medium">Forgot password?</a>
+                <a href="/ForgotPassword" className="text-sm text-[#161B22] hover:underline font-medium">Forgot password?</a>
               </div>
             </div>
           )}
@@ -121,7 +121,7 @@ export default function SignupPage() {
               <input value={form.country} onChange={set("country")} placeholder="Country" className={inp} />
 
               <button onClick={handleSignup} disabled={loading}
-                className="w-full bg-[#1E3A5F] hover:bg-[#152c4a] text-white font-semibold py-3 rounded-xl transition disabled:opacity-50 mt-2">
+                className="w-full bg-[#161B22] hover:bg-[#161B22] text-white font-semibold py-3 rounded-xl transition disabled:opacity-50 mt-2">
                 {loading ? "Sending OTP..." : "Create Account"}
               </button>
             </div>
@@ -131,7 +131,7 @@ export default function SignupPage() {
             <div className="space-y-4">
               <div className="text-center mb-2">
                 <p className="text-3xl mb-2">📧</p>
-                <h2 className="font-bold text-[#1E3A5F] text-lg">Verify your email</h2>
+                <h2 className="font-bold text-[#161B22] text-lg">Verify your email</h2>
                 <p className="text-sm text-gray-500 mt-1">OTP sent to <span className="font-medium">{form.email}</span></p>
               </div>
               <input value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
@@ -139,7 +139,7 @@ export default function SignupPage() {
                 className={`${inp} text-center text-2xl tracking-widest font-mono`}
                 onKeyDown={e => e.key === "Enter" && handleVerify()} />
               <button onClick={handleVerify} disabled={loading || otp.length !== 6}
-                className="w-full bg-[#1E3A5F] hover:bg-[#152c4a] text-white font-semibold py-3 rounded-xl transition disabled:opacity-50">
+                className="w-full bg-[#161B22] hover:bg-[#161B22] text-white font-semibold py-3 rounded-xl transition disabled:opacity-50">
                 {loading ? "Verifying..." : "Verify OTP"}
               </button>
               <button onClick={async () => {
@@ -157,13 +157,13 @@ export default function SignupPage() {
           {mode === "pending" && (
             <div className="text-center space-y-4 py-4">
               <p className="text-4xl">⏳</p>
-              <h2 className="font-bold text-[#1E3A5F] text-lg">Registration Complete!</h2>
+              <h2 className="font-bold text-[#161B22] text-lg">Registration Complete!</h2>
               <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-sm text-yellow-800">
                 <p className="font-semibold">Pending Admin Approval</p>
                 <p className="mt-1 text-xs">Your account has been verified. An admin will review and activate your account shortly. You will be able to login once approved.</p>
               </div>
               <button onClick={() => setMode("login")}
-                className="w-full bg-[#1E3A5F] text-white font-semibold py-3 rounded-xl transition hover:bg-[#152c4a]">
+                className="w-full bg-[#161B22] text-white font-semibold py-3 rounded-xl transition hover:bg-[#161B22]">
                 Back to Sign In
               </button>
             </div>

@@ -61,7 +61,7 @@ export default function UserBillingPage() {
       <Navbar />
       <div className="max-w-3xl mx-auto p-6 space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-[#1E3A5F]">Billing & Payment</h1>
+          <h1 className="text-2xl font-bold text-[#161B22]">Billing & Payment</h1>
           {totalDue > 0 && (
             <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-2 text-right">
               <p className="text-xs text-red-500">Total due</p>
@@ -86,7 +86,7 @@ export default function UserBillingPage() {
 
         {loading ? (
           <div className="flex justify-center py-20">
-            <div className="w-8 h-8 border-4 border-[#1E3A5F] border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-4 border-[#161B22] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : billings.length === 0 ? (
           <div className="bg-white rounded-2xl p-12 text-center shadow-sm border">
@@ -133,7 +133,7 @@ export default function UserBillingPage() {
                       <button
                         onClick={() => markAsPaid(b.id)}
                         disabled={markingId === b.id}
-                        className="w-full bg-[#1E3A5F] text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-[#152c4a] disabled:opacity-50">
+                        className="w-full bg-[#161B22] text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-[#161B22] disabled:opacity-50">
                         {markingId === b.id ? "Marking..." : "✓ I've Paid — Notify Amit"}
                       </button>
                     )}

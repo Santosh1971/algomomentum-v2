@@ -217,21 +217,21 @@ export default function TradeConfigPage() {
       <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-[#1E3A5F]">Trading Accounts</h1>
+            <h1 className="text-2xl font-bold text-[#161B22]">Trading Accounts</h1>
             <p className="text-sm text-gray-500 mt-1">Manage Delta Exchange accounts and symbol configs</p>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex bg-white border rounded-lg overflow-hidden text-sm">
               {(["USD", "INR"] as CurrencyMode[]).map(c => (
                 <button key={c} onClick={() => setCurrency(c)}
-                  className={`px-3 py-1.5 font-medium transition ${currency === c ? "bg-[#1E3A5F] text-white" : "text-gray-600 hover:bg-gray-50"}`}>
+                  className={`px-3 py-1.5 font-medium transition ${currency === c ? "bg-[#161B22] text-white" : "text-gray-600 hover:bg-gray-50"}`}>
                   {c}
                 </button>
               ))}
             </div>
             {availableTypes.length > 0 && (
               <button onClick={() => { const available = ACCOUNT_TYPES.filter(t => !accounts.map(a => a.accountType).includes(t.value)); setAccountForm({ accountName: "", accountType: available[0]?.value ?? "sub1" }); setModal("addAccount"); }}
-                className="bg-[#1E3A5F] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#152c4a] transition">
+                className="bg-[#161B22] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#161B22] transition">
                 + Add Account
               </button>
             )}
@@ -240,14 +240,14 @@ export default function TradeConfigPage() {
 
         {loading ? (
           <div className="flex justify-center py-20">
-            <div className="w-8 h-8 border-4 border-[#1E3A5F] border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-4 border-[#161B22] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : accounts.length === 0 ? (
           <div className="bg-white rounded-2xl p-12 text-center shadow-sm border">
             <p className="text-4xl mb-3">📡</p>
             <p className="text-gray-600 font-medium">No accounts yet</p>
             <p className="text-sm text-gray-400 mt-1">Add your first Delta Exchange account to start trading</p>
-            <button onClick={() => { const available = ACCOUNT_TYPES.filter(t => !accounts.map(a => a.accountType).includes(t.value)); setAccountForm({ accountName: "", accountType: available[0]?.value ?? "sub1" }); setModal("addAccount"); }} className="mt-4 bg-[#1E3A5F] text-white px-5 py-2 rounded-lg text-sm font-semibold">
+            <button onClick={() => { const available = ACCOUNT_TYPES.filter(t => !accounts.map(a => a.accountType).includes(t.value)); setAccountForm({ accountName: "", accountType: available[0]?.value ?? "sub1" }); setModal("addAccount"); }} className="mt-4 bg-[#161B22] text-white px-5 py-2 rounded-lg text-sm font-semibold">
               + Add Account
             </button>
           </div>
@@ -427,7 +427,7 @@ export default function TradeConfigPage() {
               <div>
                 <label className="text-sm font-medium text-gray-700">Account Type</label>
                 <select value={accountForm.accountType} onChange={e => setAccountForm({ ...accountForm, accountType: e.target.value })}
-                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]">
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#161B22]">
                   {availableTypes.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
                 </select>
               </div>
@@ -435,12 +435,12 @@ export default function TradeConfigPage() {
                 <label className="text-sm font-medium text-gray-700">Display Name</label>
                 <input value={accountForm.accountName} onChange={e => setAccountForm({ ...accountForm, accountName: e.target.value })}
                   placeholder="e.g. My Main Account"
-                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#161B22]" />
               </div>
             </div>
             <div className="flex gap-3 mt-5">
               <button onClick={closeModal} className="flex-1 border rounded-lg py-2 text-sm text-gray-600">Cancel</button>
-              <button onClick={createAccount} className="flex-1 bg-[#1E3A5F] text-white rounded-lg py-2 text-sm font-semibold">Create & Connect Keys</button>
+              <button onClick={createAccount} className="flex-1 bg-[#161B22] text-white rounded-lg py-2 text-sm font-semibold">Create & Connect Keys</button>
             </div>
           </div>
         </div>
@@ -464,7 +464,7 @@ export default function TradeConfigPage() {
               <div>
                 <label className="text-sm font-medium text-gray-700">Symbol</label>
                 <select value={symbolForm.script} onChange={e => setSymbolForm({ ...symbolForm, script: e.target.value })}
-                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]">
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#161B22]">
                   <option value="">Select symbol...</option>
                   {scripts
                     .filter(s => !accounts
@@ -479,13 +479,13 @@ export default function TradeConfigPage() {
                 <label className="text-sm font-medium text-gray-700">Allocated Amount (₹)</label>
                 <input type="number" value={symbolForm.amount} onChange={e => setSymbolForm({ ...symbolForm, amount: e.target.value })}
                   placeholder="e.g. 5000"
-                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#161B22]" />
                 <p className="text-xs text-gray-400 mt-1">Must be within your available Delta account balance.</p>
               </div>
             </div>
             <div className="flex gap-3 mt-5">
               <button onClick={closeModal} className="flex-1 border rounded-lg py-2 text-sm text-gray-600">Cancel</button>
-              <button onClick={() => addSymbol()} className="flex-1 bg-[#1E3A5F] text-white rounded-lg py-2 text-sm font-semibold">Add Symbol</button>
+              <button onClick={() => addSymbol()} className="flex-1 bg-[#161B22] text-white rounded-lg py-2 text-sm font-semibold">Add Symbol</button>
             </div>
           </div>
         </div>
@@ -500,7 +500,7 @@ export default function TradeConfigPage() {
               <div>
                 <label className="text-sm font-medium text-gray-700">Allocated Amount (₹)</label>
                 <input type="number" value={symbolForm.amount} onChange={e => setSymbolForm({ ...symbolForm, amount: e.target.value })}
-                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#161B22]" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -515,7 +515,7 @@ export default function TradeConfigPage() {
             </div>
             <div className="flex gap-3 mt-5">
               <button onClick={closeModal} className="flex-1 border rounded-lg py-2 text-sm text-gray-600">Cancel</button>
-              <button onClick={updateSymbol} className="flex-1 bg-[#1E3A5F] text-white rounded-lg py-2 text-sm font-semibold">Save Changes</button>
+              <button onClick={updateSymbol} className="flex-1 bg-[#161B22] text-white rounded-lg py-2 text-sm font-semibold">Save Changes</button>
             </div>
           </div>
         </div>

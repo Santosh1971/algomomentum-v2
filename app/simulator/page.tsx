@@ -97,7 +97,7 @@ export default function SimulatorPage() {
     if (!LW) return;
     const chart = LW.createChart(chartRef.current, {
       width: chartRef.current.clientWidth, height: 400,
-      layout: { background: { color: "#ffffff" }, textColor: "#1E3A5F" },
+      layout: { background: { color: "#ffffff" }, textColor: "#161B22" },
       grid: { vertLines: { color: "#f3f4f6" }, horzLines: { color: "#f3f4f6" } },
       timeScale: { timeVisible: true, secondsVisible: false },
       crosshair: { mode: 1 },
@@ -345,7 +345,7 @@ export default function SimulatorPage() {
     if (h > 0) return `${h}h ${m}m ${s}s`; if (m > 0) return `${m}m ${s}s`; return `${s}s`;
   }
 
-  const inp = "w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F] placeholder-gray-500";
+  const inp = "w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#161B22] placeholder-gray-500";
   const btnBase = "py-3 px-4 rounded-xl border-2 font-semibold text-sm transition-all active:scale-95 cursor-pointer";
 
   return (
@@ -355,7 +355,7 @@ export default function SimulatorPage() {
 
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-[#1E3A5F]">Signal Simulator & Trade Planner</h1>
+            <h1 className="text-2xl font-bold text-[#161B22]">Signal Simulator & Trade Planner</h1>
             <p className="text-sm text-gray-500 mt-1">Plan trades with live chart · fire signals to your bridge</p>
           </div>
           {outboundIp && (
@@ -489,7 +489,7 @@ export default function SimulatorPage() {
             <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
               <div className="px-4 py-3 border-b flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <p className="font-semibold text-[#1E3A5F]">{activeSymbol} — {resolution}</p>
+                  <p className="font-semibold text-[#161B22]">{activeSymbol} — {resolution}</p>
                   {loadingChart && <span className="text-xs text-gray-400 animate-pulse">Loading...</span>}
                 </div>
                 <div className="flex items-center gap-3">
@@ -499,7 +499,7 @@ export default function SimulatorPage() {
                     <span className="text-green-500 font-semibold">— TP</span>
                   </div>
                   <button onClick={() => setDragMode(d => !d)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${dragMode ? "bg-blue-500 text-white border-blue-600" : "bg-gray-100 text-gray-600 border-gray-300 hover:bg-gray-200"}`}>
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${dragMode ? "bg-cyan-500 text-white border-blue-600" : "bg-gray-100 text-gray-600 border-gray-300 hover:bg-gray-200"}`}>
                     {dragMode ? `✋ Drag ON${activeDrag ? ` (${activeDrag})` : " — hover line"}` : "🖱 Drag Levels"}
                   </button>
                 </div>

@@ -131,7 +131,7 @@ export default function PnlReportPage() {
       <Navbar />
       <div className="max-w-6xl mx-auto p-6 space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-[#1E3A5F]">PnL Report</h1>
+          <h1 className="text-2xl font-bold text-[#161B22]">PnL Report</h1>
           <div className="flex items-center gap-3">
             {report && (
               <button onClick={downloadExcel}
@@ -140,7 +140,7 @@ export default function PnlReportPage() {
             <div className="flex bg-white border rounded-lg overflow-hidden text-sm">
               {(["USD", "INR"] as const).map(c => (
                 <button key={c} onClick={() => setCurrency(c)}
-                  className={`px-3 py-1.5 font-medium transition ${currency === c ? "bg-[#1E3A5F] text-white" : "text-gray-600 hover:bg-gray-50"}`}>{c}</button>
+                  className={`px-3 py-1.5 font-medium transition ${currency === c ? "bg-[#161B22] text-white" : "text-gray-600 hover:bg-gray-50"}`}>{c}</button>
               ))}
             </div>
           </div>
@@ -152,14 +152,14 @@ export default function PnlReportPage() {
             <div>
               <label className="text-xs font-medium text-gray-500 block mb-1">Symbol</label>
               <select value={selectedConfigId} onChange={e => setSelectedConfigId(e.target.value)}
-                className="border rounded-lg px-3 py-2 text-sm w-56 focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]">
+                className="border rounded-lg px-3 py-2 text-sm w-56 focus:outline-none focus:ring-2 focus:ring-[#161B22]">
                 {allConfigs.map(c => <option key={c.id} value={c.id}>{c.accountName} — {c.script}</option>)}
               </select>
             </div>
             <div>
               <label className="text-xs font-medium text-gray-500 block mb-1">Quick range</label>
               <select value={quickRange} onChange={e => applyQuickRange(e.target.value)}
-                className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]">
+                className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#161B22]">
                 <option value="custom">Custom</option>
                 <option value="7d">Last 7 days</option>
                 <option value="30d">Last 30 days</option>
@@ -172,15 +172,15 @@ export default function PnlReportPage() {
             <div>
               <label className="text-xs font-medium text-gray-500 block mb-1">From (IST)</label>
               <input type="date" value={from} onChange={e => { setFrom(e.target.value); setQuickRange("custom"); }}
-                className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
+                className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#161B22]" />
             </div>
             <div>
               <label className="text-xs font-medium text-gray-500 block mb-1">To (IST)</label>
               <input type="date" value={to} onChange={e => { setTo(e.target.value); setQuickRange("custom"); }}
-                className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
+                className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#161B22]" />
             </div>
             <button onClick={loadReport} disabled={loading}
-              className="bg-[#1E3A5F] text-white px-5 py-2 rounded-xl font-semibold text-sm hover:bg-[#152c4a] disabled:opacity-50 transition">
+              className="bg-[#161B22] text-white px-5 py-2 rounded-xl font-semibold text-sm hover:bg-[#161B22] disabled:opacity-50 transition">
               {loading ? "Loading..." : "Load Report"}
             </button>
           </div>
@@ -210,7 +210,7 @@ export default function PnlReportPage() {
               <div className="bg-white rounded-2xl p-5 shadow-sm border">
                 <p className="font-semibold text-gray-700 mb-3">Equity Curve & Cumulative PnL</p>
                 <div className="flex gap-4 text-xs text-gray-400 mb-1">
-                  <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-[#1E3A5F] inline-block"></span> Equity (notional $)</span>
+                  <span className="flex items-center gap-1"><span className="w-3 h-0.5 bg-[#161B22] inline-block"></span> Equity (notional $)</span>
                   <span className="flex items-center gap-1"><span className="w-3 h-3 bg-green-400 opacity-70 inline-block rounded-sm"></span> Cumulative PnL ($)</span>
                 </div>
                 <ResponsiveContainer width="100%" height={240}>
@@ -221,7 +221,7 @@ export default function PnlReportPage() {
                     <YAxis yAxisId="pnl" orientation="right" tick={{ fontSize: 11 }} label={{ value: "PnL $", angle: 90, position: "insideRight", style: { fontSize: 10 } }} />
                     <Tooltip formatter={(v: any, name: any) => [currency === "INR" ? `₹${(Number(v)*INR).toLocaleString("en-IN")}` : `$${Number(v).toFixed(2)}`, name]} />
                     <Legend />
-                    <Line yAxisId="equity" type="monotone" dataKey="Equity" stroke="#1E3A5F" dot={false} strokeWidth={2} />
+                    <Line yAxisId="equity" type="monotone" dataKey="Equity" stroke="#161B22" dot={false} strokeWidth={2} />
                     <Bar yAxisId="pnl" dataKey="Net PnL" fill="#22c55e" opacity={0.7} radius={[2, 2, 0, 0]} />
                   </ComposedChart>
                 </ResponsiveContainer>

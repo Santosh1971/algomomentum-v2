@@ -74,23 +74,23 @@ export default function AdminUsersPage() {
       <div className="max-w-7xl mx-auto p-6 space-y-5">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-[#1E3A5F]">All Users</h1>
+            <h1 className="text-2xl font-bold text-[#161B22]">All Users</h1>
             <p className="text-sm text-gray-500 mt-1">{users.length} registered clients</p>
           </div>
           <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search by name or email..."
-            className="border rounded-xl px-4 py-2 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
+            className="border rounded-xl px-4 py-2 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-[#161B22]" />
         </div>
 
         {loading ? (
           <div className="flex justify-center py-20">
-            <div className="w-8 h-8 border-4 border-[#1E3A5F] border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-4 border-[#161B22] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
           <div className="bg-white rounded-2xl shadow-sm border overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-[#1E3A5F] text-white text-xs">
+                <tr className="bg-[#161B22] text-white text-xs">
                   {["#", "Name", "Email", "Phone", "Age", "Gender", "City", "Delta ID", "Country", "Status", "Actions"].map(h => (
                     <th key={h} className="px-4 py-3 text-left font-medium whitespace-nowrap">{h}</th>
                   ))}
@@ -104,7 +104,7 @@ export default function AdminUsersPage() {
                     <td className="px-4 py-3 text-gray-400">{i + 1}</td>
                     <td className="px-4 py-3 font-medium text-gray-800 whitespace-nowrap">
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-[#1E3A5F] text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
+                        <div className="w-7 h-7 rounded-full bg-[#161B22] text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
                           {(u.name ?? u.email)[0].toUpperCase()}
                         </div>
                         {u.name ?? "—"}

@@ -148,7 +148,7 @@ export default function AdminBillingPage() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       <div className="max-w-6xl mx-auto p-6 space-y-6">
-        <h1 className="text-2xl font-bold text-[#1E3A5F]">Billing — Admin</h1>
+        <h1 className="text-2xl font-bold text-[#161B22]">Billing — Admin</h1>
 
         {/* Settings */}
         <div className="bg-white rounded-2xl p-5 shadow-sm border">
@@ -157,17 +157,17 @@ export default function AdminBillingPage() {
             <div>
               <label className="text-xs text-gray-500 block mb-1">Platform fee %</label>
               <input type="number" value={feeEdit} onChange={e => setFeeEdit(e.target.value)} min="0" max="100"
-                className="border rounded-lg px-3 py-2 text-sm w-28 focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
+                className="border rounded-lg px-3 py-2 text-sm w-28 focus:outline-none focus:ring-2 focus:ring-[#161B22]" />
             </div>
             <div>
               <label className="text-xs text-gray-500 block mb-1">UPI ID</label>
               <input value={upiEdit} onChange={e => setUpiEdit(e.target.value)} placeholder="amit@upi"
-                className="border rounded-lg px-3 py-2 text-sm w-52 focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
+                className="border rounded-lg px-3 py-2 text-sm w-52 focus:outline-none focus:ring-2 focus:ring-[#161B22]" />
             </div>
             <div>
               <label className="text-xs text-gray-500 block mb-1">WhatsApp number</label>
               <input value={waEdit} onChange={e => setWaEdit(e.target.value)} placeholder="+91XXXXXXXXXX"
-                className="border rounded-lg px-3 py-2 text-sm w-44 focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
+                className="border rounded-lg px-3 py-2 text-sm w-44 focus:outline-none focus:ring-2 focus:ring-[#161B22]" />
             </div>
             <div>
               <label className="text-xs text-gray-500 block mb-1">UPI QR image</label>
@@ -184,7 +184,7 @@ export default function AdminBillingPage() {
               </div>
             </div>
             <button onClick={saveSettings} disabled={savingSettings}
-              className="bg-[#1E3A5F] text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-[#152c4a] disabled:opacity-50">
+              className="bg-[#161B22] text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-[#161B22] disabled:opacity-50">
               {savingSettings ? "Saving..." : "Save"}
             </button>
           </div>
@@ -197,7 +197,7 @@ export default function AdminBillingPage() {
             <div>
               <label className="text-xs text-gray-500 block mb-1">User</label>
               <select value={genUserId} onChange={e => setGenUserId(e.target.value)}
-                className="border rounded-lg px-3 py-2 text-sm w-52 focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]">
+                className="border rounded-lg px-3 py-2 text-sm w-52 focus:outline-none focus:ring-2 focus:ring-[#161B22]">
                 <option value="">Select user...</option>
                 {allUsers.map(u => (
                   <option key={u.id} value={u.id}>{u.name ?? u.email}</option>
@@ -207,7 +207,7 @@ export default function AdminBillingPage() {
             <div>
               <label className="text-xs text-gray-500 block mb-1">Month</label>
               <input type="month" value={genMonth} onChange={e => setGenMonth(e.target.value)}
-                className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F]" />
+                className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#161B22]" />
             </div>
             <button onClick={generateNow} disabled={generating}
               className="bg-green-600 text-white px-5 py-2 rounded-lg text-sm font-semibold hover:bg-green-700 disabled:opacity-50">
@@ -220,7 +220,7 @@ export default function AdminBillingPage() {
         {/* Month-wise billing tables */}
         {loading ? (
           <div className="flex justify-center py-20">
-            <div className="w-8 h-8 border-4 border-[#1E3A5F] border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-4 border-[#161B22] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : months.length === 0 ? (
           <div className="bg-white rounded-2xl p-12 text-center shadow-sm border">
@@ -235,11 +235,11 @@ export default function AdminBillingPage() {
             const totalFee = rows.reduce((s, b) => s + b.billableAmount, 0);
             return (
               <div key={month} className="bg-white rounded-2xl shadow-sm border overflow-hidden">
-                <div className="px-5 py-3 bg-[#1E3A5F] flex items-center justify-between">
+                <div className="px-5 py-3 bg-[#161B22] flex items-center justify-between">
                   <span className="text-white font-semibold">{month}</span>
                   <div className="flex gap-6 text-sm">
-                    <span className="text-blue-200">Net PnL: <span className={`font-bold ${totalNet >= 0 ? "text-green-300" : "text-red-300"}`}>${totalNet.toFixed(2)}</span></span>
-                    <span className="text-blue-200">Platform fees: <span className="font-bold text-white">${totalFee.toFixed(2)}</span></span>
+                    <span className="text-cyan-300">Net PnL: <span className={`font-bold ${totalNet >= 0 ? "text-green-300" : "text-red-300"}`}>${totalNet.toFixed(2)}</span></span>
+                    <span className="text-cyan-300">Platform fees: <span className="font-bold text-white">${totalFee.toFixed(2)}</span></span>
                   </div>
                 </div>
                 <table className="w-full text-sm">

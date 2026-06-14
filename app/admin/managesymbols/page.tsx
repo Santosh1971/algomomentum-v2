@@ -78,13 +78,13 @@ export default function ManageSymbolsPage() {
     return `{"symbol":"${symbol}","side":"${side}","trade":"${trade}","price":"{{close}}","trigger_time":"{{timenow}}"}`;
   }
 
-  const inp = "w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F] placeholder-gray-500";
+  const inp = "w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#161B22] placeholder-gray-500";
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       <div className="max-w-6xl mx-auto p-6 space-y-6">
-        <h1 className="text-2xl font-bold text-[#1E3A5F]">Manage Symbols</h1>
+        <h1 className="text-2xl font-bold text-[#161B22]">Manage Symbols</h1>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white rounded-2xl p-5 shadow-sm border space-y-3">
             <h2 className="font-semibold text-gray-700">{editSymbol ? `Editing: ${editSymbol}` : "Add Symbol"}</h2>
@@ -107,7 +107,7 @@ export default function ManageSymbolsPage() {
             ))}
             <div className="flex gap-2">
               <button onClick={saveScript}
-                className="flex-1 bg-[#1E3A5F] text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-[#152c4a] transition">
+                className="flex-1 bg-[#161B22] text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-[#161B22] transition">
                 {editSymbol ? "Save Changes" : "Add Symbol"}
               </button>
               {editSymbol && (
@@ -122,7 +122,7 @@ export default function ManageSymbolsPage() {
           <div className="md:col-span-2 bg-white rounded-2xl shadow-sm border overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-[#1E3A5F] text-white text-xs">
+                <tr className="bg-[#161B22] text-white text-xs">
                   {["Symbol", "Exch Symbol", "Product ID", "Lot", "Max Pos", "Actions"].map((h) => (
                     <th key={h} className="px-3 py-3 text-left font-medium">{h}</th>
                   ))}
@@ -154,7 +154,7 @@ export default function ManageSymbolsPage() {
         {/* Broadcast Webhook Section */}
         <div className="bg-white rounded-2xl shadow-sm border p-5 space-y-4">
           <div>
-            <h2 className="text-lg font-bold text-[#1E3A5F]">📡 Broadcast Webhooks</h2>
+            <h2 className="text-lg font-bold text-[#161B22]">📡 Broadcast Webhooks</h2>
             <p className="text-sm text-gray-500 mt-1">One URL fires trades for ALL active users on that symbol simultaneously.</p>
           </div>
 
@@ -178,7 +178,7 @@ export default function ManageSymbolsPage() {
                 return (
                   <div key={s.symbol} className="border rounded-xl p-4 space-y-3 bg-gray-50">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-[#1E3A5F] text-sm">{s.symbol}</span>
+                      <span className="font-bold text-[#161B22] text-sm">{s.symbol}</span>
                       <span className="text-xs text-gray-400 bg-white border px-2 py-0.5 rounded-full">broadcast</span>
                     </div>
 
@@ -188,7 +188,7 @@ export default function ManageSymbolsPage() {
                       <div className="flex items-center gap-2">
                         <code className="flex-1 text-xs bg-white border rounded-lg px-3 py-2 text-gray-700 truncate">{url}</code>
                         <button onClick={() => copyText(url, "URL")}
-                          className="text-xs bg-[#1E3A5F] text-white px-3 py-2 rounded-lg hover:bg-[#152c4a] whitespace-nowrap">
+                          className="text-xs bg-[#161B22] text-white px-3 py-2 rounded-lg hover:bg-[#161B22] whitespace-nowrap">
                           Copy URL
                         </button>
                       </div>

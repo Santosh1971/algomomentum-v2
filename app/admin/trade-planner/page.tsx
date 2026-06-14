@@ -55,7 +55,7 @@ export default function TradePlannerPage() {
     const chart = LW.createChart(chartRef.current, {
       width: chartRef.current.clientWidth,
       height: 400,
-      layout: { background: { color: "#ffffff" }, textColor: "#1E3A5F" },
+      layout: { background: { color: "#ffffff" }, textColor: "#161B22" },
       grid: { vertLines: { color: "#f0f0f0" }, horzLines: { color: "#f0f0f0" } },
       timeScale: { timeVisible: true, secondsVisible: false },
       rightPriceScale: { borderColor: "#e5e7eb" },
@@ -132,13 +132,13 @@ export default function TradePlannerPage() {
     loadCandles(symbol);
   }
 
-  const inp = "w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F] placeholder-gray-500";
+  const inp = "w-full border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#161B22] placeholder-gray-500";
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       <div className="max-w-7xl mx-auto p-6 space-y-5">
-        <h1 className="text-2xl font-bold text-[#1E3A5F]">Trade Planner</h1>
+        <h1 className="text-2xl font-bold text-[#161B22]">Trade Planner</h1>
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
 
           {/* Left Panel */}
@@ -217,7 +217,7 @@ export default function TradePlannerPage() {
           <div className="lg:col-span-3 bg-white rounded-2xl shadow-sm border overflow-hidden">
             <div className="px-4 py-3 border-b flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <p className="font-semibold text-[#1E3A5F]">{symbol} — 15m</p>
+                <p className="font-semibold text-[#161B22]">{symbol} — 15m</p>
                 {loadingChart && <span className="text-xs text-gray-400 animate-pulse">Loading chart...</span>}
               </div>
               <div className="flex items-center gap-4 text-xs text-gray-500">

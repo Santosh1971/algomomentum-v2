@@ -53,7 +53,7 @@ export default function AdminPositionsPage() {
       <div className="max-w-6xl mx-auto p-6 space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-[#1E3A5F]">All Positions</h1>
+            <h1 className="text-2xl font-bold text-[#161B22]">All Positions</h1>
             <p className="text-sm text-gray-500 mt-1">Live positions across all user accounts</p>
           </div>
           <div className="flex items-center gap-3">
@@ -63,7 +63,7 @@ export default function AdminPositionsPage() {
             <div className="flex bg-white border rounded-lg overflow-hidden text-sm">
               {(["USD", "INR"] as const).map(c => (
                 <button key={c} onClick={() => setCurrency(c)}
-                  className={`px-3 py-1.5 font-medium transition ${currency === c ? "bg-[#1E3A5F] text-white" : "text-gray-600 hover:bg-gray-50"}`}>{c}</button>
+                  className={`px-3 py-1.5 font-medium transition ${currency === c ? "bg-[#161B22] text-white" : "text-gray-600 hover:bg-gray-50"}`}>{c}</button>
               ))}
             </div>
             <button onClick={loadAll} className="text-xs px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200">↻ Refresh</button>
@@ -72,7 +72,7 @@ export default function AdminPositionsPage() {
 
         {loading ? (
           <div className="flex justify-center py-20">
-            <div className="w-8 h-8 border-4 border-[#1E3A5F] border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-4 border-[#161B22] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : data.length === 0 ? (
           <div className="bg-white rounded-2xl p-12 text-center shadow-sm border">

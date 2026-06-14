@@ -36,7 +36,7 @@ export default function AdminDashboard() {
       <Navbar />
       <div className="max-w-5xl mx-auto p-6 space-y-6">
         <div className="bg-white rounded-2xl p-6 shadow-sm border">
-          <h1 className="text-2xl font-bold text-[#1E3A5F]">Admin Dashboard</h1>
+          <h1 className="text-2xl font-bold text-[#161B22]">Admin Dashboard</h1>
           <p className="text-gray-500 text-sm mt-1">AlgoMomentum Bridge v2 — Platform Overview</p>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

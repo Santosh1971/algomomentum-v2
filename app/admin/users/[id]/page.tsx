@@ -91,7 +91,7 @@ export default function AdminUserDetailPage() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       <div className="flex justify-center py-20">
-        <div className="w-8 h-8 border-4 border-[#1E3A5F] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-[#161B22] border-t-transparent rounded-full animate-spin" />
       </div>
     </div>
   );
@@ -119,7 +119,7 @@ export default function AdminUserDetailPage() {
               ← Users
             </Link>
             <div>
-              <h1 className="text-xl font-bold text-[#1E3A5F]">{user.name ?? user.email}</h1>
+              <h1 className="text-xl font-bold text-[#161B22]">{user.name ?? user.email}</h1>
               <p className="text-sm text-gray-500">{user.email} · {user.phone}</p>
             </div>
           </div>
@@ -127,7 +127,7 @@ export default function AdminUserDetailPage() {
             <div className="flex bg-white border rounded-lg overflow-hidden text-sm">
               {(["INR", "USD"] as const).map(c => (
                 <button key={c} onClick={() => setCurrency(c)}
-                  className={`px-3 py-1.5 font-medium transition ${currency === c ? "bg-[#1E3A5F] text-white" : "text-gray-600 hover:bg-gray-50"}`}>
+                  className={`px-3 py-1.5 font-medium transition ${currency === c ? "bg-[#161B22] text-white" : "text-gray-600 hover:bg-gray-50"}`}>
                   {c}
                 </button>
               ))}

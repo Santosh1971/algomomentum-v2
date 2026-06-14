@@ -62,9 +62,9 @@ export default function ConnectDeltaModal({ accountId, onSuccess, onClose }: Pro
                 <div className="relative">
                   <input type={showKey ? "text" : "password"} placeholder="Paste your Delta API Key"
                     value={apiKey} onChange={e => setApiKey(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 pr-16 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F] font-mono" />
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 pr-16 text-sm focus:outline-none focus:ring-2 focus:ring-[#161B22] font-mono" />
                   <button type="button" onClick={() => setShowKey(!showKey)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#1E3A5F] font-semibold">
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#161B22] font-semibold">
                     {showKey ? "Hide" : "Show"}
                   </button>
                 </div>
@@ -74,9 +74,9 @@ export default function ConnectDeltaModal({ accountId, onSuccess, onClose }: Pro
                 <div className="relative">
                   <input type={showSecret ? "text" : "password"} placeholder="Paste your Delta API Secret"
                     value={apiSecret} onChange={e => setApiSecret(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 pr-16 text-sm focus:outline-none focus:ring-2 focus:ring-[#1E3A5F] font-mono" />
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2.5 pr-16 text-sm focus:outline-none focus:ring-2 focus:ring-[#161B22] font-mono" />
                   <button type="button" onClick={() => setShowSecret(!showSecret)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#1E3A5F] font-semibold">
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#161B22] font-semibold">
                     {showSecret ? "Hide" : "Show"}
                   </button>
                 </div>
@@ -88,18 +88,18 @@ export default function ConnectDeltaModal({ accountId, onSuccess, onClose }: Pro
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700">❌ {errMsg}</div>
               )}
               <a href="https://india.delta.exchange/app/account/api-management" target="_blank" rel="noopener noreferrer"
-                className="block text-center text-xs text-[#1E3A5F] underline">
+                className="block text-center text-xs text-[#161B22] underline">
                 How to get your Delta API Key →
               </a>
               <button onClick={handleConnect}
-                className="w-full bg-[#1E3A5F] hover:bg-[#152c4a] text-white font-semibold py-3 rounded-xl transition-colors">
+                className="w-full bg-[#161B22] hover:bg-[#161B22] text-white font-semibold py-3 rounded-xl transition-colors">
                 Connect Account
               </button>
             </div>
           )}
           {step === "loading" && (
             <div className="py-10 text-center space-y-3">
-              <div className="w-10 h-10 border-4 border-[#1E3A5F] border-t-transparent rounded-full animate-spin mx-auto" />
+              <div className="w-10 h-10 border-4 border-[#161B22] border-t-transparent rounded-full animate-spin mx-auto" />
               <p className="text-sm text-gray-600">Validating credentials with Delta Exchange...</p>
             </div>
           )}
