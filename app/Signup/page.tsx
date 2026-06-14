@@ -63,9 +63,12 @@ export default function SignupPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#1E3A5F] to-[#0f2440] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-        <div className="bg-[#1E3A5F] px-8 py-6 text-center">
-          <h1 className="text-2xl font-bold text-white">AlgoMomentum</h1>
-          <p className="text-blue-200 text-sm mt-1">Bridge Platform v2</p>
+        <div className="bg-[#0F172A] px-8 py-6 flex flex-col items-center gap-3">
+          <img src="/alm-logo.png" alt="AlgoMomentum" width="64" height="64" style={{borderRadius:"12px", objectFit:"cover"}} />
+          <div className="text-center">
+            <h1 className="text-xl font-bold text-white">AlgoMomentum</h1>
+            <p className="text-cyan-400 text-xs mt-0.5 uppercase tracking-wider">Bridge Platform v2</p>
+          </div>
         </div>
 
         <div className="px-8 py-6">
