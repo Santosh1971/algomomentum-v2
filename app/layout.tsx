@@ -11,7 +11,7 @@ if (typeof window === "undefined") { startBillingCron(); }
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "AlgoMomentum Bridge",
+  title: "AlgoMomentum — Bridge Platform v2",
   description: "Automated trading platform for Delta Exchange India",
 };
 

@@ -2,19 +2,17 @@
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-
+import Image from "next/image";
 export default function Navbar() {
   const { data: session } = useSession();
   const path = usePathname();
   const isAdmin = session?.user?.role === "admin";
-
   const userLinks = [
     { href: "/user/dashboard", label: "Dashboard" },
     { href: "/user/tradeconfig", label: "Accounts" },
     { href: "/user/pnl-report", label: "PnL Report" },
     { href: "/user/payments", label: "Billing & Payment" },
   ];
-
   const adminLinks = [
     { href: "/admin/dashboard", label: "Dashboard" },
     { href: "/admin/users", label: "Users" },
@@ -24,14 +22,17 @@ export default function Navbar() {
     { href: "/admin/managesymbols", label: "Symbols" },
     { href: "/simulator", label: "Simulator" },
   ];
-
   const links = isAdmin && !path.startsWith("/user") ? adminLinks : userLinks;
-
   return (
-    <nav className="bg-[#1E3A5F] text-white px-6 py-3 flex items-center justify-between shadow-lg sticky top-0 z-40">
+    <nav className="bg-[#0F172A] text-white px-6 py-2 flex items-center justify-between shadow-lg sticky top-0 z-40">
       <div className="flex items-center gap-6">
-        <Link href={isAdmin && !path.startsWith("/user") ? "/admin/dashboard" : "/user/dashboard"} className="font-bold text-lg">
-          AlgoMomentum <span className="text-blue-300 text-sm font-normal">v2</span>
+        <Link href={isAdmin && !path.startsWith("/user") ? "/admin/dashboard" : "/user/dashboard"}
+          className="flex items-center gap-2.5 select-none">
+          <Image src="/alm-logo.png" alt="AlgoMomentum" width={38} height={38} className="rounded-lg object-cover" priority />
+          <div className="flex flex-col leading-tight">
+            <span className="text-white font-semibold text-sm tracking-wide">AlgoMomentum</span>
+            <span className="text-cyan-400 text-[10px] font-normal tracking-wider uppercase">Bridge Platform v2</span>
+          </div>
         </Link>
         <div className="hidden md:flex items-center gap-1">
           {links.map((l) => (
