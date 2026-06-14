@@ -13,18 +13,24 @@ export default function ContactUs() {
         </Link>
         <Link href="/Signup" className="bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-sm px-5 py-2 rounded-lg transition">Sign In</Link>
       </nav>
-      <main      <main"m      <main      <main"m      <main      <main"m      <main      <maind       <main      <main"m    /h      <main      <main"m    t-sl      <main      <main"m      <maied">      here       <main      <main"m      <main      <main"m      <marn      <main      <main"m      <main      <main"m      <main      <main"m      <main      <maind       <main      <main"m    /h      algomomentum.in", href: "mailto:support@algomomentum.in" },
-                                                                                                                        label: "Feedback", value: "We welcome feedback to improve o                                                                                             <div key={item.label} className="bg-[#0F172A] border border-slate-700/50 rounded-xl p-5">
-              <h2 className="text-slate-300 font-semibold text-sm mb-1">{item.label}</h2>
-              {item.href ? (
-                <a href={item.href} className="text-cyan-400 hover:underline text-sm">{item.value}</a>
-              ) : (
-                <p className="text-slate-400 text-sm">{item.value}</p>
-              )}
-            </div>
-          ))}
+      <main className="max-w-3xl mx-auto px-6 py-16">
+        <h1 className="text-3xl font-bold mb-6 text-white">Contact Us</h1>
+        <p className="text-slate-400 mb-8 text-sm leading-relaxed">We are here to help. If you have any questions, suggestions, or concerns, feel free to reach out to us.</p>
+        <div className="space-y-4">
+          <div className="bg-[#0F172A] border border-slate-700/50 rounded-xl p-5">
+            <h2 className="text-slate-300 font-semibold text-sm mb-1">Email</h2>
+            <a href="mailto:support@algomomentum.in" className="text-cyan-400 hover:underline text-sm">support@algomomentum.in</a>
+          </div>
+          <div className="bg-[#0F172A] border border-slate-700/50 rounded-xl p-5">
+            <h2 className="text-slate-300 font-semibold text-sm mb-1">Business Hours</h2>
+            <p className="text-slate-400 text-sm">Monday to Friday: 10:00 AM to 6:00 PM IST</p>
+          </div>
+          <div className="bg-[#0F172A] border border-slate-700/50 rounded-xl p-5">
+            <h2 className="text-slate-300 font-semibold text-sm mb-1">Feedback</h2>
+            <p className="text-slate-400 text-sm">We welcome feedback to improve our services. Drop us a line anytime.</p>
+          </div>
         </div>
-        <div className="mt-10"><Link href="/" className="text-cyan-400 hover:underline text-sm">← Back to Home</Link></div>
+        <div className="mt-10"><Link href="/" className="text-cyan-400 hover:underline text-sm">Back to Home</Link></div>
       </main>
     </div>
   );
