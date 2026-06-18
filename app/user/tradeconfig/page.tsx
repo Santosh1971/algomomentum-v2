@@ -1,6 +1,6 @@
 "use client";
 import { useSession } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
@@ -99,10 +99,10 @@ export default function TradeConfigPage() {
     accounts.forEach(a => { if (a.delta_account_name) { loadBalance(a.id); loadPositions(a.id); } });
   }, [accounts]);
 
-  const searchParams = useSearchParams();
   useEffect(() => {
-    const connected = searchParams.get("delta_connected");
-    const error = searchParams.get("delta_error");
+    const params = new URLSearchParams(window.location.search);
+    const connected = params.get("delta_connected");
+    const error = params.get("delta_error");
     if (connected === "1") {
       toast.success("Delta Exchange connected successfully!");
       loadAccounts();
@@ -111,7 +111,7 @@ export default function TradeConfigPage() {
       toast.error("Failed to connect Delta Exchange. Please try again.");
       window.history.replaceState({}, "", "/user/tradeconfig");
     }
-  }, [searchParams]);
+  }, []);
 
   function closeModal() {
     setModal(null); setActiveAccountId(null); setActiveConfig(null);
