@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { NEXT_AUTH } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 const CLIENT_ID = process.env.DELTA_CLIENT_ID!;
@@ -8,7 +8,7 @@ const CLIENT_SECRET = process.env.DELTA_CLIENT_SECRET!;
 const TOKEN_URL = "https://cdn.india.deltaex.org/v2/oauth/token";
 
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(NEXT_AUTH);
   if (!session?.user?.email) {
     return NextResponse.redirect(new URL("/Signup", req.url));
   }

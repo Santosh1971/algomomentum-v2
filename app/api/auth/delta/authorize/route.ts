@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
+import { NEXT_AUTH } from "@/lib/auth";
 
 export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const session = await getServerSession(NEXT_AUTH);
   if (!session?.user?.email) {
     return NextResponse.redirect(new URL("/Signup", req.url));
   }
