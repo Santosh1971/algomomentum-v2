@@ -63,10 +63,36 @@ export default function AdminUsersPage() {
     else toast.error("Failed to delete user");
   }
 
-  const filtered = users.filter(u =>
-    u.email.toLowerCase().includes(search.toLowerCase()) ||
-    (u.name ?? "").toLowerCase().includes(search.toLowerCase())
-  );
+  // Custom sort order
+  const sortOrder = [
+    "cruoso4@gmail.com",        // Amit Mandal (Admin)
+    "jha.santosh.kr@gmail.com", // Santosh (Admin)
+    "ajha1371@gmail.com",       // Anupama Jha
+    "pratyakcha.jha@gmail.com", // Pratyakcha Jha
+    "utkarsh.jha1971@gmail.com",// Utkarsh Jha
+    "utkarsh.tenkaichi.dbz@gmail.com", // Utkarsh2
+    "ayushrudra28@gmail.com",   // Ayush Rudra
+    "dvndrmandal@gmail.com",    // Devendra Mandal
+    "111sajal.mandal@gmail.com",// Sajal Mandal
+    "sunilgupta0291@gmail.com", // Sunil Gupta
+    "gamecok772019@gmail.com",  // Rahul
+    "moonforweb@gmail.com",     // Ghongde Erwant Rao
+    "keshavbhat247@gmail.com",  // Keshav Bhat K
+  ];
+
+  const filtered = users
+    .filter(u =>
+      u.email.toLowerCase().includes(search.toLowerCase()) ||
+      (u.name ?? "").toLowerCase().includes(search.toLowerCase())
+    )
+    .sort((a, b) => {
+      const ai = sortOrder.indexOf(a.email);
+      const bi = sortOrder.indexOf(b.email);
+      if (ai !== -1 && bi !== -1) return ai - bi;
+      if (ai !== -1) return -1;
+      if (bi !== -1) return 1;
+      return (a.name ?? a.email).localeCompare(b.name ?? b.email);
+    });
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -87,8 +113,8 @@ export default function AdminUsersPage() {
             <div className="w-8 h-8 border-4 border-[#161B22] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
-          <div className="bg-white rounded-2xl shadow-sm border overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="bg-white rounded-2xl shadow-sm border">
+            <table className="w-full text-xs">
               <thead>
                 <tr className="bg-[#161B22] text-white text-xs">
                   {["#", "Name", "Email", "Phone", "Age", "Gender", "City", "Delta ID", "Country", "Status", "Actions"].map(h => (
@@ -102,7 +128,7 @@ export default function AdminUsersPage() {
                 ) : filtered.map((u, i) => (
                   <tr key={u.id} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
                     <td className="px-4 py-3 text-gray-400">{i + 1}</td>
-                    <td className="px-4 py-3 font-medium text-gray-800 whitespace-nowrap">
+                    <td className="px-4 py-3 font-medium text-gray-800 max-w-[160px]">
                       <div className="flex items-center gap-2">
                         <div className="w-7 h-7 rounded-full bg-[#161B22] text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
                           {(u.name ?? u.email)[0].toUpperCase()}
@@ -114,7 +140,7 @@ export default function AdminUsersPage() {
                     <td className="px-4 py-3 text-green-600 whitespace-nowrap">{u.phone || "—"}</td>
                     <td className="px-4 py-3">{u.details?.age || "—"}</td>
                     <td className="px-4 py-3">{u.details?.gender || "—"}</td>
-                    <td className="px-4 py-3 whitespace-nowrap">{u.details?.city || "—"}</td>
+                    <td className="px-4 py-3 max-w-[120px]">{u.details?.city || "—"}</td>
                     <td className="px-4 py-3 text-xs font-mono">{u.details?.deltaUserId || "—"}</td>
                     <td className="px-4 py-3">{u.details?.country || "—"}</td>
                     <td className="px-4 py-3">
