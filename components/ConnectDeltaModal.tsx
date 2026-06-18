@@ -4,13 +4,14 @@ import { toast } from "sonner";
 
 interface Props {
   accountId: string;
+  accountType?: string;
   onSuccess: (accountName: string, deltaUserId: string) => void;
   onClose: () => void;
 }
 
 type Step = "form" | "loading" | "success" | "error";
 
-export default function ConnectDeltaModal({ accountId, onSuccess, onClose }: Props) {
+export default function ConnectDeltaModal({ accountId, accountType = "main", onSuccess, onClose }: Props) {
   const [step, setStep] = useState<Step>("form");
   const [apiKey, setApiKey] = useState("");
   const [apiSecret, setApiSecret] = useState("");
@@ -18,6 +19,7 @@ export default function ConnectDeltaModal({ accountId, onSuccess, onClose }: Pro
   const [showSecret, setShowSecret] = useState(false);
   const [accountName, setAccountName] = useState("");
   const [errMsg, setErrMsg] = useState("");
+  const isMainAccount = accountType === "main";
 
   async function handleConnect() {
     if (!apiKey.trim() || !apiSecret.trim()) { toast.error("Both API Key and Secret are required"); return; }
@@ -39,6 +41,10 @@ export default function ConnectDeltaModal({ accountId, onSuccess, onClose }: Pro
     }
   }
 
+  function handleDeltaOAuth() {
+    window.location.href = "/api/auth/delta/authorize";
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
@@ -57,6 +63,19 @@ export default function ConnectDeltaModal({ accountId, onSuccess, onClose }: Pro
         <div className="px-6 pb-6">
           {(step === "form" || step === "error") && (
             <div className="space-y-4">
+              {isMainAccount && (
+                <>
+                  <button onClick={handleDeltaOAuth}
+                    className="w-full bg-[#F7931A] hover:bg-[#e8830a] text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm">
+                    <span>⚡</span> Connect with Delta Exchange
+                  </button>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-px bg-gray-200" />
+                    <span className="text-xs text-gray-400">or use API key manually</span>
+                    <div className="flex-1 h-px bg-gray-200" />
+                  </div>
+                </>
+              )}
               <div>
                 <p className="text-sm font-semibold text-gray-700 mb-1">API Key</p>
                 <div className="relative">
@@ -92,8 +111,8 @@ export default function ConnectDeltaModal({ accountId, onSuccess, onClose }: Pro
                 How to get your Delta API Key →
               </a>
               <button onClick={handleConnect}
-                className="w-full bg-[#161B22] hover:bg-[#161B22] text-white font-semibold py-3 rounded-xl transition-colors">
-                Connect Account
+                className="w-full bg-[#161B22] hover:bg-[#0d1117] text-white font-semibold py-3 rounded-xl transition-colors">
+                Connect with API Key
               </button>
             </div>
           )}

@@ -36,6 +36,10 @@ model DeltaAccount {
   delta_user_id      String?
   isActive           Boolean  @default(true)
   createdAt          DateTime @default(now())
+  oauth_access_token  String?
+  oauth_refresh_token String?
+  oauth_expires_at    DateTime?
+  is_oauth            Boolean  @default(false)
 
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   tradeConfigs TradeConfig[]

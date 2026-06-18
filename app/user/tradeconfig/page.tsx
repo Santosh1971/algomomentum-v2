@@ -99,6 +99,20 @@ export default function TradeConfigPage() {
     accounts.forEach(a => { if (a.delta_account_name) { loadBalance(a.id); loadPositions(a.id); } });
   }, [accounts]);
 
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const connected = searchParams.get("delta_connected");
+    const error = searchParams.get("delta_error");
+    if (connected === "1") {
+      toast.success("Delta Exchange connected successfully!");
+      loadAccounts();
+      window.history.replaceState({}, "", "/user/tradeconfig");
+    } else if (error) {
+      toast.error("Failed to connect Delta Exchange. Please try again.");
+      window.history.replaceState({}, "", "/user/tradeconfig");
+    }
+  }, [searchParams]);
+
   function closeModal() {
     setModal(null); setActiveAccountId(null); setActiveConfig(null);
     setAccountForm({ accountName: "", accountType: "main" });
@@ -524,6 +538,7 @@ export default function TradeConfigPage() {
       {modal === "connectKeys" && activeAccountId && (
         <ConnectDeltaModal
           accountId={activeAccountId}
+          accountType={accounts.find(a => a.id === activeAccountId)?.accountType ?? "main"}
           onSuccess={(name) => { toast.success(`Connected: ${name}`); closeModal(); loadAccounts(); }}
           onClose={closeModal}
         />
