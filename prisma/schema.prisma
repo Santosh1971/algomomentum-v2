@@ -78,7 +78,7 @@ model TradeConfig {
 
   strategyId      String?
   isSubscription  Boolean   @default(false)
-  strategy        Strategy? @relation(fields: [strategyId], references: [id])
+  strategyRef     Strategy? @relation(fields: [strategyId], references: [id])
 
   user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   account DeltaAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
