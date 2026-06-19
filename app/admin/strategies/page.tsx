@@ -56,7 +56,7 @@ export default function AdminStrategiesPage() {
                 </div>
               )}
               <div className="text-[10px] text-muted-foreground mt-1 font-mono break-all">
-                webhook: /api/webhook?strategy={s.webhookToken}
+                webhook: /api/v1/webhook/strategy/{s.webhookToken}
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">

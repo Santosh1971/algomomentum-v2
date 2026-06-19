@@ -63,7 +63,6 @@ export async function POST(req) {
       timeframe,
       description,
       isFeatured,
-      backtestFileUrl,
       equityData:    parsedStats.equityData    ?? null,
       totalPnlPct:  parsedStats.totalPnlPct   ?? null,
       winRate:      parsedStats.winRate        ?? null,
