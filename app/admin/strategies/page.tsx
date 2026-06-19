@@ -1,6 +1,6 @@
 'use client'
 
-import Navbar from '@/components/Navbar'// app/admin/strategies/page.jsx
+import Navbar from '@/components/Navbar'
 // Admin page to create and manage marketplace strategies
 
 import { useEffect, useState, useRef } from 'react'
@@ -10,6 +10,7 @@ export default function AdminStrategiesPage() {
   const [showForm, setShowForm]     = useState(false)
   const [editing, setEditing]       = useState(null)
   const [loading, setLoading]       = useState(true)
+  const [propsModal, setPropsModal] = useState(null)
 
   useEffect(() => { fetchStrategies() }, [])
 
@@ -55,6 +56,7 @@ export default function AdminStrategiesPage() {
                 <div className="text-xs text-green-500 mt-0.5">+{s.totalPnlPct.toFixed(1)}% PnL · {s.winRate?.toFixed(1)}% win · −{s.maxDrawdown?.toFixed(1)}% DD · {s.totalTrades} trades</div>
               )}
               {(s as any).backtestFileName && <div className="text-[10px] text-muted-foreground mt-0.5">📎 {(s as any).backtestFileName}</div>}
+              <div className="text-[10px] text-amber-500 mt-0.5 font-mono break-all">Msg: {'{'}&quot;symbol&quot;:&quot;{'{{ticker}}'}&quot;,&quot;side&quot;:&quot;{'{{strategy.order.action}}'}&quot;,&quot;trade&quot;:&quot;{'{{strategy.order.comment}}'}&quot;{'}'}</div>
               <div className="text-[10px] text-muted-foreground mt-1 font-mono break-all">
                 webhook: /api/v1/webhook/strategy/{s.webhookToken}
               </div>
@@ -63,6 +65,7 @@ export default function AdminStrategiesPage() {
               <Toggle label="Featured" value={s.isFeatured} onChange={() => handleToggle(s, 'isFeatured')} />
               <Toggle label="Active"   value={s.isActive}   onChange={() => handleToggle(s, 'isActive')} />
               <button onClick={() => { setEditing(s); setShowForm(true) }} className="text-xs px-2 py-1 rounded border border-border/40 hover:bg-muted/30">Edit</button>
+              <button onClick={() => setPropsModal(s)} className="text-xs px-2 py-1 rounded border border-blue-500/40 text-blue-400 hover:bg-blue-500/10">Properties</button>
               <button onClick={() => handleDelete(s.id)} className="text-xs px-2 py-1 rounded border border-red-500/30 text-red-400 hover:bg-red-500/10">Delete</button>
             </div>
           </div>
