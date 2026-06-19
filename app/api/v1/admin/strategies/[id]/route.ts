@@ -9,7 +9,7 @@ import { parseBacktestFile } from '@/lib/parseBacktest'
 // PATCH /api/admin/strategies/:id — update strategy
 export async function PATCH(req, { params }) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.role !== 'admin') {
+  if (session?.user?.role !== 'admin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
@@ -44,7 +44,7 @@ export async function PATCH(req, { params }) {
 // DELETE /api/admin/strategies/:id
 export async function DELETE(req, { params }) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.role !== 'admin') {
+  if (session?.user?.role !== 'admin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 

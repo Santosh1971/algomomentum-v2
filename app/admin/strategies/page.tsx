@@ -1,5 +1,6 @@
 'use client'
-// app/admin/strategies/page.jsx
+
+import Navbar from '@/components/Navbar'// app/admin/strategies/page.jsx
 // Admin page to create and manage marketplace strategies
 
 import { useEffect, useState, useRef } from 'react'
@@ -36,7 +37,7 @@ export default function AdminStrategiesPage() {
   if (loading) return <div className="p-8 text-center text-muted-foreground">Loading…</div>
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <><Navbar /><div className="max-w-4xl mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-medium">Marketplace strategies</h1>
         <button onClick={() => { setEditing(null); setShowForm(true) }} className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700">
@@ -84,7 +85,7 @@ export default function AdminStrategiesPage() {
           }}
         />
       )}
-    </div>
+    </div></>
   )
 }
 
