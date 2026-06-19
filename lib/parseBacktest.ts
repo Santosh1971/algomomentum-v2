@@ -50,27 +50,37 @@ function extractStats(rows) {
   let initialEquity = null
   let finalEquity = null
 
+  // Find type column to filter only Exit rows for equity curve
+  const typeCol = Object.keys(rows[0] || {}).find((h: string) => h.toLowerCase() === 'type') ?? ''
+
   for (const row of rows) {
+    const rowType = typeCol ? String(row[typeCol] || '').toLowerCase() : ''
+    const isExit = !typeCol || rowType.includes('exit')
+    const profitVal = parseFloat(row[colMap.profit] || 0)
+
+    // Count wins/losses from Exit rows only
+    if (isExit && !isNaN(profitVal) && profitVal !== 0) {
+      if (profitVal > 0) wins++
+      else losses++
+    }
+
+    // Only use Exit rows for equity curve
+    if (!isExit) continue
+
     const dateVal = row[colMap.date] || row[colMap.closeTime] || ''
     const equityVal = parseFloat(row[colMap.equity] || row[colMap.cumulativePnl] || 0)
-    const profitVal = parseFloat(row[colMap.profit] || 0)
 
     if (!isNaN(equityVal) && dateVal) {
       if (initialEquity === null) initialEquity = equityVal
       finalEquity = equityVal
-      // If values look like PnL (small numbers), add initial capital
-      const equityAbs = Math.abs(equityVal) < 500 && equityData.length === 0 ? equityVal + 1000 : equityVal
+      // Cumulative PnL — add initial capital 1000
+      const equityAbs = equityVal + 1000
       equityData.push({ date: dateVal, equity: equityAbs })
 
       // Track drawdown
       if (equityVal > peak) peak = equityVal
       const dd = peak > 0 ? (peak - equityVal) / peak : 0
       if (dd > maxDrawdown) maxDrawdown = dd
-    }
-
-    if (!isNaN(profitVal)) {
-      if (profitVal > 0) wins++
-      else if (profitVal < 0) losses++
     }
   }
 
