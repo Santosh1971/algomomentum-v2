@@ -57,7 +57,7 @@ export default function AdminStrategiesPage() {
 
               {/* Symbol · Exchange · TF */}
               <div className="text-xs text-muted-foreground">
-                {s.symbol} · {(s as any).properties?.Symbol ?? ('CRYPTO:' + s.symbol)} · TF: {s.timeframe}
+                {s.symbol} · {(s as any).properties?.Symbol ?? ('CRYPTO:' + s.symbol)} · {s.timeframe}
                 {(s as any).backtestFileName && <span className="ml-2 text-[10px]">📎 {(s as any).backtestFileName}</span>}
               </div>
 
@@ -67,19 +67,20 @@ export default function AdminStrategiesPage() {
                 const parts = range.split('—')
                 let days = ''
                 try { days = ` (${Math.round((new Date(parts[1].trim()).getTime() - new Date(parts[0].trim()).getTime()) / 86400000)} days)` } catch {}
-                return <div className="text-[10px] text-muted-foreground">Backtest: {range}{days}</div>
+                return <div className="text-xs text-muted-foreground">Backtest: {range}{days}</div>
               })()}
 
               {/* PnL stats */}
               {s.totalPnlPct != null && (
-                <div className="text-xs text-green-500">
-                  +{s.totalPnlPct.toFixed(1)}% PnL · −{s.maxDrawdown?.toFixed(1)}% DD · {s.totalTrades} trades · {s.winRate?.toFixed(1)}% win
+                <div className="text-xs text-foreground">
+                  PnL: +{s.totalPnlPct.toFixed(1)}% · DD: −{s.maxDrawdown?.toFixed(1)}% · No. Trades: {s.totalTrades}
                 </div>
               )}
 
               {/* Subscribers */}
               <div className="text-xs text-muted-foreground">
-                Subscribers: <span className="text-foreground font-medium">{s._count.subscribers}</span>
+                <span>Subscribers: <span className="text-foreground font-medium">{s._count.subscribers}</span></span>
+                <span>Subscribed Amount: <span className="text-foreground font-medium">₹—</span></span>
               </div>
 
               {/* Webhook URL */}
@@ -88,17 +89,17 @@ export default function AdminStrategiesPage() {
                 <div className="text-[10px] font-mono bg-muted/30 border border-border/30 rounded px-2 py-1 flex-1 break-all">
                   http://87.76.191.157/api/v1/webhook/strategy/{s.symbol}?secret=algobc2026$
                 </div>
-                <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(`http://87.76.191.157/api/v1/webhook/strategy/${s.symbol}?secret=algobc2026$`) }}
+                <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(`http://87.76.191.157/api/v1/webhook/strategy/${s.symbol}?secret=algobc2026$`); const b=e.currentTarget; b.textContent='Copied!'; setTimeout(()=>b.textContent='Copy',2000) }}
                   className="text-[10px] px-2 py-1 rounded bg-muted/50 border border-border/30 hover:bg-muted whitespace-nowrap">Copy</button>
               </div>
 
               {/* Msg */}
               <div className="flex items-center gap-2">
                 <span className="text-[10px] text-muted-foreground w-16 flex-shrink-0">Msg:</span>
-                <div className="text-[10px] font-mono text-amber-500 bg-muted/20 border border-border/20 rounded px-2 py-1 flex-1 break-all">
+                <div className="text-[10px] font-mono text-foreground bg-muted/20 border border-border/20 rounded px-2 py-1 flex-1 break-all">
                   {'{"symbol":"{{ticker}}","side":"{{strategy.order.action}}","trade":"{{strategy.order.comment}}","price":"{{strategy.order.price}}","trigger_time":"{{timenow}}"}'}
                 </div>
-                <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText('{"symbol":"{{ticker}}","side":"{{strategy.order.action}}","trade":"{{strategy.order.comment}}","price":"{{strategy.order.price}}","trigger_time":"{{timenow}}"}') }}
+                <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText('{"symbol":"{{ticker}}","side":"{{strategy.order.action}}","trade":"{{strategy.order.comment}}","price":"{{strategy.order.price}}","trigger_time":"{{timenow}}"}'); const b2=e.currentTarget; b2.textContent='Copied!'; setTimeout(()=>b2.textContent='Copy',2000) }}
                   className="text-[10px] px-2 py-1 rounded bg-muted/50 border border-border/30 hover:bg-muted whitespace-nowrap">Copy</button>
               </div>
             </div>
