@@ -48,34 +48,72 @@ export default function AdminStrategiesPage() {
 
       <div className="space-y-3">
         {strategies.map(s => (
-          <div key={s.id} className="border border-border/40 rounded-xl p-4 flex items-center gap-4">
-            <div className="flex-1 min-w-0">
-              <div className="font-medium text-sm">{s.name}</div>
-              <div className="text-xs text-muted-foreground">{s.symbol} · {s.timeframe} · {s._count.subscribers} subscribers</div>
+          <div key={s.id} className="border border-border/40 rounded-xl p-4 flex gap-4">
+            {/* LEFT: strategy info */}
+            <div className="flex-1 min-w-0 space-y-1">
+
+              {/* Name */}
+              <div className="font-semibold text-sm">{s.name}</div>
+
+              {/* Symbol · Exchange · TF */}
+              <div className="text-xs text-muted-foreground">
+                {s.symbol} · {(s as any).properties?.Symbol ?? ('CRYPTO:' + s.symbol)} · TF: {s.timeframe}
+                {(s as any).backtestFileName && <span className="ml-2 text-[10px]">📎 {(s as any).backtestFileName}</span>}
+              </div>
+
+              {/* Backtest range + days */}
+              {(s as any).properties?.['Trading range'] && (() => {
+                const range = (s as any).properties['Trading range']
+                const parts = range.split('—')
+                let days = ''
+                try { days = ` (${Math.round((new Date(parts[1].trim()).getTime() - new Date(parts[0].trim()).getTime()) / 86400000)} days)` } catch {}
+                return <div className="text-[10px] text-muted-foreground">Backtest: {range}{days}</div>
+              })()}
+
+              {/* PnL stats */}
               {s.totalPnlPct != null && (
-                <div className="text-xs text-green-500 mt-0.5">+{s.totalPnlPct.toFixed(1)}% PnL · {s.winRate?.toFixed(1)}% win · −{s.maxDrawdown?.toFixed(1)}% DD · {s.totalTrades} trades</div>
-              )}
-              {(s as any).backtestFileName && <div className="text-[10px] text-muted-foreground mt-0.5">📎 {(s as any).backtestFileName}</div>}
-              <div className="text-[10px] text-amber-500 mt-0.5 font-mono break-all">Msg: {'{'}&quot;symbol&quot;:&quot;{'{{ticker}}'}&quot;,&quot;side&quot;:&quot;{'{{strategy.order.action}}'}&quot;,&quot;trade&quot;:&quot;{'{{strategy.order.comment}}'}&quot;{'}'}</div>
-              <div className="text-[10px] text-muted-foreground mt-1 font-mono break-all">
-                <div className="text-[10px] text-muted-foreground mb-0.5">Webhook URL (paste in TradingView alert)</div>
-                <div className="flex items-center gap-2">
-                  <div className="text-[10px] font-mono bg-muted/30 border border-border/30 rounded px-2 py-1 flex-1 break-all">
-                    http://87.76.191.157/api/v1/webhook/strategy/{s.symbol}?secret=algobc2026$
-                  </div>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(`http://87.76.191.157/api/v1/webhook/strategy/${s.symbol}?secret=algobc2026$`) }}
-                    className="text-[10px] px-2 py-1 rounded bg-muted/50 border border-border/40 hover:bg-muted whitespace-nowrap flex-shrink-0"
-                  >Copy URL</button>
+                <div className="text-xs text-green-500">
+                  +{s.totalPnlPct.toFixed(1)}% PnL · −{s.maxDrawdown?.toFixed(1)}% DD · {s.totalTrades} trades · {s.winRate?.toFixed(1)}% win
                 </div>
+              )}
+
+              {/* Subscribers */}
+              <div className="text-xs text-muted-foreground">
+                Subscribers: <span className="text-foreground font-medium">{s._count.subscribers}</span>
+              </div>
+
+              {/* Webhook URL */}
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-muted-foreground w-16 flex-shrink-0">Webhook:</span>
+                <div className="text-[10px] font-mono bg-muted/30 border border-border/30 rounded px-2 py-1 flex-1 break-all">
+                  http://87.76.191.157/api/v1/webhook/strategy/{s.symbol}?secret=algobc2026$
+                </div>
+                <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(`http://87.76.191.157/api/v1/webhook/strategy/${s.symbol}?secret=algobc2026$`) }}
+                  className="text-[10px] px-2 py-1 rounded bg-muted/50 border border-border/30 hover:bg-muted whitespace-nowrap">Copy</button>
+              </div>
+
+              {/* Msg */}
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-muted-foreground w-16 flex-shrink-0">Msg:</span>
+                <div className="text-[10px] font-mono text-amber-500 bg-muted/20 border border-border/20 rounded px-2 py-1 flex-1 break-all">
+                  {'{"symbol":"{{ticker}}","side":"{{strategy.order.action}}","trade":"{{strategy.order.comment}}","price":"{{strategy.order.price}}","trigger_time":"{{timenow}}"}'}
+                </div>
+                <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText('{"symbol":"{{ticker}}","side":"{{strategy.order.action}}","trade":"{{strategy.order.comment}}","price":"{{strategy.order.price}}","trigger_time":"{{timenow}}"}') }}
+                  className="text-[10px] px-2 py-1 rounded bg-muted/50 border border-border/30 hover:bg-muted whitespace-nowrap">Copy</button>
               </div>
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <Toggle label="Featured" value={s.isFeatured} onChange={() => handleToggle(s, 'isFeatured')} />
-              <Toggle label="Active"   value={s.isActive}   onChange={() => handleToggle(s, 'isActive')} />
-              <button onClick={() => { setEditing(s); setShowForm(true) }} className="text-xs px-2 py-1 rounded border border-border/40 hover:bg-muted/30">Edit</button>
-              <button onClick={() => setPropsModal(s)} className="text-xs px-2 py-1 rounded border border-blue-500/40 text-blue-400 hover:bg-blue-500/10">Properties</button>
-              <button onClick={() => handleDelete(s.id)} className="text-xs px-2 py-1 rounded border border-red-500/30 text-red-400 hover:bg-red-500/10">Delete</button>
+
+            {/* RIGHT: controls */}
+            <div className="flex flex-col items-end gap-2 flex-shrink-0">
+              <div className="flex gap-3">
+                <Toggle label="Featured" value={s.isFeatured} onChange={() => handleToggle(s, 'isFeatured')} />
+                <Toggle label="Active"   value={s.isActive}   onChange={() => handleToggle(s, 'isActive')} />
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => { setEditing(s); setShowForm(true) }} className="text-xs px-3 py-1.5 rounded border border-border/40 hover:bg-muted/30">Edit</button>
+                <button onClick={() => setPropsModal(s)} className="text-xs px-3 py-1.5 rounded border border-blue-500/40 text-blue-400 hover:bg-blue-500/10">Properties</button>
+                <button onClick={() => handleDelete(s.id)} className="text-xs px-3 py-1.5 rounded border border-red-500/30 text-red-400 hover:bg-red-500/10">Delete</button>
+              </div>
             </div>
           </div>
         ))}
