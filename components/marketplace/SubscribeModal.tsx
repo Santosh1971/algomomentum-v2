@@ -12,7 +12,7 @@ export default function SubscribeModal({ strategy, onClose, onSuccess }) {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/marketplace/subscribe', {
+      const res = await fetch('/api/v1/marketplace/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ strategyId: strategy.id, amount }),
