@@ -1,18 +1,15 @@
-// app/api/marketplace/subscribe/route.js
-// POST — user subscribes to a strategy (creates their TradeConfig)
-
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { NEXT_AUTH as authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-export async function POST(req) {
+export async function POST(req: Request) {
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { strategyId, lotSize, capital } = await req.json()
+  const { strategyId, amount } = await req.json()
 
   if (!strategyId) {
     return NextResponse.json({ error: 'strategyId is required' }, { status: 400 })
@@ -21,7 +18,6 @@ export async function POST(req) {
   const strategy = await prisma.strategy.findUnique({
     where: { id: strategyId, isActive: true },
   })
-
   if (!strategy) {
     return NextResponse.json({ error: 'Strategy not found or inactive' }, { status: 404 })
   }
@@ -30,23 +26,38 @@ export async function POST(req) {
   const existing = await prisma.tradeConfig.findFirst({
     where: { userId: session.user.id, strategyId, isSubscription: true },
   })
-
   if (existing) {
-    return NextResponse.json({ error: 'Already subscribed to this strategy' }, { status: 409 })
+    return NextResponse.json({ error: 'Already subscribed' }, { status: 409 })
   }
 
-  // Create a locked TradeConfig for this user
+  // Get user's first active Delta account
+  const account = await prisma.deltaAccount.findFirst({
+    where: { userId: session.user.id, isActive: true },
+  })
+  if (!account) {
+    return NextResponse.json({ error: 'No active Delta account found. Please connect one first.' }, { status: 400 })
+  }
+
+  // Check unique constraint - user may already have this symbol on this account
+  const scriptExists = await prisma.tradeConfig.findFirst({
+    where: { accountId: account.id, script: strategy.symbol },
+  })
+  if (scriptExists) {
+    return NextResponse.json({ error: `You already have a bot for ${strategy.symbol} on this account.` }, { status: 409 })
+  }
+
   const tradeConfig = await prisma.tradeConfig.create({
     data: {
-      userId:        session.user.id,
+      userId:         session.user.id,
+      accountId:      account.id,
       strategyId,
       isSubscription: true,
-      symbol:        strategy.symbol,   // locked — inherited from strategy
-      lotSize:       lotSize ?? 1,
-      capital:       capital ?? null,
-      isActive:      true,
-      // name shown in user's bot list
-      name:          `${strategy.name} (subscribed)`,
+      script:         strategy.symbol,
+      amount:         amount ?? 1000,
+      isActive:       false,
+      mode:           'bridge',
+      strategy:       strategy.name,
+      timeframe:      strategy.timeframe,
     },
   })
 
