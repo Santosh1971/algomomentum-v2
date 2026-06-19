@@ -51,9 +51,9 @@ export default function Navbar() {
       </div>
       <div className="flex items-center gap-3">
         {isAdmin && (
-          <Link href={path.startsWith("/user") ? "/admin/dashboard" : "/user/dashboard"}
+          <Link href={path.startsWith("/user") || path.startsWith("/marketplace") ? "/admin/dashboard" : "/user/dashboard"}
             className="text-xs bg-yellow-500 text-black px-3 py-1.5 rounded-full font-semibold hover:bg-yellow-400 transition">
-            {path.startsWith("/user") ? "⚙ Admin Panel" : "👤 User View"}
+            {path.startsWith("/user") || path.startsWith("/marketplace") ? "⚙ Admin Panel" : "👤 User View"}
           </Link>
         )}
         <span className="text-xs text-cyan-400 hidden md:block">{session?.user?.email}</span>
