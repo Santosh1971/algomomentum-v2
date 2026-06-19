@@ -56,7 +56,9 @@ function extractStats(rows) {
     if (!isNaN(equityVal) && dateVal) {
       if (initialEquity === null) initialEquity = equityVal
       finalEquity = equityVal
-      equityData.push({ date: dateVal, equity: equityVal })
+      // If values look like PnL (small numbers), add initial capital
+      const equityAbs = Math.abs(equityVal) < 500 && equityData.length === 0 ? equityVal + 1000 : equityVal
+      equityData.push({ date: dateVal, equity: equityAbs })
 
       // Track drawdown
       if (equityVal > peak) peak = equityVal
@@ -104,10 +106,10 @@ function findColumns(headers) {
   const find = (...keys) => headers.find(h => keys.includes(lower(h))) || ''
 
   return {
-    date:         find('date', 'datetime', 'time', 'tradedate', 'closetime'),
-    closeTime:    find('closetime', 'exittime'),
-    equity:       find('equity', 'cumulativeequity', 'runningequity'),
-    cumulativePnl:find('cumulativepnl', 'cumpnl', 'runningpnl'),
-    profit:       find('profit', 'pnl', 'netprofit', 'tradepnl'),
+    date:         find('dateandtime', 'date', 'datetime', 'time', 'tradedate', 'closetime'),
+    closeTime:    find('closetime', 'exittime', 'dateandtime'),
+    equity:       find('cumulativepnlusd', 'equity', 'cumulativeequity', 'runningequity', 'cumulativepnl'),
+    cumulativePnl:find('cumulativepnlusd', 'cumulativepnl', 'cumpnl', 'runningpnl'),
+    profit:       find('netpnlusd', 'profit', 'pnl', 'netprofit', 'tradepnl', 'netpnl'),
   }
 }
