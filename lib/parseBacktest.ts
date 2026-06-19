@@ -131,7 +131,6 @@ function extractStats(rows) {
     maxDrawdown: Math.round(maxDrawdown * 10000) / 100, // as percentage
     profitFactor: profitFactor !== null ? Math.round(profitFactor * 1000) / 1000 : null,
     totalTrades,
-    properties,
   }
 }
 
