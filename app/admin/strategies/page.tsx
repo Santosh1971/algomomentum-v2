@@ -58,7 +58,16 @@ export default function AdminStrategiesPage() {
               {(s as any).backtestFileName && <div className="text-[10px] text-muted-foreground mt-0.5">📎 {(s as any).backtestFileName}</div>}
               <div className="text-[10px] text-amber-500 mt-0.5 font-mono break-all">Msg: {'{'}&quot;symbol&quot;:&quot;{'{{ticker}}'}&quot;,&quot;side&quot;:&quot;{'{{strategy.order.action}}'}&quot;,&quot;trade&quot;:&quot;{'{{strategy.order.comment}}'}&quot;{'}'}</div>
               <div className="text-[10px] text-muted-foreground mt-1 font-mono break-all">
-                webhook: /api/v1/webhook/strategy/{s.webhookToken}
+                <div className="text-[10px] text-muted-foreground mb-0.5">Webhook URL (paste in TradingView alert)</div>
+                <div className="flex items-center gap-2">
+                  <div className="text-[10px] font-mono bg-muted/30 border border-border/30 rounded px-2 py-1 flex-1 break-all">
+                    http://87.76.191.157/api/v1/webhook/strategy/{s.symbol}?secret=algobc2026$
+                  </div>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(`http://87.76.191.157/api/v1/webhook/strategy/${s.symbol}?secret=algobc2026$`) }}
+                    className="text-[10px] px-2 py-1 rounded bg-muted/50 border border-border/40 hover:bg-muted whitespace-nowrap flex-shrink-0"
+                  >Copy URL</button>
+                </div>
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
