@@ -4,7 +4,7 @@
 import { useState } from 'react'
 
 export default function SubscribeModal({ strategy, onClose, onSuccess }) {
-  const [lotSize, setLotSize] = useState(1)
+  const [amount, setAmount] = useState(1000)
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState(null)
 
@@ -15,7 +15,7 @@ export default function SubscribeModal({ strategy, onClose, onSuccess }) {
       const res = await fetch('/api/marketplace/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ strategyId: strategy.id, lotSize }),
+        body: JSON.stringify({ strategyId: strategy.id, amount }),
       })
       if (!res.ok) {
         const { error } = await res.json()
@@ -44,16 +44,16 @@ export default function SubscribeModal({ strategy, onClose, onSuccess }) {
 
           {/* Lot size */}
           <div>
-            <label className="text-xs text-muted-foreground block mb-1">Lot size</label>
+            <label className="text-xs text-muted-foreground block mb-1">Capital (₹)</label>
             <input
               type="number"
               min="1"
               step="1"
-              value={lotSize}
-              onChange={e => setLotSize(Number(e.target.value))}
+              value={amount}
+              onChange={e => setAmount(Number(e.target.value))}
               className="w-full bg-muted/30 border border-border/40 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
             />
-            <div className="text-xs text-muted-foreground mt-1">Number of contracts per trade signal</div>
+            <div className="text-xs text-muted-foreground mt-1">Amount used per trade signal in ₹</div>
           </div>
         </div>
 
@@ -63,7 +63,7 @@ export default function SubscribeModal({ strategy, onClose, onSuccess }) {
           <button onClick={onClose} className="flex-1 py-2 rounded-lg border border-border/40 text-sm hover:bg-muted/30 transition-colors">Cancel</button>
           <button
             onClick={handleSubscribe}
-            disabled={loading}
+            disabled={loading || amount < 100}
             className="flex-1 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700 disabled:opacity-50 transition-colors"
           >
             {loading ? 'Subscribing…' : 'Confirm subscribe'}
