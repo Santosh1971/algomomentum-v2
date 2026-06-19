@@ -17,7 +17,9 @@ export function parseBacktestFile(buffer, filename) {
     rows = parseCSV(text)
   } else if (ext === 'xlsx' || ext === 'xls') {
     const wb = XLSX.read(buffer, { type: 'buffer' })
-    const ws = wb.Sheets[wb.SheetNames[0]]
+    // Use 'Trades' sheet if available, otherwise first sheet
+    const tradesSheet = wb.SheetNames.find((n: string) => n.toLowerCase() === 'trades')
+    const ws = wb.Sheets[tradesSheet ?? wb.SheetNames[0]]
     rows = XLSX.utils.sheet_to_json(ws, { defval: '' })
   } else {
     throw new Error('Unsupported file type. Upload .csv or .xlsx')
@@ -102,7 +104,7 @@ function extractStats(rows) {
 
 // Fuzzy column matching for TradingView's various export formats
 function findColumns(headers) {
-  const lower = h => h.toLowerCase().replace(/\s|_/g, '')
+  const lower = h => h.toLowerCase().replace(/[\s_()%]/g, '')
   const find = (...keys) => headers.find(h => keys.includes(lower(h))) || ''
 
   return {
