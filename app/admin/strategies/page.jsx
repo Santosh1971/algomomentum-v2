@@ -1,0 +1,183 @@
+'use client'
+// app/admin/strategies/page.jsx
+// Admin page to create and manage marketplace strategies
+
+import { useEffect, useState, useRef } from 'react'
+
+export default function AdminStrategiesPage() {
+  const [strategies, setStrategies] = useState([])
+  const [showForm, setShowForm]     = useState(false)
+  const [editing, setEditing]       = useState(null)
+  const [loading, setLoading]       = useState(true)
+
+  useEffect(() => { fetchStrategies() }, [])
+
+  async function fetchStrategies() {
+    const res = await fetch('/api/admin/strategies')
+    const { strategies } = await res.json()
+    setStrategies(strategies)
+    setLoading(false)
+  }
+
+  async function handleDelete(id) {
+    if (!confirm('Delete this strategy and all subscriber bots?')) return
+    await fetch(`/api/admin/strategies/${id}`, { method: 'DELETE' })
+    setStrategies(prev => prev.filter(s => s.id !== id))
+  }
+
+  async function handleToggle(s, field) {
+    const fd = new FormData()
+    fd.append(field, String(!s[field]))
+    const res = await fetch(`/api/admin/strategies/${s.id}`, { method: 'PATCH', body: fd })
+    const { strategy } = await res.json()
+    setStrategies(prev => prev.map(x => x.id === s.id ? { ...x, ...strategy } : x))
+  }
+
+  if (loading) return <div className="p-8 text-center text-muted-foreground">Loading…</div>
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-xl font-medium">Marketplace strategies</h1>
+        <button onClick={() => { setEditing(null); setShowForm(true) }} className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700">
+          + New strategy
+        </button>
+      </div>
+
+      <div className="space-y-3">
+        {strategies.map(s => (
+          <div key={s.id} className="border border-border/40 rounded-xl p-4 flex items-center gap-4">
+            <div className="flex-1 min-w-0">
+              <div className="font-medium text-sm">{s.name}</div>
+              <div className="text-xs text-muted-foreground">{s.symbol} · {s.timeframe} · {s._count.subscribers} subscribers</div>
+              {s.totalPnlPct != null && (
+                <div className="text-xs text-green-500 mt-0.5">
+                  +{s.totalPnlPct.toFixed(1)}% PnL · {s.winRate?.toFixed(1)}% win · −{s.maxDrawdown?.toFixed(1)}% DD
+                </div>
+              )}
+              <div className="text-[10px] text-muted-foreground mt-1 font-mono break-all">
+                webhook: /api/webhook?strategy={s.webhookToken}
+              </div>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Toggle label="Featured" value={s.isFeatured} onChange={() => handleToggle(s, 'isFeatured')} />
+              <Toggle label="Active"   value={s.isActive}   onChange={() => handleToggle(s, 'isActive')} />
+              <button onClick={() => { setEditing(s); setShowForm(true) }} className="text-xs px-2 py-1 rounded border border-border/40 hover:bg-muted/30">Edit</button>
+              <button onClick={() => handleDelete(s.id)} className="text-xs px-2 py-1 rounded border border-red-500/30 text-red-400 hover:bg-red-500/10">Delete</button>
+            </div>
+          </div>
+        ))}
+        {strategies.length === 0 && <div className="text-center text-muted-foreground text-sm py-12">No strategies yet. Create one to get started.</div>}
+      </div>
+
+      {showForm && (
+        <StrategyFormModal
+          initial={editing}
+          onClose={() => setShowForm(false)}
+          onSaved={(s) => {
+            if (editing) {
+              setStrategies(prev => prev.map(x => x.id === s.id ? { ...x, ...s } : x))
+            } else {
+              setStrategies(prev => [{ ...s, _count: { subscribers: 0 } }, ...prev])
+            }
+            setShowForm(false)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+function StrategyFormModal({ initial, onClose, onSaved }) {
+  const [name,        setName]        = useState(initial?.name || '')
+  const [symbol,      setSymbol]      = useState(initial?.symbol || '')
+  const [timeframe,   setTimeframe]   = useState(initial?.timeframe || '1h')
+  const [description, setDescription] = useState(initial?.description || '')
+  const [isFeatured,  setIsFeatured]  = useState(initial?.isFeatured ?? false)
+  const [loading,     setLoading]     = useState(false)
+  const [error,       setError]       = useState(null)
+  const fileRef = useRef()
+
+  async function handleSave() {
+    setLoading(true)
+    setError(null)
+    try {
+      const fd = new FormData()
+      fd.append('name', name)
+      fd.append('symbol', symbol.toUpperCase())
+      fd.append('timeframe', timeframe)
+      fd.append('description', description)
+      fd.append('isFeatured', String(isFeatured))
+      const file = fileRef.current?.files?.[0]
+      if (file) fd.append('backtestFile', file)
+
+      const url    = initial ? `/api/admin/strategies/${initial.id}` : '/api/admin/strategies'
+      const method = initial ? 'PATCH' : 'POST'
+      const res    = await fetch(url, { method, body: fd })
+      if (!res.ok) { const { error } = await res.json(); throw new Error(error) }
+      const { strategy } = await res.json()
+      onSaved(strategy)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-background border border-border/50 rounded-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+        <div className="text-base font-medium mb-4">{initial ? 'Edit strategy' : 'New strategy'}</div>
+        <div className="space-y-3">
+          <Field label="Name">
+            <input value={name} onChange={e => setName(e.target.value)} className="form-input" placeholder="XRP Directional" />
+          </Field>
+          <Field label="Symbol">
+            <input value={symbol} onChange={e => setSymbol(e.target.value)} className="form-input" placeholder="XRPUSDT" />
+          </Field>
+          <Field label="Timeframe">
+            <select value={timeframe} onChange={e => setTimeframe(e.target.value)} className="form-input">
+              {['1m','5m','15m','30m','1h','2h','4h','8h','1D'].map(t => <option key={t}>{t}</option>)}
+            </select>
+          </Field>
+          <Field label="Description (optional)">
+            <textarea value={description} onChange={e => setDescription(e.target.value)} className="form-input" rows={2} />
+          </Field>
+          <Field label="Backtest CSV / XLSX (optional)">
+            <input type="file" ref={fileRef} accept=".csv,.xlsx,.xls" className="text-sm text-muted-foreground" />
+            <div className="text-xs text-muted-foreground mt-1">Equity curve and stats auto-parsed from file</div>
+          </Field>
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <input type="checkbox" checked={isFeatured} onChange={e => setIsFeatured(e.target.checked)} />
+            <span>Featured on marketplace</span>
+          </label>
+        </div>
+        {error && <div className="mt-3 text-xs text-red-400">{error}</div>}
+        <div className="flex gap-3 mt-5">
+          <button onClick={onClose} className="flex-1 py-2 rounded-lg border border-border/40 text-sm">Cancel</button>
+          <button onClick={handleSave} disabled={loading} className="flex-1 py-2 rounded-lg bg-blue-600 text-white text-sm disabled:opacity-50">
+            {loading ? 'Saving…' : 'Save strategy'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Field({ label, children }) {
+  return (
+    <div>
+      <label className="text-xs text-muted-foreground block mb-1">{label}</label>
+      {children}
+    </div>
+  )
+}
+
+function Toggle({ label, value, onChange }) {
+  return (
+    <label className="flex items-center gap-1 text-xs cursor-pointer">
+      <input type="checkbox" checked={value} onChange={onChange} className="w-3 h-3" />
+      <span className="text-muted-foreground">{label}</span>
+    </label>
+  )
+}

@@ -76,6 +76,10 @@ model TradeConfig {
   pause_lastToggledAt DateTime?
   lastEditAt          DateTime?
 
+  strategyId      String?
+  isSubscription  Boolean   @default(false)
+  strategy        Strategy? @relation(fields: [strategyId], references: [id])
+
   user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   account DeltaAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
   Billing Billing[]
@@ -166,4 +170,24 @@ model PlatformSettings {
   upiId              String?
   adminWhatsapp      String?
   updatedAt          DateTime @updatedAt
+}
+
+model Strategy {
+  id              String        @id @default(cuid())
+  name            String
+  symbol          String
+  timeframe       String
+  description     String?
+  equityData      Json?
+  totalPnlPct     Float?
+  winRate         Float?
+  maxDrawdown     Float?
+  profitFactor    Float?
+  totalTrades     Int?
+  webhookToken    String        @unique @default(cuid())
+  isFeatured      Boolean       @default(false)
+  isActive        Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  subscribers     TradeConfig[]
 }
