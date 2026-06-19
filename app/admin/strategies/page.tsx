@@ -13,7 +13,7 @@ export default function AdminStrategiesPage() {
   useEffect(() => { fetchStrategies() }, [])
 
   async function fetchStrategies() {
-    const res = await fetch('/api/admin/strategies')
+    const res = await fetch('/api/v1/admin/strategies')
     const { strategies } = await res.json()
     setStrategies(strategies)
     setLoading(false)
@@ -21,14 +21,14 @@ export default function AdminStrategiesPage() {
 
   async function handleDelete(id) {
     if (!confirm('Delete this strategy and all subscriber bots?')) return
-    await fetch(`/api/admin/strategies/${id}`, { method: 'DELETE' })
+    await fetch(`/api/v1/admin/strategies/${id}`, { method: 'DELETE' })
     setStrategies(prev => prev.filter(s => s.id !== id))
   }
 
   async function handleToggle(s, field) {
     const fd = new FormData()
     fd.append(field, String(!s[field]))
-    const res = await fetch(`/api/admin/strategies/${s.id}`, { method: 'PATCH', body: fd })
+    const res = await fetch(`/api/v1/admin/strategies/${s.id}`, { method: 'PATCH', body: fd })
     const { strategy } = await res.json()
     setStrategies(prev => prev.map(x => x.id === s.id ? { ...x, ...strategy } : x))
   }
@@ -111,7 +111,7 @@ function StrategyFormModal({ initial, onClose, onSaved }) {
       const file = fileRef.current?.files?.[0]
       if (file) fd.append('backtestFile', file)
 
-      const url    = initial ? `/api/admin/strategies/${initial.id}` : '/api/admin/strategies'
+      const url    = initial ? `/api/v1/admin/strategies/${initial.id}` : '/api/v1/admin/strategies'
       const method = initial ? 'PATCH' : 'POST'
       const res    = await fetch(url, { method, body: fd })
       if (!res.ok) { const { error } = await res.json(); throw new Error(error) }

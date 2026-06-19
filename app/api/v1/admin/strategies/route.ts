@@ -10,7 +10,7 @@ import { parseBacktestFile } from '@/lib/parseBacktest'
 // GET /api/admin/strategies — list all
 export async function GET(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.isAdmin) {
+  if (session?.user?.role !== 'admin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
@@ -25,7 +25,7 @@ export async function GET(req) {
 // POST /api/admin/strategies — create a strategy (multipart/form-data)
 export async function POST(req) {
   const session = await getServerSession(authOptions)
-  if (!session?.user?.isAdmin) {
+  if (session?.user?.role !== 'admin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
