@@ -73,13 +73,13 @@ function extractStats(rows) {
     if (!isNaN(equityVal) && dateVal) {
       if (initialEquity === null) initialEquity = equityVal
       finalEquity = equityVal
-      // Cumulative PnL — add initial capital 1000
-      const equityAbs = equityVal + 1000
+      // Cumulative PnL USD — add base capital 1000 to get equity
+      const equityAbs = 1000 + equityVal
       equityData.push({ date: dateVal, equity: equityAbs })
 
-      // Track drawdown
-      if (equityVal > peak) peak = equityVal
-      const dd = peak > 0 ? (peak - equityVal) / peak : 0
+      // Track drawdown on equity not cumPnL
+      if (equityAbs > peak) peak = equityAbs
+      const dd = peak > 0 ? (peak - equityAbs) / peak : 0
       if (dd > maxDrawdown) maxDrawdown = dd
     }
   }
@@ -88,9 +88,11 @@ function extractStats(rows) {
   const winRate = totalTrades > 0 ? (wins / totalTrades) * 100 : null
 
   // Total PnL %
+  // PnL% based on initial capital 1000 (cumPnL goes from ~0 upward)
+  const initialCapital = 1000
   let totalPnlPct = null
-  if (initialEquity !== null && finalEquity !== null && initialEquity !== 0) {
-    totalPnlPct = ((finalEquity - initialEquity) / Math.abs(initialEquity)) * 100
+  if (finalEquity !== null) {
+    totalPnlPct = (finalEquity / initialCapital) * 100
   }
 
   // Profit factor: gross profit / gross loss (approximate from equity swings)
