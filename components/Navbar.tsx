@@ -24,11 +24,11 @@ export default function Navbar() {
     { href: "/admin/strategies", label: "Strategies" },
     { href: "/simulator", label: "Simulator" },
   ];
-  const links = isAdmin && !path.startsWith("/user") ? adminLinks : userLinks;
+  const links = isAdmin && !path.startsWith("/user") && !path.startsWith("/marketplace") ? adminLinks : userLinks;
   return (
     <nav className="bg-[#0D1117] text-white px-6 py-2 flex items-center justify-between shadow-lg sticky top-0 z-40">
       <div className="flex items-center gap-6">
-        <Link href={isAdmin && !path.startsWith("/user") ? "/admin/dashboard" : "/user/dashboard"}
+        <Link href={isAdmin && !path.startsWith("/user") && !path.startsWith("/marketplace") ? "/admin/dashboard" : "/user/dashboard"}
           className="flex items-center gap-2.5 select-none">
           <Image src="/alm-logo.png" alt="AlgoMomentum" width={38} height={38} className="rounded-lg object-cover" priority />
           <div className="flex flex-col leading-tight">
