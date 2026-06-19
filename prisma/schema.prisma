@@ -184,6 +184,7 @@ model Strategy {
   maxDrawdown     Float?
   profitFactor    Float?
   totalTrades     Int?
+  backtestFileName String?
   webhookToken    String        @unique @default(cuid())
   isFeatured      Boolean       @default(false)
   isActive        Boolean       @default(true)
