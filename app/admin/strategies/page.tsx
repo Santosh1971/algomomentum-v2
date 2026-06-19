@@ -89,7 +89,7 @@ export default function AdminStrategiesPage() {
                 <div className="text-[10px] font-mono bg-muted/30 border border-border/30 rounded px-2 py-1 flex-1 break-all">
                   http://87.76.191.157/api/v1/webhook/strategy/{s.symbol}?secret=algobc2026$
                 </div>
-                <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(`http://87.76.191.157/api/v1/webhook/strategy/${s.symbol}?secret=algobc2026$`); const b=e.currentTarget; b.textContent='✓ Copied Webhook!'; b.style.color='green'; setTimeout(()=>{ b.textContent='Copy'; b.style.color='' },2000) }}
+                <button onClick={(e) => { e.stopPropagation(); const txt=`http://87.76.191.157/api/v1/webhook/strategy/${s.symbol}?secret=algobc2026$`; const el=document.createElement('textarea'); el.value=txt; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el); const b=e.currentTarget; b.textContent='✓ Copied!'; b.style.color='green'; setTimeout(()=>{ b.textContent='Copy'; b.style.color='' },2000) }}
                   className="text-[10px] px-2 py-1 rounded bg-muted/50 border border-border/30 hover:bg-muted whitespace-nowrap">Copy</button>
               </div>
 
@@ -99,7 +99,7 @@ export default function AdminStrategiesPage() {
                 <div className="text-[10px] font-mono text-foreground bg-muted/20 border border-border/20 rounded px-2 py-1 flex-1 break-all">
                   {'{"symbol":"{{ticker}}","side":"{{strategy.order.action}}","trade":"{{strategy.order.comment}}","price":"{{strategy.order.price}}","trigger_time":"{{timenow}}"}'}
                 </div>
-                <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText('{"symbol":"{{ticker}}","side":"{{strategy.order.action}}","trade":"{{strategy.order.comment}}","price":"{{strategy.order.price}}","trigger_time":"{{timenow}}"}'); const b2=e.currentTarget; b2.textContent='✓ Copied Msg!'; b2.style.color='green'; setTimeout(()=>{ b2.textContent='Copy'; b2.style.color='' },2000) }}
+                <button onClick={(e) => { e.stopPropagation(); const txt2='{"symbol":"{{ticker}}","side":"{{strategy.order.action}}","trade":"{{strategy.order.comment}}","price":"{{strategy.order.price}}","trigger_time":"{{timenow}}"}'; const el2=document.createElement('textarea'); el2.value=txt2; document.body.appendChild(el2); el2.select(); document.execCommand('copy'); document.body.removeChild(el2); const b2=e.currentTarget; b2.textContent='✓ Copied!'; b2.style.color='green'; setTimeout(()=>{ b2.textContent='Copy'; b2.style.color='' },2000) }}
                   className="text-[10px] px-2 py-1 rounded bg-muted/50 border border-border/30 hover:bg-muted whitespace-nowrap">Copy</button>
               </div>
             </div>
