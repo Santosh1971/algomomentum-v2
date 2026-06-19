@@ -54,11 +54,7 @@ export default function AdminStrategiesPage() {
               {s.totalPnlPct != null && (
                 <div className="text-xs text-green-500 mt-0.5">+{s.totalPnlPct.toFixed(1)}% PnL · {s.winRate?.toFixed(1)}% win · −{s.maxDrawdown?.toFixed(1)}% DD · {s.totalTrades} trades</div>
               )}
-              {s.totalPnlPct != null && (
-                <div className="text-xs text-green-500 mt-0.5">
-                  +{s.totalPnlPct.toFixed(1)}% PnL · {s.winRate?.toFixed(1)}% win · −{s.maxDrawdown?.toFixed(1)}% DD
-                </div>
-              )}
+              {(s as any).backtestFileName && <div className="text-[10px] text-muted-foreground mt-0.5">📎 {(s as any).backtestFileName}</div>}
               <div className="text-[10px] text-muted-foreground mt-1 font-mono break-all">
                 webhook: /api/v1/webhook/strategy/{s.webhookToken}
               </div>
