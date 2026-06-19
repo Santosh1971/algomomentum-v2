@@ -42,7 +42,6 @@ export async function POST(req) {
   }
 
   let parsedStats = {}
-  let backtestFileUrl = null
 
   if (file && file.size > 0) {
     const buffer = Buffer.from(await file.arrayBuffer())

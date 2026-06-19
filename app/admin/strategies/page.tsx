@@ -52,6 +52,9 @@ export default function AdminStrategiesPage() {
               <div className="font-medium text-sm">{s.name}</div>
               <div className="text-xs text-muted-foreground">{s.symbol} · {s.timeframe} · {s._count.subscribers} subscribers</div>
               {s.totalPnlPct != null && (
+                <div className="text-xs text-green-500 mt-0.5">+{s.totalPnlPct.toFixed(1)}% PnL · {s.winRate?.toFixed(1)}% win · −{s.maxDrawdown?.toFixed(1)}% DD · {s.totalTrades} trades</div>
+              )}
+              {s.totalPnlPct != null && (
                 <div className="text-xs text-green-500 mt-0.5">
                   +{s.totalPnlPct.toFixed(1)}% PnL · {s.winRate?.toFixed(1)}% win · −{s.maxDrawdown?.toFixed(1)}% DD
                 </div>
