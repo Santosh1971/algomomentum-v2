@@ -70,6 +70,30 @@ export default function AdminStrategiesPage() {
         {strategies.length === 0 && <div className="text-center text-muted-foreground text-sm py-12">No strategies yet. Create one to get started.</div>}
       </div>
 
+      {propsModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setPropsModal(null)}>
+          <div className="bg-background border border-border/50 rounded-2xl w-full max-w-lg max-h-[80vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-base font-medium">Strategy Properties — {propsModal.name}</div>
+              <button onClick={() => setPropsModal(null)} className="text-muted-foreground hover:text-foreground text-xl">×</button>
+            </div>
+            {(propsModal as any).properties ? (
+              <table className="w-full text-xs">
+                <tbody>
+                  {Object.entries((propsModal as any).properties).map(([k, v]) => (
+                    <tr key={k} className="border-b border-border/20">
+                      <td className="py-1.5 pr-4 text-muted-foreground font-medium w-1/2">{k}</td>
+                      <td className="py-1.5 text-foreground">{String(v)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="text-sm text-muted-foreground">No properties data. Re-upload the XLSX file to extract properties.</div>
+            )}
+          </div>
+        </div>
+      )}
       {showForm && (
         <StrategyFormModal
           initial={editing}

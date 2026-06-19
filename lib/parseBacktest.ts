@@ -104,6 +104,25 @@ function extractStats(rows) {
   }
   const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : null
 
+  // Extract Properties sheet if available
+  let properties: Record<string, string> | null = null
+  if (ext === 'xlsx' || ext === 'xls') {
+    try {
+      const wb2 = XLSX.read(buffer, { type: 'buffer' })
+      const propSheet = wb2.SheetNames.find((n: string) => n.toLowerCase() === 'properties')
+      if (propSheet) {
+        const ws2 = wb2.Sheets[propSheet]
+        const propRows = XLSX.utils.sheet_to_json(ws2, { header: 1 }) as string[][]
+        properties = {}
+        for (const row of propRows.slice(1)) {
+          if (row[0] && row[1] !== undefined) {
+            properties[String(row[0]).trim()] = String(row[1]).trim()
+          }
+        }
+      }
+    } catch {}
+  }
+
   return {
     equityData,
     totalPnlPct: totalPnlPct !== null ? Math.round(totalPnlPct * 100) / 100 : null,
@@ -111,6 +130,7 @@ function extractStats(rows) {
     maxDrawdown: Math.round(maxDrawdown * 10000) / 100, // as percentage
     profitFactor: profitFactor !== null ? Math.round(profitFactor * 1000) / 1000 : null,
     totalTrades,
+    properties,
   }
 }
 
