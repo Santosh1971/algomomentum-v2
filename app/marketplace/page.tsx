@@ -21,14 +21,14 @@ export default function MarketplacePage() {
   }, [session])
 
   async function fetchStrategies() {
-    const res = await fetch('/api/marketplace')
+    const res = await fetch('/api/v1/marketplace')
     const { strategies } = await res.json()
     setStrategies(strategies)
     setLoading(false)
   }
 
   async function fetchUserSubs() {
-    const res = await fetch('/api/marketplace/my-subscriptions')
+    const res = await fetch('/api/v1/marketplace/my-subscriptions')
     if (res.ok) {
       const { strategyIds } = await res.json()
       setSubscribed(new Set(strategyIds))
@@ -36,7 +36,7 @@ export default function MarketplacePage() {
   }
 
   async function handleUnsubscribe(strategyId) {
-    await fetch('/api/marketplace/unsubscribe', {
+    await fetch('/api/v1/marketplace/unsubscribe', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ strategyId }),
