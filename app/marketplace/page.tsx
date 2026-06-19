@@ -1,4 +1,6 @@
 'use client'
+
+import Navbar from '@/components/Navbar'
 // app/marketplace/page.jsx
 // User-facing strategy marketplace
 
