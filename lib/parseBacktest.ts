@@ -25,7 +25,27 @@ export function parseBacktestFile(buffer, filename) {
     throw new Error('Unsupported file type. Upload .csv or .xlsx')
   }
 
-  return extractStats(rows)
+  // Extract Properties sheet if xlsx
+  let properties: Record<string, string> | null = null
+  if (ext === 'xlsx' || ext === 'xls') {
+    try {
+      const wb2 = XLSX.read(buffer, { type: 'buffer' })
+      const propSheet = wb2.SheetNames.find((n: string) => n.toLowerCase() === 'properties')
+      if (propSheet) {
+        const ws2 = wb2.Sheets[propSheet]
+        const propRows = XLSX.utils.sheet_to_json(ws2, { header: 1 }) as string[][]
+        properties = {}
+        for (const row of propRows.slice(1) as string[][]) {
+          if (row[0] && row[1] !== undefined) {
+            properties[String(row[0]).trim()] = String(row[1]).trim()
+          }
+        }
+      }
+    } catch {}
+  }
+
+  const stats = extractStats(rows)
+  return { ...stats, properties }
 }
 
 function parseCSV(text) {
@@ -103,25 +123,6 @@ function extractStats(rows) {
     else if (p < 0) grossLoss += Math.abs(p)
   }
   const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : null
-
-  // Extract Properties sheet if available
-  let properties: Record<string, string> | null = null
-  if (ext === 'xlsx' || ext === 'xls') {
-    try {
-      const wb2 = XLSX.read(buffer, { type: 'buffer' })
-      const propSheet = wb2.SheetNames.find((n: string) => n.toLowerCase() === 'properties')
-      if (propSheet) {
-        const ws2 = wb2.Sheets[propSheet]
-        const propRows = XLSX.utils.sheet_to_json(ws2, { header: 1 }) as string[][]
-        properties = {}
-        for (const row of propRows.slice(1)) {
-          if (row[0] && row[1] !== undefined) {
-            properties[String(row[0]).trim()] = String(row[1]).trim()
-          }
-        }
-      }
-    } catch {}
-  }
 
   return {
     equityData,
