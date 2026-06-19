@@ -26,6 +26,7 @@ export default function AdminDashboard() {
     { title: "Billing Reports", value: "Generate", icon: "🧾", href: "/admin/billing-report", color: "bg-green-50 border-green-200" },
     { title: "Bot Status", value: "Live", icon: "🤖", href: "/admin/bot-status", color: "bg-purple-50 border-purple-200" },
     { title: "Manage Symbols", value: "Configure", icon: "⚙️", href: "/admin/managesymbols", color: "bg-yellow-50 border-yellow-200" },
+    { title: "Marketplace", value: "Strategies", icon: "🏪", href: "/admin/strategies", color: "bg-purple-50 border-purple-200" },
     { title: "Signal Simulator", value: "Test", icon: "🚀", href: "/simulator", color: "bg-purple-50 border-purple-200" },
     { title: "All Positions", value: "Live View", icon: "📊", href: "/admin/positions", color: "bg-indigo-50 border-indigo-200" },
     { title: "Emergency Exit", value: "⚠️ Exit All", icon: "🚨", href: "/admin/EMERGENCY_EXIT", color: "bg-red-50 border-red-200" },

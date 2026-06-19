@@ -46,9 +46,11 @@ export default function MarketplacePage() {
     setSubscribed(prev => { const s = new Set(prev); s.delete(strategyId); return s })
   }
 
-  if (loading) return <div className="p-8 text-center text-muted-foreground">Loading strategies…</div>
+  if (loading) return <><Navbar /><div className="p-8 text-center text-muted-foreground">Loading strategies…</div></>
 
   return (
+    <>
+    <Navbar />
     <div className="max-w-6xl mx-auto px-4 py-8">
       <div className="mb-8">
         <h1 className="text-2xl font-medium mb-1">Strategy Marketplace</h1>
@@ -92,6 +94,7 @@ export default function MarketplacePage() {
         />
       )}
     </div>
+    </>
   )
 }
 
