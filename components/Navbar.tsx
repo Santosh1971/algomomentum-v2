@@ -11,6 +11,7 @@ export default function Navbar() {
     { href: "/user/dashboard", label: "Dashboard" },
     { href: "/user/tradeconfig", label: "Accounts" },
     { href: "/user/pnl-report", label: "PnL Report" },
+    { href: "/marketplace", label: "Marketplace" },
     { href: "/user/payments", label: "Billing & Payment" },
   ];
   const adminLinks = [

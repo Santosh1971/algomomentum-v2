@@ -32,6 +32,11 @@ export default function DashboardPage() {
             <h2 className="font-semibold text-gray-800">PnL Report</h2>
             <p className="text-sm text-gray-500 mt-1">View live PnL from Delta fills</p>
           </Link>
+          <Link href="/marketplace" className="bg-white rounded-2xl p-5 shadow-sm border hover:shadow-md transition block" style={{borderColor:"#e0f7fa"}}>
+            <div className="text-3xl mb-3">🏪</div>
+            <h2 className="font-semibold text-gray-800">Marketplace</h2>
+            <p className="text-sm text-gray-500 mt-1">Browse and subscribe to strategies</p>
+          </Link>
           <Link href="/user/payments" className="bg-white rounded-2xl p-5 shadow-sm border hover:shadow-md transition block" style={{borderColor:"#f3e5f5"}}>
             <div className="text-3xl mb-3">💳</div>
             <h2 className="font-semibold text-gray-800">Payments</h2>
