@@ -8,6 +8,20 @@ import * as XLSX from 'xlsx'
  * Parse a Buffer (from file upload) into backtest stats.
  * Supports both .csv and .xlsx exports from TradingView Strategy Tester.
  */
+// Convert Excel serial date to ISO string
+function excelDateToISO(val: any): string {
+  if (!val) return new Date().toISOString()
+  const num = parseFloat(String(val))
+  if (!isNaN(num) && num > 40000) {
+    // Excel serial date
+    return new Date((num - 25569) * 86400 * 1000).toISOString()
+  }
+  // Already a string date
+  const d = new Date(String(val).replace(' ', 'T'))
+  if (!isNaN(d.getTime())) return d.toISOString()
+  return new Date().toISOString()
+}
+
 export function parseBacktestFile(buffer, filename) {
   const ext = filename.split('.').pop().toLowerCase()
 
@@ -95,7 +109,7 @@ function extractStats(rows) {
       finalEquity = equityVal
       // Cumulative PnL USD — add base capital 1000 to get equity
       const equityAbs = 1000 + equityVal
-      equityData.push({ date: dateVal, equity: equityAbs })
+      equityData.push({ date: excelDateToISO(dateVal), equity: equityAbs })
 
       // Track drawdown on equity not cumPnL
       if (equityAbs > peak) peak = equityAbs
@@ -133,9 +147,9 @@ function extractStats(rows) {
     const priceCol = Object.keys(rows[0]).find(h => h.toLowerCase().replace(/[\s_()%]/g,'') === 'priceusd') ?? ''
     const sizeCol = Object.keys(rows[0]).find(h => h.toLowerCase().replace(/[\s_()%]/g,'') === 'sizeqty') ?? ''
     const netPnlCol = Object.keys(rows[0]).find(h => h.toLowerCase().replace(/[\s_()%]/g,'') === 'netpnlusd') ?? ''
-    const netPnlPctCol = Object.keys(rows[0]).find(h => h.toLowerCase().replace(/[\s_()%]/g,'') === 'netpnlpct') ?? ''
+    const netPnlPctCol = Object.keys(rows[0]).find(h => h.toLowerCase().replace(/[\s_()']/g,'').replace('%','pct') === 'netpnlpct') ?? ''
     const cumPnlCol = Object.keys(rows[0]).find(h => h.toLowerCase().replace(/[\s_()%]/g,'') === 'cumulativepnlusd') ?? ''
-    const dateVal = colMap.date ? row[colMap.date] : ''
+    const dateVal = row[colMap.date] || row[colMap.closeTime] || ''
     if (!dateVal || !typeVal || !row[typeVal]) continue
     const typeStr = String(row[typeVal]).toLowerCase()
     const side = typeStr.includes('long') ? 'buy' : typeStr.includes('short') ? 'sell' : ''
@@ -150,7 +164,7 @@ function extractStats(rows) {
       netPnlUsd: netPnlCol ? parseFloat(row[netPnlCol]) || 0 : 0,
       netPnlPct: netPnlPctCol ? parseFloat(row[netPnlPctCol]) || 0 : 0,
       cumulativePnlUsd: cumPnlCol ? parseFloat(row[cumPnlCol]) || 0 : 0,
-      firedAt: String(dateVal),
+      firedAt: excelDateToISO(dateVal),
     })
   }
 
@@ -176,5 +190,6 @@ function findColumns(headers) {
     equity:       find('cumulativepnlusd', 'equity', 'cumulativeequity', 'runningequity', 'cumulativepnl'),
     cumulativePnl:find('cumulativepnlusd', 'cumulativepnl', 'cumpnl', 'runningpnl'),
     profit:       find('netpnlusd', 'profit', 'pnl', 'netprofit', 'tradepnl', 'netpnl'),
+    netPnlPct:   find('netpnlpct', 'netpnl%', 'netpnlpercentage', 'pnlpct'),
   }
 }

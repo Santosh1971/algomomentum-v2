@@ -27,7 +27,33 @@ export async function PATCH(req, { params }) {
     const buffer = Buffer.from(await file.arrayBuffer())
     try {
       const parsed = parseBacktestFile(buffer, file.name)
-      Object.assign(data, parsed)
+      const { backtestTrades, properties, ...parsedStats } = parsed
+      if (properties) parsedStats.properties = properties
+      parsedStats.backtestFileName = file.name
+      Object.assign(data, parsedStats)
+
+      // Store backtest trades
+      if (backtestTrades?.length) {
+        await prisma.strategyTrade.deleteMany({ where: { strategyId: params.id, source: 'backtest' } })
+        await prisma.strategyTrade.createMany({
+          data: backtestTrades.map((t) => ({
+            strategyId:       params.id,
+            source:           'backtest',
+            side:             t.side,
+            trade:            t.type,
+            signal:           t.signal,
+            price:            t.price,
+            size:             t.size,
+            netPnlUsd:        t.netPnlUsd,
+            netPnlPct:        t.netPnlPct,
+            cumulativePnlUsd: t.cumulativePnlUsd,
+            tradeNumber:      t.tradeNumber,
+            symbol:           data.symbol ?? 'XRPUSDT',
+            firedAt:          isNaN(new Date(t.firedAt).getTime()) ? new Date() : new Date(t.firedAt),
+            totalFired:       0,
+          }))
+        })
+      }
     } catch (e) {
       return NextResponse.json({ error: e.message }, { status: 422 })
     }
