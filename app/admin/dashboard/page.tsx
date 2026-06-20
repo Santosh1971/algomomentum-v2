@@ -29,7 +29,7 @@ export default function AdminDashboard() {
     { title: "Marketplace", value: "Strategies", icon: "🏪", href: "/admin/strategies", color: "bg-purple-50 border-purple-200" },
     { title: "Signal Simulator", value: "Test", icon: "🚀", href: "/simulator", color: "bg-purple-50 border-purple-200" },
     { title: "All Positions", value: "Live View", icon: "📊", href: "/admin/positions", color: "bg-indigo-50 border-indigo-200" },
-    { title: "Emergency Exit", value: "⚠️ Exit All", icon: "🚨", href: "/admin/EMERGENCY_EXIT", color: "bg-red-50 border-red-200" },
+    { title: "Manual Entry/Exit", value: "🚀 Manual Signal", icon: "🚨", href: "/admin/manual-signal", color: "bg-red-50 border-red-200" },
   ];
 
   return (
