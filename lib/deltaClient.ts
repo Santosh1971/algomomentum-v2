@@ -169,7 +169,7 @@ function oauthHeaders(token: string) {
   return {
     "Content-Type": "application/json",
     Accept: "application/json",
-    Authorization: "Bearer " + token,
+    Authorization: token,
     "User-Agent": "algomomentum-v2/2.0",
   };
 }
