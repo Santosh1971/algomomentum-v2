@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
-import EquitySparkline from '@/components/marketplace/EquitySparkline'
+import EquityChart from '@/components/marketplace/EquityChart'
 
 const PERIODS = [
   { label: '7D', value: '7' },
@@ -67,8 +67,8 @@ export default function StrategyDetailPage() {
             {/* Equity chart */}
             <div className="border border-border/40 rounded-xl p-4">
               <div className="text-sm font-medium mb-3">Backtesting PnL</div>
-              <div className="h-52">
-                <EquitySparkline data={s.equityData} big />
+              <div className="h-64">
+                <EquityChart data={s.equityData} />
               </div>
             </div>
 
@@ -121,35 +121,41 @@ export default function StrategyDetailPage() {
               <div className="p-4 border-b border-border/40">
                 <div className="text-sm font-medium">Signal History</div>
               </div>
-              {data.trades?.length > 0 ? (
+              {data.pairedTrades?.length > 0 ? (
                 <table className="w-full text-xs">
                   <thead className="bg-muted/30">
                     <tr>
-                      <th className="text-left px-4 py-2 text-muted-foreground font-medium">#</th>
-                      <th className="text-left px-4 py-2 text-muted-foreground font-medium">Signal</th>
-                      <th className="text-left px-4 py-2 text-muted-foreground font-medium">Side</th>
-                      <th className="text-left px-4 py-2 text-muted-foreground font-medium">Price</th>
-                      <th className="text-left px-4 py-2 text-muted-foreground font-medium">Date & Time</th>
-                      <th className="text-left px-4 py-2 text-muted-foreground font-medium">Subscribers Fired</th>
+                      <th className="text-left px-3 py-2 text-muted-foreground font-medium">Trade#</th>
+                      <th className="text-left px-3 py-2 text-muted-foreground font-medium">Symbol</th>
+                      <th className="text-left px-3 py-2 text-muted-foreground font-medium">Signal</th>
+                      <th className="text-left px-3 py-2 text-muted-foreground font-medium">Entry Date</th>
+                      <th className="text-left px-3 py-2 text-muted-foreground font-medium">Entry Price</th>
+                      <th className="text-left px-3 py-2 text-muted-foreground font-medium">Exit Date</th>
+                      <th className="text-left px-3 py-2 text-muted-foreground font-medium">Exit Price</th>
+                      <th className="text-right px-3 py-2 text-muted-foreground font-medium">PnL (ROI%)</th>
+                      <th className="text-right px-3 py-2 text-muted-foreground font-medium">Agg. PnL%</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {data.trades.map((t: any, i: number) => (
-                      <tr key={t.id} className="border-t border-border/20 hover:bg-muted/20">
-                        <td className="px-4 py-2">{data.trades.length - i}</td>
-                        <td className="px-4 py-2 font-medium">{t.trade}</td>
-                        <td className={`px-4 py-2 font-medium ${t.side === 'buy' ? 'text-green-500' : 'text-red-400'}`}>{t.side?.toUpperCase()}</td>
-                        <td className="px-4 py-2">{t.price ? `$${parseFloat(t.price).toFixed(4)}` : '—'}</td>
-                        <td className="px-4 py-2 text-muted-foreground">{new Date(t.firedAt).toLocaleString('en-IN')}</td>
-                        <td className="px-4 py-2">{t.totalFired}</td>
+                    {data.pairedTrades.map((t: any) => (
+                      <tr key={t.tradeNum} className="border-t border-border/20 hover:bg-muted/20">
+                        <td className="px-3 py-2">{t.tradeNum}</td>
+                        <td className="px-3 py-2 font-medium">{t.symbol}</td>
+                        <td className={`px-3 py-2 font-medium ${t.entrySide === 'buy' ? 'text-green-500' : 'text-red-400'}`}>{t.entrySide?.toUpperCase()}</td>
+                        <td className="px-3 py-2 text-muted-foreground">{new Date(t.entryDate).toLocaleDateString('en-IN')}</td>
+                        <td className="px-3 py-2">${t.entryPrice?.toFixed(4)}</td>
+                        <td className="px-3 py-2 text-muted-foreground">{new Date(t.exitDate).toLocaleDateString('en-IN')}</td>
+                        <td className="px-3 py-2">${t.exitPrice?.toFixed(4)}</td>
+                        <td className={`px-3 py-2 text-right font-medium ${t.pnlPct >= 0 ? 'text-green-500' : 'text-red-400'}`}>{t.pnlPct >= 0 ? '+' : ''}{t.pnlPct.toFixed(2)}%</td>
+                        <td className={`px-3 py-2 text-right font-medium ${t.aggPnlPct >= 0 ? 'text-green-500' : 'text-red-400'}`}>{t.aggPnlPct >= 0 ? '+' : ''}{t.aggPnlPct.toFixed(2)}%</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               ) : (
                 <div className="p-8 text-center text-muted-foreground text-sm">
-                  No signals fired in this period yet.<br/>
-                  <span className="text-xs">Signals will appear here once TradingView alerts start firing.</span>
+                  No completed trades in this period yet.<br/>
+                  <span className="text-xs">Trades will appear here once TradingView signals start firing.</span>
                 </div>
               )}
             </div>
