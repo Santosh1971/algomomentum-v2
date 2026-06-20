@@ -164,3 +164,43 @@ export async function getTicker(symbol: string) {
     return null;
   }
 }
+
+function oauthHeaders(token: string) {
+  return {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+    Authorization: "Bearer " + token,
+    "User-Agent": "algomomentum-v2/2.0",
+  };
+}
+
+export async function placeOrderOAuth(token: string, body: Record<string, any>) {
+  try {
+    const r = await axios.post(`${BASE_URL}/v2/orders`, body, { headers: oauthHeaders(token) });
+    return r.data;
+  } catch (e: any) {
+    console.error("placeOrderOAuth error:", e.response?.data ?? e.message);
+    return { success: false, error: e.response?.data ?? e.message };
+  }
+}
+
+export async function setLeverageOAuth(token: string, productId: number, leverage: number) {
+  const body = { leverage: String(leverage) };
+  try {
+    const r = await axios.post(`${BASE_URL}/v2/products/${productId}/orders/leverage`, body, { headers: oauthHeaders(token) });
+    return r.data;
+  } catch (e: any) {
+    console.error("setLeverageOAuth error:", e.response?.data ?? e.message);
+    return { success: false, error: e.response?.data ?? e.message };
+  }
+}
+
+export async function getPositionsOAuth(token: string) {
+  try {
+    const r = await axios.get(`${BASE_URL}/v2/positions/margined`, { headers: oauthHeaders(token) });
+    return r.data;
+  } catch (e: any) {
+    console.error("getPositionsOAuth error:", e.response?.data ?? e.message);
+    return { success: false, error: e.response?.data ?? e.message };
+  }
+}
