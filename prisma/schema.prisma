@@ -193,3 +193,17 @@ model Strategy {
   updatedAt       DateTime      @updatedAt
   subscribers     TradeConfig[]
 }
+
+model StrategyTrade {
+  id         String   @id @default(cuid())
+  strategyId String
+  side       String
+  trade      String
+  price      Float?
+  symbol     String
+  firedAt    DateTime @default(now())
+  totalFired Int      @default(0)
+
+  @@index([strategyId])
+  @@index([firedAt])
+}

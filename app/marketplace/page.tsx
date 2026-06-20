@@ -7,9 +7,11 @@ import Navbar from '@/components/Navbar'
 import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import EquitySparkline from '@/components/marketplace/EquitySparkline'
+import { useRouter } from 'next/navigation'
 import SubscribeModal from '@/components/marketplace/SubscribeModal'
 
 export default function MarketplacePage() {
+  const router = useRouter()
   const { data: session } = useSession()
   const [strategies, setStrategies] = useState([])
   const [loading, setLoading] = useState(true)
@@ -64,7 +66,7 @@ export default function MarketplacePage() {
             key={s.id}
             strategy={s}
             isSubscribed={subscribed.has(s.id)}
-            onDetail={() => setSelected(s)}
+            onDetail={() => router.push(`/marketplace/${s.id}`)}
             onSubscribe={() => setSubModal(s)}
             onUnsubscribe={() => handleUnsubscribe(s.id)}
           />

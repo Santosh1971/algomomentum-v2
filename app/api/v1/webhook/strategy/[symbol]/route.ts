@@ -13,7 +13,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ symbol
     return NextResponse.json({ error: 'Invalid secret' }, { status: 401 })
   }
 
-  const { side, trade } = await req.json()
+  const { side, trade, price } = await req.json()
   const isEntry = /ENTRY/i.test(trade)
   const isExit  = /EXIT/i.test(trade)
   if (!isEntry && !isExit) return NextResponse.json({ error: 'Invalid trade type' }, { status: 400 })
@@ -34,6 +34,18 @@ export async function POST(req: NextRequest, context: { params: Promise<{ symbol
 
   const script = cache.getScript(strategy.symbol)
   if (!script) return NextResponse.json({ error: `Unknown symbol: ${strategy.symbol}` }, { status: 400 })
+
+  // Log this trade signal
+  await prisma.strategyTrade.create({
+    data: {
+      strategyId: strategy.id,
+      side,
+      trade,
+      price:      price ? parseFloat(price) : null,
+      symbol:     strategy.symbol,
+      totalFired: strategy.subscribers.length,
+    },
+  })
 
   const results = await Promise.allSettled(
     strategy.subscribers.map((tc: any) => isEntry ? handleEntry({ tc, side, script }) : handleExit({ tc, side, script }))
