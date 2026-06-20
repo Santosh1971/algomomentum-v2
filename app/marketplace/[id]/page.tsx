@@ -100,8 +100,8 @@ export default function StrategyDetailPage() {
         {tab === 'live' && (
           <div className="space-y-4">
             {/* Period selector */}
-            <div className="flex gap-2">
-              {PERIODS.map(p => (
+            <div className="flex gap-2 flex-wrap">
+              {[{label:'All',value:'all'}, ...PERIODS].map(p => (
                 <button key={p.value} onClick={() => setPeriod(p.value)}
                   className={`px-4 py-1.5 rounded-lg text-sm transition-colors ${period === p.value ? 'bg-blue-600 text-white' : 'border border-border/40 hover:bg-muted/30'}`}>
                   {p.label}
@@ -110,18 +110,29 @@ export default function StrategyDetailPage() {
             </div>
 
             {/* Live stats */}
-            <div className="grid grid-cols-3 gap-3">
-              <KpiCard label="Total Signals" value={data.trades?.length ?? 0} />
-              <KpiCard label="Entry Signals" value={data.entries ?? 0} color="green" />
-              <KpiCard label="Exit Signals"  value={data.exits ?? 0} color="red" />
+            <div className="grid grid-cols-4 gap-3">
+              <KpiCard label="Total Trades"  value={data.stats?.total ?? 0} />
+              <KpiCard label="Win Rate"      value={data.stats?.winRate ? `${data.stats.winRate}%` : '—'} color="green" />
+              <KpiCard label="Wins"          value={data.stats?.wins ?? 0} color="green" />
+              <KpiCard label="Losses"        value={data.stats?.losses ?? 0} color="red" />
             </div>
+
+            {/* Live equity chart */}
+            {data.liveEquity?.length > 1 && (
+              <div className="border border-border/40 rounded-xl p-4">
+                <div className="text-sm font-medium mb-3">Live PnL Curve</div>
+                <div className="h-52">
+                  <EquityChart data={data.liveEquity} />
+                </div>
+              </div>
+            )}
 
             {/* Trade history table */}
             <div className="border border-border/40 rounded-xl overflow-hidden">
               <div className="p-4 border-b border-border/40">
-                <div className="text-sm font-medium">Signal History</div>
+                <div className="text-sm font-medium">Historical Trades (Backtest + Live)</div>
               </div>
-              {data.pairedTrades?.length > 0 ? (
+              {data.allPaired?.length > 0 ? (
                 <table className="w-full text-xs">
                   <thead className="bg-muted/30">
                     <tr>
@@ -137,7 +148,7 @@ export default function StrategyDetailPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.pairedTrades.map((t: any) => (
+                    {data.allPaired.map((t: any) => (
                       <tr key={t.tradeNum} className="border-t border-border/20 hover:bg-muted/20">
                         <td className="px-3 py-2">{t.tradeNum}</td>
                         <td className="px-3 py-2 font-medium">{t.symbol}</td>

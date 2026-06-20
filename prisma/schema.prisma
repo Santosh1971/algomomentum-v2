@@ -195,15 +195,23 @@ model Strategy {
 }
 
 model StrategyTrade {
-  id         String   @id @default(cuid())
-  strategyId String
-  side       String
-  trade      String
-  price      Float?
-  symbol     String
-  firedAt    DateTime @default(now())
-  totalFired Int      @default(0)
+  id               String   @id @default(cuid())
+  strategyId       String
+  side             String
+  trade            String
+  signal           String?
+  price            Float?
+  size             Float?
+  netPnlUsd        Float?
+  netPnlPct        Float?
+  cumulativePnlUsd Float?
+  tradeNumber      Int?
+  symbol           String
+  source           String   @default("live")
+  firedAt          DateTime @default(now())
+  totalFired       Int      @default(0)
 
   @@index([strategyId])
   @@index([firedAt])
+  @@index([source])
 }

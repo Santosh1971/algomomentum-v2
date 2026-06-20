@@ -124,6 +124,36 @@ function extractStats(rows) {
   }
   const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : null
 
+  // Extract individual trades for storage
+  const backtestTrades: BacktestTrade[] = []
+  for (const row of rows) {
+    const tradeNum = parseInt(row[colMap.date ? Object.keys(rows[0]).find(h => h.toLowerCase().replace(/[\s_()%]/g,'') === 'tradenumber') ?? '' : ''] || '0')
+    const typeVal = Object.keys(rows[0]).find(h => h.toLowerCase() === 'type') ?? ''
+    const signalCol = Object.keys(rows[0]).find(h => h.toLowerCase().replace(/[\s_()%]/g,'') === 'signal') ?? ''
+    const priceCol = Object.keys(rows[0]).find(h => h.toLowerCase().replace(/[\s_()%]/g,'') === 'priceusd') ?? ''
+    const sizeCol = Object.keys(rows[0]).find(h => h.toLowerCase().replace(/[\s_()%]/g,'') === 'sizeqty') ?? ''
+    const netPnlCol = Object.keys(rows[0]).find(h => h.toLowerCase().replace(/[\s_()%]/g,'') === 'netpnlusd') ?? ''
+    const netPnlPctCol = Object.keys(rows[0]).find(h => h.toLowerCase().replace(/[\s_()%]/g,'') === 'netpnlpct') ?? ''
+    const cumPnlCol = Object.keys(rows[0]).find(h => h.toLowerCase().replace(/[\s_()%]/g,'') === 'cumulativepnlusd') ?? ''
+    const dateVal = colMap.date ? row[colMap.date] : ''
+    if (!dateVal || !typeVal || !row[typeVal]) continue
+    const typeStr = String(row[typeVal]).toLowerCase()
+    const side = typeStr.includes('long') ? 'buy' : typeStr.includes('short') ? 'sell' : ''
+    if (!side) continue
+    backtestTrades.push({
+      tradeNumber: parseInt(row[Object.keys(rows[0]).find(h => h.toLowerCase().replace(/[\s_()%]/g,'') === 'tradenumber') ?? ''] || '0'),
+      type: row[typeVal],
+      side,
+      signal: signalCol ? row[signalCol] : '',
+      price: priceCol ? parseFloat(row[priceCol]) || 0 : 0,
+      size: sizeCol ? parseFloat(row[sizeCol]) || 0 : 0,
+      netPnlUsd: netPnlCol ? parseFloat(row[netPnlCol]) || 0 : 0,
+      netPnlPct: netPnlPctCol ? parseFloat(row[netPnlPctCol]) || 0 : 0,
+      cumulativePnlUsd: cumPnlCol ? parseFloat(row[cumPnlCol]) || 0 : 0,
+      firedAt: String(dateVal),
+    })
+  }
+
   return {
     equityData,
     totalPnlPct: totalPnlPct !== null ? Math.round(totalPnlPct * 100) / 100 : null,
@@ -131,6 +161,7 @@ function extractStats(rows) {
     maxDrawdown: Math.round(maxDrawdown * 10000) / 100, // as percentage
     profitFactor: profitFactor !== null ? Math.round(profitFactor * 1000) / 1000 : null,
     totalTrades,
+    backtestTrades,
   }
 }
 
