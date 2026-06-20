@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
         select: {
           id: true, script: true, amount: true, initial_amount: true,
           isActive: true, userActive: true, mode: true, strategy: true,
-          leverage: true, compoundMode: true, platformFeePercent: true,
+          leverage: true, compoundMode: true, platformFeePercent: true, isSubscription: true, strategy: true,
           webhookToken: true, createdAt: true, lastToggledAt: true,
         },
       },

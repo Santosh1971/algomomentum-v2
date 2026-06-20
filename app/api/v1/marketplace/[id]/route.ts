@@ -1,9 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { NEXT_AUTH } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const period = req.nextUrl.searchParams.get('period') ?? 'all'
+
+  const session = await getServerSession(NEXT_AUTH)
+  let isSubscribed = false
+  let userHasAccount = false
+
+  if (session?.user?.email) {
+    const user = await prisma.user.findUnique({ where: { email: session.user.email } })
+    if (user) {
+      const sub = await prisma.tradeConfig.findFirst({
+        where: { userId: user.id, strategyId: id, isSubscription: true }
+      })
+      isSubscribed = !!sub
+      const account = await prisma.deltaAccount.findFirst({ where: { userId: user.id, isActive: true } })
+      userHasAccount = !!account
+    }
+  }
 
   const strategy = await prisma.strategy.findUnique({
     where: { id, isActive: true },
@@ -11,7 +29,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   })
   if (!strategy) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  // Build date filter
   let dateFilter: any = {}
   if (period !== 'all') {
     const daysAgo = new Date()
@@ -19,20 +36,17 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     dateFilter = { firedAt: { gte: daysAgo } }
   }
 
-  // Get ALL trades (backtest + live) for history table
   const allTrades = await prisma.strategyTrade.findMany({
     where: { strategyId: id },
     orderBy: { firedAt: 'asc' },
   })
 
-  // Get period-filtered trades for stats
   const periodTrades = period === 'all' ? allTrades : allTrades.filter(t => {
     const daysAgo = new Date()
     daysAgo.setDate(daysAgo.getDate() - parseInt(period))
     return new Date(t.firedAt) >= daysAgo
   })
 
-  // Pair Entry+Exit into completed trades
   function pairTrades(trades: any[]) {
     const paired: any[] = []
     let tradeNum = 0
@@ -77,19 +91,18 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const allPaired    = pairTrades(allTrades)
   const periodPaired = period === 'all' ? allPaired : pairTrades(periodTrades)
 
-  // Build equity curve for live tab (period filtered)
-  const liveEquity = periodPaired.slice().reverse().map((t, i) => ({
+  const liveEquity = periodPaired.slice().reverse().map((t) => ({
     date:   t.exitDate,
     equity: 1000 + (1000 * t.aggPnlPct / 100),
   }))
 
-  // Period stats
   const wins   = periodPaired.filter(t => t.pnlPct > 0).length
   const losses = periodPaired.filter(t => t.pnlPct < 0).length
-  const totalPnlPct = periodPaired.length > 0 ? periodPaired[0].aggPnlPct - (periodPaired[periodPaired.length-1]?.aggPnlPct ?? 0) : 0
 
   return NextResponse.json({
     strategy,
+    isSubscribed,
+    userHasAccount,
     allPaired,
     periodPaired,
     liveEquity,

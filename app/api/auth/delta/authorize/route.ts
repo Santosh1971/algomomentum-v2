@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   url.searchParams.set("response_type", "code");
   url.searchParams.set("client_id", process.env.DELTA_CLIENT_ID!);
   url.searchParams.set("redirect_uri", REDIRECT_URI);
-  url.searchParams.set("scope", "read");
+  url.searchParams.set("scope", "read trade");
   url.searchParams.set("state", state);
   return NextResponse.redirect(url.toString());
 }

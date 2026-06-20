@@ -26,6 +26,7 @@ export async function GET(req: NextRequest) {
     const REDIRECT_URI = BASE_URL + "/api/auth/delta/callback";
     const formData = new FormData();
     formData.append("grant_type", "authorization_code");
+    formData.append("scope", "read trade");
     formData.append("client_id", CLIENT_ID);
     formData.append("client_secret", CLIENT_SECRET);
     formData.append("redirect_uri", REDIRECT_URI);
@@ -33,6 +34,7 @@ export async function GET(req: NextRequest) {
 
     const tokenRes = await fetch(TOKEN_URL, { method: "POST", body: formData });
     const tokenData = await tokenRes.json();
+    console.log("Delta token response:", JSON.stringify(tokenData));
 
     if (!tokenData.access_token) {
       console.error("Delta OAuth token error:", tokenData);

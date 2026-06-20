@@ -41,7 +41,7 @@ export default function MarketplacePage() {
 
   async function handleUnsubscribe(strategyId) {
     await fetch('/api/v1/marketplace/unsubscribe', {
-      method: 'DELETE',
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ strategyId }),
     })

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import EquityChart from '@/components/marketplace/EquityChart'
 
@@ -15,16 +15,55 @@ const PERIODS = [
 
 export default function StrategyDetailPage() {
   const { id } = useParams()
+  const router = useRouter()
   const [tab, setTab] = useState<'backtest' | 'live'>('backtest')
   const [period, setPeriod] = useState('30')
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [subscribing, setSubscribing] = useState(false)
+  const [subMsg, setSubMsg] = useState('')
 
   useEffect(() => {
     fetch(`/api/v1/marketplace/${id}?period=${period}`)
       .then(r => r.json())
       .then(d => { setData(d); setLoading(false) })
   }, [id, period])
+
+  async function handleSubscribe() {
+    setSubscribing(true)
+    setSubMsg('')
+    const res = await fetch('/api/v1/marketplace/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ strategyId: id }),
+    })
+    const json = await res.json()
+    if (res.ok) {
+      setSubMsg('Successfully subscribed!')
+      setData((prev: any) => ({ ...prev, isSubscribed: true }))
+    } else {
+      setSubMsg(json.error ?? 'Subscription failed')
+    }
+    setSubscribing(false)
+  }
+
+  async function handleUnsubscribe() {
+    setSubscribing(true)
+    setSubMsg('')
+    const res = await fetch('/api/v1/marketplace/unsubscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ strategyId: id }),
+    })
+    const json = await res.json()
+    if (res.ok) {
+      setSubMsg('Unsubscribed successfully.')
+      setData((prev: any) => ({ ...prev, isSubscribed: false }))
+    } else {
+      setSubMsg(json.error ?? 'Failed to unsubscribe')
+    }
+    setSubscribing(false)
+  }
 
   if (loading) return <><Navbar /><div className="p-10 text-center text-muted-foreground">Loading…</div></>
   if (!data?.strategy) return <><Navbar /><div className="p-10 text-center text-muted-foreground">Strategy not found</div></>
@@ -36,10 +75,26 @@ export default function StrategyDetailPage() {
       <Navbar />
       <div className="max-w-5xl mx-auto px-4 py-8">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold">{s.name}</h1>
-          <div className="text-sm text-muted-foreground mt-1">{s.symbol} · {s.timeframe} · {s._count.subscribers} subscribers</div>
-          {s.description && <p className="text-sm text-muted-foreground mt-2">{s.description}</p>}
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold">{s.name}</h1>
+            <div className="text-sm text-muted-foreground mt-1">{s.symbol} · {s.timeframe} · {s._count.subscribers} subscribers</div>
+            {s.description && <p className="text-sm text-muted-foreground mt-2">{s.description}</p>}
+          </div>
+          <div className="flex flex-col items-end gap-2 shrink-0">
+            {data.isSubscribed ? (
+              <button onClick={handleUnsubscribe} disabled={subscribing}
+                className="px-5 py-2 rounded-lg text-sm font-medium bg-red-600 hover:bg-red-700 text-white transition-colors disabled:opacity-50">
+                {subscribing ? 'Processing…' : 'Unsubscribe'}
+              </button>
+            ) : (
+              <button onClick={handleSubscribe} disabled={subscribing}
+                className="px-5 py-2 rounded-lg text-sm font-medium bg-green-600 hover:bg-green-700 text-white transition-colors disabled:opacity-50">
+                {subscribing ? 'Processing…' : 'Subscribe'}
+              </button>
+            )}
+            {subMsg && <div className="text-xs text-muted-foreground">{subMsg}</div>}
+          </div>
         </div>
 
         {/* Tabs */}
@@ -56,23 +111,18 @@ export default function StrategyDetailPage() {
 
         {tab === 'backtest' && (
           <div className="space-y-4">
-            {/* KPI row */}
             <div className="grid grid-cols-4 gap-3">
               <KpiCard label="Total PnL"     value={s.totalPnlPct  != null ? `+${s.totalPnlPct.toFixed(1)}%`  : '—'} color="green" />
               <KpiCard label="Profit factor" value={s.profitFactor?.toFixed(2) ?? '—'} />
               <KpiCard label="Win rate"      value={s.winRate != null ? `${s.winRate.toFixed(1)}%` : '—'} />
               <KpiCard label="Max drawdown"  value={s.maxDrawdown != null ? `−${s.maxDrawdown.toFixed(1)}%` : '—'} color="red" />
             </div>
-
-            {/* Equity chart */}
             <div className="border border-border/40 rounded-xl p-4">
               <div className="text-sm font-medium mb-3">Backtesting PnL</div>
               <div className="h-64">
                 <EquityChart data={s.equityData} />
               </div>
             </div>
-
-            {/* Backtest details */}
             <div className="grid grid-cols-2 gap-4">
               <div className="border border-border/40 rounded-xl p-4 space-y-2">
                 <div className="text-sm font-medium mb-2">Backtesting Result</div>
@@ -99,7 +149,6 @@ export default function StrategyDetailPage() {
 
         {tab === 'live' && (
           <div className="space-y-4">
-            {/* Period selector */}
             <div className="flex gap-2 flex-wrap">
               {[{label:'All',value:'all'}, ...PERIODS].map(p => (
                 <button key={p.value} onClick={() => setPeriod(p.value)}
@@ -108,16 +157,12 @@ export default function StrategyDetailPage() {
                 </button>
               ))}
             </div>
-
-            {/* Live stats */}
             <div className="grid grid-cols-4 gap-3">
               <KpiCard label="Total Trades"  value={data.stats?.total ?? 0} />
               <KpiCard label="Win Rate"      value={data.stats?.winRate ? `${data.stats.winRate}%` : '—'} color="green" />
               <KpiCard label="Wins"          value={data.stats?.wins ?? 0} color="green" />
               <KpiCard label="Losses"        value={data.stats?.losses ?? 0} color="red" />
             </div>
-
-            {/* Live equity chart */}
             {data.liveEquity?.length > 1 && (
               <div className="border border-border/40 rounded-xl p-4">
                 <div className="text-sm font-medium mb-3">Live PnL Curve</div>
@@ -126,13 +171,11 @@ export default function StrategyDetailPage() {
                 </div>
               </div>
             )}
-
-            {/* Trade history table */}
             <div className="border border-border/40 rounded-xl overflow-hidden">
               <div className="p-4 border-b border-border/40">
                 <div className="text-sm font-medium">Historical Trades (Backtest + Live)</div>
               </div>
-              {data.allPaired?.length > 0 ? (
+              {data.periodPaired?.length > 0 ? (
                 <table className="w-full text-xs">
                   <thead className="bg-muted/30">
                     <tr>
@@ -148,7 +191,7 @@ export default function StrategyDetailPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.allPaired.map((t: any) => (
+                    {data.periodPaired.map((t: any) => (
                       <tr key={t.tradeNum} className="border-t border-border/20 hover:bg-muted/20">
                         <td className="px-3 py-2">{t.tradeNum}</td>
                         <td className="px-3 py-2 font-medium">{t.symbol}</td>
@@ -165,7 +208,7 @@ export default function StrategyDetailPage() {
                 </table>
               ) : (
                 <div className="p-8 text-center text-muted-foreground text-sm">
-                  No completed trades in this period yet.<br/>
+                  No trades in this period yet.<br/>
                   <span className="text-xs">Trades will appear here once TradingView signals start firing.</span>
                 </div>
               )}

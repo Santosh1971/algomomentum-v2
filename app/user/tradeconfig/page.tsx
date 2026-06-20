@@ -10,7 +10,7 @@ const INR_PER_USD = 85;
 
 interface TradeConfig {
   id: string; script: string; amount: number; initial_amount: number | null;
-  isActive: boolean; userActive: boolean; mode: string; strategy: string | null;
+  isActive: boolean; userActive: boolean; mode: string; strategy: string | null; isSubscription: boolean;
   leverage: number; compoundMode: string; platformFeePercent: number;
   webhookToken: string; createdAt: string;
 }
@@ -356,6 +356,7 @@ export default function TradeConfigPage() {
                                 <div className="col-span-2">
                                   <span className="font-bold text-gray-800">{tc.script}</span>
                                   <div className="text-xs text-gray-400 mt-0.5">{tc.compoundMode}</div>
+                                  {tc.isSubscription && <span className="text-xs px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-medium mt-0.5 inline-block">📊 {tc.strategy ?? "Strategy"}</span>}
                                 </div>
                                 <div className="col-span-2 text-sm">
                                   <div className="font-medium">{fmt(tc.amount / INR_PER_USD)}</div>
