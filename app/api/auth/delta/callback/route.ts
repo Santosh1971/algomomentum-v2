@@ -6,11 +6,12 @@ import { prisma } from "@/lib/prisma";
 const CLIENT_ID = process.env.DELTA_CLIENT_ID!;
 const CLIENT_SECRET = process.env.DELTA_CLIENT_SECRET!;
 const TOKEN_URL = "https://cdn.india.deltaex.org/v2/oauth/token";
+const BASE_URL = process.env.NEXTAUTH_URL!;
 
 export async function GET(req: NextRequest) {
   const session = await getServerSession(NEXT_AUTH);
   if (!session?.user?.email) {
-    return NextResponse.redirect(new URL("/Signup", req.url));
+    return NextResponse.redirect(new URL("/Signup", BASE_URL));
   }
 
   const { searchParams } = new URL(req.url);
@@ -18,11 +19,11 @@ export async function GET(req: NextRequest) {
   const error = searchParams.get("error");
 
   if (error || !code) {
-    return NextResponse.redirect(new URL("/user/tradeconfig?delta_error=1", req.url));
+    return NextResponse.redirect(new URL("/user/tradeconfig?delta_error=1", BASE_URL));
   }
 
   try {
-    const REDIRECT_URI = process.env.NEXTAUTH_URL + "/api/auth/delta/callback";
+    const REDIRECT_URI = BASE_URL + "/api/auth/delta/callback";
     const formData = new FormData();
     formData.append("grant_type", "authorization_code");
     formData.append("client_id", CLIENT_ID);
@@ -35,7 +36,7 @@ export async function GET(req: NextRequest) {
 
     if (!tokenData.access_token) {
       console.error("Delta OAuth token error:", tokenData);
-      return NextResponse.redirect(new URL("/user/tradeconfig?delta_error=2", req.url));
+      return NextResponse.redirect(new URL("/user/tradeconfig?delta_error=2", BASE_URL));
     }
 
     const profileRes = await fetch("https://api.india.delta.exchange/v2/profile", {
@@ -50,7 +51,7 @@ export async function GET(req: NextRequest) {
       : new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     const user = await prisma.user.findUnique({ where: { email: session.user.email } });
-    if (!user) return NextResponse.redirect(new URL("/Signup", req.url));
+    if (!user) return NextResponse.redirect(new URL("/Signup", BASE_URL));
 
     await prisma.deltaAccount.upsert({
       where: { userId_accountType: { userId: user.id, accountType: "main" } },
@@ -86,9 +87,9 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    return NextResponse.redirect(new URL("/user/tradeconfig?delta_connected=1", req.url));
+    return NextResponse.redirect(new URL("/user/tradeconfig?delta_connected=1", BASE_URL));
   } catch (e: any) {
     console.error("Delta OAuth error:", e);
-    return NextResponse.redirect(new URL("/user/tradeconfig?delta_error=3", req.url));
+    return NextResponse.redirect(new URL("/user/tradeconfig?delta_error=3", BASE_URL));
   }
 }
