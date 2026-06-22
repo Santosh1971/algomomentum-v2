@@ -14,7 +14,8 @@ export default function SubscribeModal({ strategy, onClose, onSuccess }) {
     fetch('/api/v1/accounts')
       .then(r => r.json())
       .then(d => {
-        const mainAccount = d?.accounts?.[0]
+        const accounts = d?.accounts ?? []
+        const mainAccount = accounts.find((a: any) => a.accountType === 'main') ?? accounts[0]
         if (mainAccount?.id) {
           fetch(`/api/v1/accounts/${mainAccount.id}/balance`)
             .then(r => r.json())
@@ -32,7 +33,7 @@ export default function SubscribeModal({ strategy, onClose, onSuccess }) {
       window.alert(`❌ Insufficient margin!\n\nRequired: ₹${(strategy.minCapital || amount).toLocaleString('en-IN')} (~$${requiredUsd.toFixed(2)})\nAvailable: $${balance.available.toFixed(2)} (~₹${(balance.available * INR_TO_USD).toFixed(0)})\n\nPlease add funds to your Delta account.`)
       return
     }
-    const confirm = window.confirm(`Subscribe to ${strategy.name}?\n\nCapital: ₹${amount}\nAvailable Balance: $${balance?.available?.toFixed(2) ?? "—"}\n\n⚠️ Your bot will be INACTIVE until admin approves your account.\n\nSubscribe anyway?`)
+    const confirm = window.confirm(`Subscribe to ${strategy.name}?\n\nCapital: ₹${amount}\nAvailable Balance: $${balance?.available?.toFixed(2) ?? "—"}\n\nConfirm subscription?`)
     if (!confirm) return
     setLoading(true)
     setError(null)
