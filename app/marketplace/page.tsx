@@ -30,12 +30,12 @@ function DeltaConnectedBanner() {
   )
   if (welcome) return (
     <div className="mb-6 bg-blue-500/20 border border-blue-500/30 rounded-xl px-4 py-3 text-sm text-blue-600">
-      👋 Welcome! Browse our strategies below. <a href="/user/tradeconfig" className="underline font-semibold">Connect your Delta Exchange account</a> to subscribe and start trading.
+      👋 Welcome! Browse our strategies below. <a href="/api/auth/delta/authorize" className="underline font-semibold">Connect your Delta Exchange account</a> to subscribe and start trading.
     </div>
   )
   if (connect) return (
     <div className="mb-6 bg-orange-500/20 border border-orange-500/30 rounded-xl px-4 py-3 text-sm text-orange-600">
-      🔗 Please <a href="/user/tradeconfig" className="underline font-semibold">connect your Delta Exchange account</a> first to access the full platform.
+      🔗 Please <a href="/api/auth/delta/authorize" className="underline font-semibold">connect your Delta Exchange account</a> first to access the full platform.
     </div>
   )
   if (pending) return (
