@@ -99,6 +99,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const wins   = periodPaired.filter(t => t.pnlPct > 0).length
   const losses = periodPaired.filter(t => t.pnlPct < 0).length
 
+  // Live PnL stats
+  const livePeriod = periodPaired.filter(t => t.source === 'live')
+  const livePnlPct = livePeriod.length > 0 ? Math.round(livePeriod.reduce((s, t) => s + t.pnlPct, 0) * 100) / 100 : null
+  const liveMaxDD = livePeriod.length > 0 ? Math.round(Math.max(...livePeriod.map(t => t.pnlPct < 0 ? Math.abs(t.pnlPct) : 0)) * 100) / 100 : null
+  const liveWins = livePeriod.filter(t => t.pnlPct > 0)
+  const liveLosses = livePeriod.filter(t => t.pnlPct < 0)
+  const grossProfit = liveWins.reduce((s, t) => s + t.pnlPct, 0)
+  const grossLoss = Math.abs(liveLosses.reduce((s, t) => s + t.pnlPct, 0))
+  const liveProfitFactor = grossLoss > 0 ? Math.round((grossProfit / grossLoss) * 100) / 100 : null
+
   return NextResponse.json({
     strategy,
     isSubscribed,
@@ -113,6 +123,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       winRate:    periodPaired.length > 0 ? Math.round(wins / periodPaired.length * 1000) / 10 : 0,
       entries:    periodTrades.filter(t => /entry/i.test(t.trade)).length,
       exits:      periodTrades.filter(t => /exit/i.test(t.trade)).length,
+      livePnlPct,
+      liveMaxDD,
+      liveProfitFactor,
     }
   })
 }

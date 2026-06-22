@@ -1,4 +1,5 @@
 'use client'
+import React from 'react'
 
 import Navbar from '@/components/Navbar'
 // app/marketplace/page.jsx
@@ -9,10 +10,106 @@ import { useSession } from 'next-auth/react'
 import EquitySparkline from '@/components/marketplace/EquitySparkline'
 import { useRouter } from 'next/navigation'
 import SubscribeModal from '@/components/marketplace/SubscribeModal'
+import { useSearchParams } from 'next/navigation'
+import { Suspense } from 'react'
+
+function DeltaConnectedBanner() {
+  const searchParams = useSearchParams()
+  const deltaConnected = searchParams.get('delta_connected') === '1'
+  const welcome = searchParams.get('welcome') === '1'
+  const connect = searchParams.get('connect') === '1'
+  const pending = searchParams.get('pending') === '1'
+
+  if (deltaConnected) return (
+    <div className="mb-6 bg-green-500/20 border border-green-500/30 rounded-xl px-4 py-3 text-sm text-green-600 space-y-1">
+      <p className="font-semibold">✅ Delta Exchange account connected successfully!</p>
+      <p>📧 A confirmation email has been sent to you and the admin.</p>
+      <p>⏳ Admin will verify your Delta account and approve. Once approved your bots will activate automatically.</p>
+      <p>You can browse and subscribe to strategies in the meantime.</p>
+    </div>
+  )
+  if (welcome) return (
+    <div className="mb-6 bg-blue-500/20 border border-blue-500/30 rounded-xl px-4 py-3 text-sm text-blue-600">
+      👋 Welcome! Browse our strategies below. <a href="/user/tradeconfig" className="underline font-semibold">Connect your Delta Exchange account</a> to subscribe and start trading.
+    </div>
+  )
+  if (connect) return (
+    <div className="mb-6 bg-orange-500/20 border border-orange-500/30 rounded-xl px-4 py-3 text-sm text-orange-600">
+      🔗 Please <a href="/user/tradeconfig" className="underline font-semibold">connect your Delta Exchange account</a> first to access the full platform.
+    </div>
+  )
+  if (pending) return (
+    <div className="mb-6 bg-yellow-500/20 border border-yellow-500/30 rounded-xl px-4 py-3 text-sm text-yellow-600">
+      ⏳ Your account is pending admin approval. You can browse strategies and subscribe — your bots will activate once approved.
+    </div>
+  )
+  const emailMismatch = searchParams.get('delta_error') === 'email_mismatch'
+  const expected = searchParams.get('expected') ?? ''
+  const got = searchParams.get('got') ?? ''
+  if (emailMismatch) return (
+    <div className="mb-6 bg-red-500/20 border border-red-500/30 rounded-xl px-4 py-3 text-sm text-red-600">
+      ❌ Delta email mismatch! You logged into Delta as <strong>{got}</strong> but your account email is <strong>{expected}</strong>. Please reconnect using the correct Delta account.
+    </div>
+  )
+  return null
+}
+
+
+function EmailMismatchBanner({ expected, got }: { expected: string, got: string }) {
+  const [newEmail, setNewEmail] = React.useState(got)
+  const [saving, setSaving] = React.useState(false)
+  const [msg, setMsg] = React.useState('')
+
+  async function handleChange() {
+    setSaving(true)
+    setMsg('')
+    const res = await fetch('/api/v1/user/change-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newEmail }),
+    })
+    const data = await res.json()
+    if (res.ok) {
+      setMsg('✅ Email updated! Please sign out and sign in again, then reconnect Delta.')
+    } else {
+      setMsg('❌ ' + (data.error ?? 'Failed to update email'))
+    }
+    setSaving(false)
+  }
+
+  return (
+    <div className="mb-6 bg-red-500/20 border border-red-500/30 rounded-xl px-4 py-4 text-sm text-red-600 space-y-3">
+      <p>❌ <strong>Delta email mismatch!</strong></p>
+      <p>You logged into Delta Exchange as <strong>{got}</strong> but your AlgoMomentum account is <strong>{expected}</strong>.</p>
+      <p className="text-xs">Options:</p>
+      <div className="space-y-2">
+        <p className="text-xs font-medium">Option 1: Update your AlgoMomentum email to match Delta</p>
+        <div className="flex gap-2">
+          <input value={newEmail} onChange={e => setNewEmail(e.target.value)}
+            className="flex-1 border border-red-300 rounded-lg px-3 py-1.5 text-xs bg-background text-foreground"
+            placeholder="Enter your Delta email" />
+          <button onClick={handleChange} disabled={saving}
+            className="px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs hover:bg-red-700 transition disabled:opacity-50">
+            {saving ? 'Saving...' : 'Update Email'}
+          </button>
+        </div>
+        <p className="text-xs font-medium mt-2">Option 2: Try connecting with a different Delta account</p>
+        <a href="/api/auth/delta/authorize" className="inline-block px-3 py-1.5 rounded-lg border border-red-400 text-red-600 text-xs hover:bg-red-500/10 transition">
+          🔄 Reconnect Delta
+        </a>
+      </div>
+      {msg && <p className="text-xs font-medium">{msg}</p>}
+    </div>
+  )
+}
 
 export default function MarketplacePage() {
+  const deltaConnected = false
   const router = useRouter()
   const { data: session } = useSession()
+  const hasDelta = !!(session?.user as any)?.deltaUserId
+  const isApproved = !!(session?.user as any)?.isApproved
+
   const [strategies, setStrategies] = useState([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)      // strategy for detail view
@@ -40,6 +137,9 @@ export default function MarketplacePage() {
   }
 
   async function handleUnsubscribe(strategyId) {
+    const strategy = strategies.find(s => s.id === strategyId)
+    const confirm = window.confirm(`Unsubscribe from ${strategy?.name ?? "this strategy"}?\nYour bot will be deactivated.\n\nConfirm?`)
+    if (!confirm) return
     await fetch('/api/v1/marketplace/unsubscribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -66,6 +166,8 @@ export default function MarketplacePage() {
             key={s.id}
             strategy={s}
             isSubscribed={subscribed.has(s.id)}
+            hasDelta={hasDelta}
+            isApproved={isApproved}
             onDetail={() => router.push(`/marketplace/${s.id}`)}
             onSubscribe={() => setSubModal(s)}
             onUnsubscribe={() => handleUnsubscribe(s.id)}
@@ -80,6 +182,8 @@ export default function MarketplacePage() {
           isSubscribed={subscribed.has(selected.id)}
           onClose={() => setSelected(null)}
           onSubscribe={() => { setSubModal(selected); setSelected(null) }}
+            hasDelta={hasDelta}
+            isApproved={isApproved}
           onUnsubscribe={() => { handleUnsubscribe(selected.id); setSelected(null) }}
         />
       )}
@@ -101,7 +205,7 @@ export default function MarketplacePage() {
 }
 
 // ── Strategy Card ────────────────────────────────────────────────────────────
-function StrategyCard({ strategy: s, isSubscribed, onDetail, onSubscribe, onUnsubscribe }) {
+function StrategyCard({ strategy: s, isSubscribed, onDetail, onSubscribe, onUnsubscribe, hasDelta = false, isApproved = false }) {
   return (
     <div
       className={`rounded-xl border bg-card overflow-hidden cursor-pointer hover:border-border/80 transition-colors ${s.isFeatured ? 'border-blue-500/50' : 'border-border/40'}`}
@@ -135,9 +239,14 @@ function StrategyCard({ strategy: s, isSubscribed, onDetail, onSubscribe, onUnsu
         onClick={e => e.stopPropagation()}
       >
         <span className="text-xs text-muted-foreground">{s._count.subscribers} subscribers</span>
+          {s.minCapital && <span className="text-xs text-muted-foreground">Min: ₹{s.minCapital.toLocaleString('en-IN')}</span>}
         {isSubscribed
           ? <button onClick={onUnsubscribe} className="text-xs px-3 py-1 rounded-md border border-border/40 text-green-500 hover:bg-muted/40 transition-colors">Subscribed ✓</button>
-          : <button onClick={onSubscribe}   className="text-xs px-3 py-1 rounded-md border border-border/40 hover:bg-muted/40 transition-colors">Subscribe</button>
+          : hasDelta && isApproved
+            ? <button onClick={onSubscribe} className="text-xs px-3 py-1 rounded-md border border-border/40 hover:bg-muted/40 transition-colors">Subscribe</button>
+            : hasDelta
+            ? <span className="text-xs px-3 py-1 rounded-md border border-yellow-400/40 text-yellow-500">⏳ Pending Approval</span>
+            : <button onClick={() => { const ok = window.confirm("⚠️ Please login to Delta Exchange using the SAME email you registered here.\n\nProceed?"); if(ok) window.location.href="/api/auth/delta/authorize" }} className="text-xs px-3 py-1 rounded-md border border-orange-400/40 text-orange-500 hover:bg-orange-500/10 transition-colors">🔗 Connect Delta</button>
         }
       </div>
     </div>
@@ -145,7 +254,7 @@ function StrategyCard({ strategy: s, isSubscribed, onDetail, onSubscribe, onUnsu
 }
 
 // ── Strategy Detail (full info panel) ───────────────────────────────────────
-function StrategyDetail({ strategy: s, isSubscribed, onClose, onSubscribe, onUnsubscribe }) {
+function StrategyDetail({ strategy: s, isSubscribed, onClose, onSubscribe, onUnsubscribe, hasDelta = false, isApproved = false }) {
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-end md:items-center justify-center p-4" onClick={onClose}>
       <div className="bg-background rounded-2xl border border-border/50 w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
@@ -179,7 +288,9 @@ function StrategyDetail({ strategy: s, isSubscribed, onClose, onSubscribe, onUns
           <div className="flex items-center gap-3">
             {isSubscribed
               ? <button onClick={onUnsubscribe} className="flex-1 py-2 rounded-lg border border-green-500/40 text-green-500 text-sm hover:bg-green-500/10 transition-colors">Unsubscribe</button>
-              : <button onClick={onSubscribe}   className="flex-1 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700 transition-colors">Subscribe to this strategy</button>
+              : hasDelta 
+                ? <button onClick={onSubscribe} className="flex-1 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700 transition-colors">Subscribe to this strategy</button>
+                : <a href="/api/auth/delta/authorize" className="flex-1 py-2 rounded-lg bg-orange-500 text-white text-sm hover:bg-orange-600 transition-colors text-center">🔗 Connect Delta to Subscribe</a>
             }
           </div>
         </div>

@@ -7,7 +7,8 @@ import { prisma } from '@/lib/prisma'
 import { parseBacktestFile } from '@/lib/parseBacktest'
 
 // PATCH /api/admin/strategies/:id — update strategy
-export async function PATCH(req, { params }) {
+export async function PATCH(req, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const session = await getServerSession(authOptions)
   if (session?.user?.role !== 'admin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -20,6 +21,7 @@ export async function PATCH(req, { params }) {
   for (const [key, val] of formData.entries()) {
     if (key === 'backtestFile') continue
     if (key === 'isFeatured' || key === 'isActive') { data[key] = val === 'true'; continue }
+    if (key === 'minCapital') { data[key] = parseFloat(val); continue }
     if (val !== '') data[key] = val
   }
 
@@ -27,17 +29,18 @@ export async function PATCH(req, { params }) {
     const buffer = Buffer.from(await file.arrayBuffer())
     try {
       const parsed = parseBacktestFile(buffer, file.name)
-      const { backtestTrades, properties, ...parsedStats } = parsed
+      const { backtestTrades, properties, equityData, ...parsedStats } = parsed
+      if (equityData) parsedStats.equityData = equityData
       if (properties) parsedStats.properties = properties
       parsedStats.backtestFileName = file.name
       Object.assign(data, parsedStats)
 
       // Store backtest trades
       if (backtestTrades?.length) {
-        await prisma.strategyTrade.deleteMany({ where: { strategyId: params.id, source: 'backtest' } })
+        await prisma.strategyTrade.deleteMany({ where: { strategyId: id, source: 'backtest' } })
         await prisma.strategyTrade.createMany({
           data: backtestTrades.map((t) => ({
-            strategyId:       params.id,
+            strategyId:       id,
             source:           'backtest',
             side:             t.side,
             trade:            t.type,
@@ -60,7 +63,7 @@ export async function PATCH(req, { params }) {
   }
 
   const strategy = await prisma.strategy.update({
-    where: { id: params.id },
+    where: { id },
     data,
   })
 
@@ -68,7 +71,8 @@ export async function PATCH(req, { params }) {
 }
 
 // DELETE /api/admin/strategies/:id
-export async function DELETE(req, { params }) {
+export async function DELETE(req, { params }: { params: Promise<{ id: string }> }) {
+  const { id: deleteId } = await params
   const session = await getServerSession(authOptions)
   if (session?.user?.role !== 'admin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -76,7 +80,7 @@ export async function DELETE(req, { params }) {
 
   // Remove subscriber TradeConfigs first
   await prisma.tradeConfig.deleteMany({
-    where: { strategyId: params.id },
+    where: { strategyId: deleteId },
   })
 
   await prisma.strategy.delete({ where: { id: params.id } })

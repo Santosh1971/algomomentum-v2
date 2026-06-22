@@ -15,6 +15,7 @@ export async function GET() {
       timeframe: true,
       description: true,
       isFeatured: true,
+      minCapital: true,
       equityData: true,
       totalPnlPct: true,
       winRate: true,

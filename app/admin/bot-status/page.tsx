@@ -55,10 +55,10 @@ export default function BotStatusPage() {
               {activeCount} active · {bots.length - activeCount} inactive · {bots.length} total
             </p>
           </div>
-          <div className="flex bg-white border rounded-lg overflow-hidden text-sm">
+          <div className="flex bg-muted/30 border border-border/40 rounded-lg overflow-hidden text-sm">
             {(["all", "active", "inactive"] as const).map(f => (
               <button key={f} onClick={() => setFilter(f)}
-                className={`px-3 py-1.5 font-medium capitalize transition ${filter === f ? "bg-[#161B22] text-white" : "text-gray-600 hover:bg-gray-50"}`}>
+                className={`px-3 py-1.5 font-medium capitalize transition ${filter === f ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted/50"}`}>
                 {f}
               </button>
             ))}
@@ -73,7 +73,7 @@ export default function BotStatusPage() {
           <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-[#161B22] text-white text-xs">
+                <tr className="bg-foreground/90 text-background text-xs">
                   {["User", "Account", "Symbol", "Amount", "Lev", "Mode", "Status", "Actions"].map(h => (
                     <th key={h} className="px-4 py-3 text-left font-medium">{h}</th>
                   ))}
@@ -103,23 +103,23 @@ export default function BotStatusPage() {
                         <td className="px-4 py-3 text-xs">₹{b.amount.toLocaleString("en-IN")}</td>
                         <td className="px-4 py-3 text-xs">{b.leverage}x</td>
                         <td className="px-4 py-3">
-                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${b.mode === "standalone" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"}`}>
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${b.mode === "standalone" ? "bg-purple-500/20 text-purple-600" : "bg-blue-500/20 text-blue-600"}`}>
                             {b.mode}
                           </span>
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1">
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${b.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-400"}`}>
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${b.isActive ? "bg-green-500/20 text-green-600" : "bg-gray-500/20 text-muted-foreground"}`}>
                               {b.isActive ? "Active" : "Inactive"}
                             </span>
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${b.userActive ? "bg-blue-100 text-blue-700" : "bg-yellow-100 text-yellow-600"}`}>
+                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${b.userActive ? "bg-blue-500/20 text-blue-600" : "bg-yellow-500/20 text-yellow-600"}`}>
                               {b.userActive ? "On" : "Paused"}
                             </span>
                           </div>
                         </td>
                         <td className="px-4 py-3">
                           <Link href={`/admin/users/${b.user.id}`}
-                            className="text-xs bg-[#161B22] text-white px-3 py-1.5 rounded-lg hover:bg-[#161B22]">
+                            className="text-xs bg-foreground text-background px-3 py-1.5 rounded-lg hover:opacity-80 transition-opacity">
                             Manage
                           </Link>
                         </td>

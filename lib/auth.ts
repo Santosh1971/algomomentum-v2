@@ -15,12 +15,11 @@ export const NEXT_AUTH: NextAuthOptions = {
         if (!credentials?.email || !credentials?.password) return null;
 
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
+          where: { email: credentials.email.toLowerCase() },
         });
 
         if (!user || !user.password) return null;
         if (!user.isVerified) throw new Error("Please verify your email first");
-        if (!user.isApproved) throw new Error("Your account is pending admin approval.");
 
         const valid = await bcrypt.compare(credentials.password, user.password);
         if (!valid) return null;
@@ -36,9 +35,21 @@ export const NEXT_AUTH: NextAuthOptions = {
   ],
   callbacks: {
     async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-        token.role = (user as any).role;
+      // Always fetch fresh data from DB on every JWT call
+      const email = (user?.email ?? token.email) as string;
+      if (email) {
+        const { prisma } = await import("@/lib/prisma");
+        const dbUser = await prisma.user.findUnique({
+          where: { email: email.toLowerCase() },
+          select: { id: true, role: true, isApproved: true, details: { select: { deltaUserId: true } } },
+        });
+        if (dbUser) {
+          token.id = dbUser.id;
+          token.role = dbUser.role;
+          token.isApproved = dbUser.isApproved;
+          token.deltaUserId = dbUser.details?.deltaUserId ?? null;
+          console.log("JWT refresh:", email, "isApproved:", dbUser.isApproved, "deltaUserId:", dbUser.details?.deltaUserId);
+        }
       }
       return token;
     },
@@ -46,6 +57,8 @@ export const NEXT_AUTH: NextAuthOptions = {
       if (session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as string;
+        session.user.isApproved = token.isApproved as boolean;
+        session.user.deltaUserId = token.deltaUserId as string | null;
       }
       return session;
     },

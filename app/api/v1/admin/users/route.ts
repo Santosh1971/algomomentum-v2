@@ -39,11 +39,31 @@ export async function PATCH(req: NextRequest) {
   });
   // Send welcome email on approval
   if (isApproved) {
+    // Auto-activate all bots for this user
+    try {
+      await prisma.tradeConfig.updateMany({
+        where: { userId },
+        data: { isActive: true },
+      });
+    } catch (e) {
+      console.error("Auto-activate bots failed:", e);
+    }
+    // Send welcome email
     try {
       const { sendWelcomeEmail } = await import("@/lib/email");
       await sendWelcomeEmail(user.email ?? "", user.name ?? "User");
     } catch (e) {
       console.error("Welcome email failed:", e);
+    }
+    // Email all admins about approval
+    try {
+      const admins = await prisma.user.findMany({ where: { role: "admin" }, select: { email: true } });
+      const { sendAdminNotification } = await import("@/lib/email");
+      for (const admin of admins) {
+        if (admin.email) await sendAdminNotification(admin.email, user.name ?? "User", user.email ?? "");
+      }
+    } catch (e) {
+      console.error("Admin notification failed:", e);
     }
   }
   return NextResponse.json(user);

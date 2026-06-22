@@ -1,18 +1,29 @@
 "use client";
 import { useSession, signOut } from "next-auth/react";
+import ThemeToggle from "@/components/ThemeToggle";
+import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
 export default function Navbar() {
   const { data: session } = useSession();
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const path = usePathname();
   const isAdmin = session?.user?.role === "admin";
-  const userLinks = [
+  const isApproved = (session?.user as any)?.isApproved;
+  const deltaUserId = (session?.user as any)?.deltaUserId;
+
+  const userLinks = isApproved ? [
     { href: "/user/dashboard", label: "Dashboard" },
     { href: "/user/tradeconfig", label: "Accounts" },
     { href: "/user/pnl-report", label: "PnL Report" },
     { href: "/marketplace", label: "Marketplace" },
     { href: "/user/payments", label: "Billing & Payment" },
+  ] : [
+    { href: "/marketplace", label: "Marketplace" },
   ];
   const adminLinks = [
     { href: "/admin/dashboard", label: "Dashboard" },
@@ -56,6 +67,7 @@ export default function Navbar() {
             {path.startsWith("/user") || path.startsWith("/marketplace") ? "⚙ Admin Panel" : "👤 User View"}
           </Link>
         )}
+<ThemeToggle inline />
         <span className="text-xs text-cyan-400 hidden md:block">{session?.user?.email}</span>
         <button onClick={() => signOut({ callbackUrl: "/Signup" })}
           className="text-xs bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-lg transition">

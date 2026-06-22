@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
-import { sendVerificationEmail } from "@/lib/email";
+import { sendVerificationEmail, sendNewUserAlert } from "@/lib/email";
 
 export async function POST(req: NextRequest) {
-  const { email, password, name, phone, city, district, country, gender, age } = await req.json();
+  let { email, password, name, phone, city, district, country, gender, age } = await req.json();
+  email = email?.toLowerCase().trim();
 
   if (!email || !password || !name) {
     return NextResponse.json({ error: "Name, email and password required" }, { status: 400 });
@@ -75,6 +76,17 @@ export async function PUT(req: NextRequest) {
     data: { isVerified: true },
   });
   await prisma.verificationToken.delete({ where: { id: token.id } });
+
+  // Alert all admins about new user waiting approval
+  try {
+    const verifiedUser = await prisma.user.findUnique({ where: { email }, select: { name: true, email: true } });
+    const admins = await prisma.user.findMany({ where: { role: "admin" }, select: { email: true } });
+    for (const admin of admins) {
+      if (admin.email) await sendNewUserAlert(admin.email, verifiedUser?.name ?? "Unknown", email);
+    }
+  } catch (e) {
+    console.error("Admin new user alert failed:", e);
+  }
 
   return NextResponse.json({ message: "Email verified! Your account is pending admin approval." });
 }

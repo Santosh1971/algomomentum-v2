@@ -3,7 +3,22 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --card: #ffffff;
+  --card-foreground: #171717;
+  --muted: #f3f4f6;
+  --muted-foreground: #6b7280;
+  --border: #e5e7eb;
 }
+
+.dark {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+    --card: #111111;
+    --card-foreground: #ededed;
+    --muted: #1f1f1f;
+    --muted-foreground: #a1a1aa;
+    --border: #27272a;
+  }
 
 @theme inline {
   --color-background: var(--background);
@@ -12,15 +27,83 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Cards and white backgrounds follow theme */
+.bg-white {
+  background-color: var(--card) !important;
+  color: var(--card-foreground) !important;
+}
+.bg-gray-50 { background-color: var(--muted) !important; }
+.bg-gray-100 { background-color: var(--muted) !important; }
+
+/* Text colors follow theme */
+.text-gray-900, .text-gray-800 { color: var(--foreground) !important; }
+.text-gray-700, .text-gray-600 { color: var(--muted-foreground) !important; }
+.text-gray-500, .text-gray-400 { color: var(--muted-foreground) !important; opacity: 0.8; }
+.text-gray-300 { color: var(--muted-foreground) !important; opacity: 0.6; }
+
+/* Borders follow theme */
+.border-gray-100, .border-gray-200 { border-color: var(--border) !important; }
+
+/* Table hover */
+tr:hover { background-color: var(--muted) !important; }
+
+/* Inputs follow theme */
+input, textarea, select {
+  background-color: var(--background) !important;
+  color: var(--foreground) !important;
+  border-color: var(--border) !important;
+}
+input::placeholder, textarea::placeholder {
+  color: var(--muted-foreground) !important;
+  opacity: 0.7;
+}
+
+/* Page backgrounds */
+.min-h-screen { background-color: var(--background) !important; }
+
+/* Hardcoded colors → theme-aware */
+.text-\[\#161B22\] { color: var(--foreground) !important; }
+.bg-\[\#161B22\] { background-color: var(--card) !important; }
+.border-\[\#161B22\] { border-color: var(--border) !important; }
+.ring-\[\#161B22\] { --tw-ring-color: var(--border) !important; }
+.focus\:ring-\[\#161B22\]:focus { --tw-ring-color: var(--border) !important; }
+
+/* Date inputs and all native controls — follow system theme */
+.dark input[type="date"],
+  .dark input[type="datetime-local"],
+  .dark input[type="time"],
+  .dark input[type="month"] {
+    color-scheme: dark !important;
+    background-color: var(--background) !important;
+    color: var(--foreground) !important;
+  }
+  .dark input[type="date"]::-webkit-calendar-picker-indicator,
+  .dark input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+  }
+
+/* Light color backgrounds → theme-aware */
+.bg-blue-50 { background-color: rgb(59 130 246 / 0.1) !important; }
+.bg-green-50 { background-color: rgb(34 197 94 / 0.1) !important; }
+.bg-yellow-50 { background-color: rgb(234 179 8 / 0.1) !important; }
+.bg-red-50 { background-color: rgb(239 68 68 / 0.1) !important; }
+.bg-purple-50 { background-color: rgb(168 85 247 / 0.1) !important; }
+.bg-orange-50 { background-color: rgb(249 115 22 / 0.1) !important; }
+.bg-cyan-50 { background-color: rgb(6 182 212 / 0.1) !important; }
+.bg-indigo-50 { background-color: rgb(99 102 241 / 0.1) !important; }
+.bg-pink-50 { background-color: rgb(236 72 153 / 0.1) !important; }
+
+/* Light borders → theme-aware */
+.border-blue-200 { border-color: rgb(59 130 246 / 0.3) !important; }
+.border-green-200 { border-color: rgb(34 197 94 / 0.3) !important; }
+.border-yellow-200 { border-color: rgb(234 179 8 / 0.3) !important; }
+.border-red-200 { border-color: rgb(239 68 68 / 0.3) !important; }
+.border-purple-200 { border-color: rgb(168 85 247 / 0.3) !important; }
+.border-gray-300 { border-color: var(--border) !important; }
+.border-gray-400 { border-color: var(--border) !important; }

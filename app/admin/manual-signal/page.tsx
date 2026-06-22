@@ -138,7 +138,7 @@ export default function ManualSignalPage() {
 
           {/* Fire button */}
           <button onClick={fireSignal} disabled={loading || !selectedId}
-            className={`w-full py-3 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 ${trade === 'EXIT' ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white'}`}>
+            className={`w-full py-3 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50 ${side === 'sell' ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-green-600 hover:bg-green-700 text-white'}`}>
             {loading ? 'Firing…' : `🚀 Fire ${side === 'buy' ? 'Long' : 'Short'} ${trade} Signal`}
           </button>
 

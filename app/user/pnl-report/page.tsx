@@ -42,6 +42,14 @@ function lastNDays(n: number) {
 }
 
 export default function PnlReportPage() {
+  const [isDark, setIsDark] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    setIsDark(mq.matches);
+    mq.addEventListener('change', e => setIsDark(e.matches));
+    return () => mq.removeEventListener('change', e => setIsDark(e.matches));
+  }, []);
+  const selStyle = isDark ? { colorScheme: 'dark', backgroundColor: '#1f1f1f', color: '#ededed', borderColor: '#27272a' } : {};
   const { data: session, status } = useSession();
   const router = useRouter();
   const [accounts, setAccounts] = useState<DeltaAccount[]>([]);
@@ -152,14 +160,14 @@ export default function PnlReportPage() {
             <div>
               <label className="text-xs font-medium text-gray-500 block mb-1">Symbol</label>
               <select value={selectedConfigId} onChange={e => setSelectedConfigId(e.target.value)}
-                className="border rounded-lg px-3 py-2 text-sm w-56 focus:outline-none focus:ring-2 focus:ring-[#161B22]">
+                className="border rounded-lg px-3 py-2 text-sm w-56 focus:outline-none focus:ring-2 focus:ring-[#161B22]" style={selStyle}>
                 {allConfigs.map(c => <option key={c.id} value={c.id}>{c.accountName} — {c.script}</option>)}
               </select>
             </div>
             <div>
               <label className="text-xs font-medium text-gray-500 block mb-1">Quick range</label>
               <select value={quickRange} onChange={e => applyQuickRange(e.target.value)}
-                className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#161B22]">
+                className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#161B22]" style={selStyle}>
                 <option value="custom">Custom</option>
                 <option value="7d">Last 7 days</option>
                 <option value="30d">Last 30 days</option>

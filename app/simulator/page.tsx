@@ -95,10 +95,11 @@ export default function SimulatorPage() {
     if (!chartRef.current || chartInstanceRef.current) return;
     const LW = (window as any).LightweightCharts;
     if (!LW) return;
+    const isDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     const chart = LW.createChart(chartRef.current, {
       width: chartRef.current.clientWidth, height: 400,
-      layout: { background: { color: "#ffffff" }, textColor: "#161B22" },
-      grid: { vertLines: { color: "#f3f4f6" }, horzLines: { color: "#f3f4f6" } },
+      layout: { background: { color: isDark ? "#0a0a0a" : "#ffffff" }, textColor: isDark ? "#ededed" : "#161B22" },
+      grid: { vertLines: { color: isDark ? "#27272a" : "#f3f4f6" }, horzLines: { color: isDark ? "#27272a" : "#f3f4f6" } },
       timeScale: { timeVisible: true, secondsVisible: false },
       crosshair: { mode: 1 },
     });

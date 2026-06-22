@@ -538,6 +538,7 @@ export default function TradeConfigPage() {
 
       {modal === "connectKeys" && activeAccountId && (
         <ConnectDeltaModal
+          isAdmin={(session as any)?.user?.role === "admin"}
           accountId={activeAccountId}
           accountType={accounts.find(a => a.id === activeAccountId)?.accountType ?? "main"}
           onSuccess={(name) => { toast.success(`Connected: ${name}`); closeModal(); loadAccounts(); }}

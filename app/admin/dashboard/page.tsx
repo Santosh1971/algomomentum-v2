@@ -22,14 +22,14 @@ export default function AdminDashboard() {
   }, []);
 
   const cards = [
-    { title: "Total Clients", value: stats.users, icon: "👥", href: "/admin/users", color: "bg-blue-50 border-blue-200" },
-    { title: "Billing Reports", value: "Generate", icon: "🧾", href: "/admin/billing-report", color: "bg-green-50 border-green-200" },
-    { title: "Bot Status", value: "Live", icon: "🤖", href: "/admin/bot-status", color: "bg-purple-50 border-purple-200" },
-    { title: "Manage Symbols", value: "Configure", icon: "⚙️", href: "/admin/managesymbols", color: "bg-yellow-50 border-yellow-200" },
-    { title: "Marketplace", value: "Strategies", icon: "🏪", href: "/admin/strategies", color: "bg-purple-50 border-purple-200" },
-    { title: "Signal Simulator", value: "Test", icon: "🚀", href: "/simulator", color: "bg-purple-50 border-purple-200" },
-    { title: "All Positions", value: "Live View", icon: "📊", href: "/admin/positions", color: "bg-indigo-50 border-indigo-200" },
-    { title: "Manual Entry/Exit", value: "🚀 Manual Signal", icon: "🚨", href: "/admin/manual-signal", color: "bg-red-50 border-red-200" },
+    { title: "Total Clients", value: stats.users, icon: "👥", href: "/admin/users", color: "bg-blue-500/10 border-blue-500/30" },
+    { title: "Billing Reports", value: "Generate", icon: "🧾", href: "/admin/billing-report", color: "bg-green-500/10 border-green-500/30" },
+    { title: "Bot Status", value: "Live", icon: "🤖", href: "/admin/bot-status", color: "bg-purple-500/10 border-purple-500/30" },
+    { title: "Manage Symbols", value: "Configure", icon: "⚙️", href: "/admin/managesymbols", color: "bg-yellow-500/10 border-yellow-500/30" },
+    { title: "Marketplace", value: "Strategies", icon: "🏪", href: "/admin/strategies", color: "bg-purple-500/10 border-purple-500/30" },
+    { title: "Signal Simulator", value: "Test", icon: "🚀", href: "/simulator", color: "bg-purple-500/10 border-purple-500/30" },
+    { title: "All Positions", value: "Live View", icon: "📊", href: "/admin/positions", color: "bg-indigo-500/10 border-indigo-500/30" },
+    { title: "Manual Entry/Exit", value: "🚀 Manual Signal", icon: "🚨", href: "/admin/manual-signal", color: "bg-red-500/10 border-red-500/30" },
   ];
 
   return (

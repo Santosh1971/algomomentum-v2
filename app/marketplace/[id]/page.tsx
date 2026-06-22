@@ -1,4 +1,5 @@
 'use client'
+import { useSession } from 'next-auth/react'
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
@@ -14,6 +15,8 @@ const PERIODS = [
 ]
 
 export default function StrategyDetailPage() {
+  const { data: session } = useSession()
+  const hasDelta = !!(session?.user as any)?.deltaUserId
   const { id } = useParams()
   const router = useRouter()
   const [tab, setTab] = useState<'backtest' | 'live'>('backtest')
@@ -48,6 +51,8 @@ export default function StrategyDetailPage() {
   }
 
   async function handleUnsubscribe() {
+    const confirm = window.confirm(`Unsubscribe from ${s?.name ?? "this strategy"}?\nYour bot will be deactivated.\n\nConfirm?`)
+    if (!confirm) return
     setSubscribing(true)
     setSubMsg('')
     const res = await fetch('/api/v1/marketplace/unsubscribe', {
@@ -78,7 +83,7 @@ export default function StrategyDetailPage() {
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold">{s.name}</h1>
-            <div className="text-sm text-muted-foreground mt-1">{s.symbol} · {s.timeframe} · {s._count.subscribers} subscribers</div>
+            <div className="text-sm text-muted-foreground mt-1">{s.symbol} · {s.timeframe} · {s._count.subscribers} subscribers{s.minCapital ? ` · Min ₹${s.minCapital.toLocaleString('en-IN')}` : ''}</div>
             {s.description && <p className="text-sm text-muted-foreground mt-2">{s.description}</p>}
           </div>
           <div className="flex flex-col items-end gap-2 shrink-0">
@@ -87,11 +92,16 @@ export default function StrategyDetailPage() {
                 className="px-5 py-2 rounded-lg text-sm font-medium bg-red-600 hover:bg-red-700 text-white transition-colors disabled:opacity-50">
                 {subscribing ? 'Processing…' : 'Unsubscribe'}
               </button>
-            ) : (
+            ) : hasDelta ? (
               <button onClick={handleSubscribe} disabled={subscribing}
                 className="px-5 py-2 rounded-lg text-sm font-medium bg-green-600 hover:bg-green-700 text-white transition-colors disabled:opacity-50">
                 {subscribing ? 'Processing…' : 'Subscribe'}
               </button>
+            ) : (
+              <a href="/api/auth/delta/authorize"
+                className="px-5 py-2 rounded-lg text-sm font-medium bg-orange-500 hover:bg-orange-600 text-white transition-colors">
+                🔗 Connect Delta to Subscribe
+              </a>
             )}
             {subMsg && <div className="text-xs text-muted-foreground">{subMsg}</div>}
           </div>
@@ -162,6 +172,11 @@ export default function StrategyDetailPage() {
               <KpiCard label="Win Rate"      value={data.stats?.winRate ? `${data.stats.winRate}%` : '—'} color="green" />
               <KpiCard label="Wins"          value={data.stats?.wins ?? 0} color="green" />
               <KpiCard label="Losses"        value={data.stats?.losses ?? 0} color="red" />
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <KpiCard label="Live PnL"      value={data.stats?.livePnlPct != null ? `${data.stats.livePnlPct > 0 ? '+' : ''}${data.stats.livePnlPct}%` : '—'} color={data.stats?.livePnlPct >= 0 ? 'green' : 'red'} />
+              <KpiCard label="Max Drawdown"  value={data.stats?.liveMaxDD != null ? `-${data.stats.liveMaxDD}%` : '—'} color="red" />
+              <KpiCard label="Profit Factor" value={data.stats?.liveProfitFactor?.toFixed(2) ?? '—'} />
             </div>
             {data.liveEquity?.length > 1 && (
               <div className="border border-border/40 rounded-xl p-4">

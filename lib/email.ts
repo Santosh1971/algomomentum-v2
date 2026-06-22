@@ -79,3 +79,66 @@ export async function sendPasswordResetEmail(email: string, name: string, resetU
     console.error("Password reset email failed:", e);
   }
 }
+
+export async function sendAdminNotification(adminEmail: string, userName: string, userEmail: string) {
+  try {
+    await resend.emails.send({
+      from: FROM, to: adminEmail,
+      subject: `✅ User Approved: ${userName}`,
+      html: `<div style="font-family:Arial;max-width:480px;margin:0 auto;padding:32px">
+        <div style="background:#1E3A5F;padding:24px;border-radius:8px;text-align:center;margin-bottom:24px">
+          <h1 style="color:white;margin:0">AlgoMomentum</h1>
+        </div>
+        <h2 style="color:#1E3A5F">User Approved</h2>
+        <p style="color:#6b7280"><strong>${userName}</strong> (${userEmail}) has been approved and their bots have been activated.</p>
+        <a href="https://app.algomomentum.in/admin/users" style="display:inline-block;background:#1E3A5F;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;margin-top:16px">View Users →</a>
+      </div>`,
+    });
+  } catch (e) {
+    console.error("Admin notification email failed:", e);
+  }
+}
+
+export async function sendNewUserAlert(adminEmail: string, userName: string, userEmail: string, deltaUserId?: string) {
+  try {
+    await resend.emails.send({
+      from: FROM, to: adminEmail,
+      subject: `🆕 New User Waiting Approval: ${userName}`,
+      html: `<div style="font-family:Arial;max-width:480px;margin:0 auto;padding:32px">
+        <div style="background:#1E3A5F;padding:24px;border-radius:8px;text-align:center;margin-bottom:24px">
+          <h1 style="color:white;margin:0">AlgoMomentum</h1>
+        </div>
+        <h2 style="color:#F59E0B">New User Waiting for Approval</h2>
+        <p style="color:#6b7280"><strong>${userName}</strong> (${userEmail}) has registered and is waiting for approval.</p>
+        ${deltaUserId ? `<p style="color:#6b7280">Delta User ID: <strong>${deltaUserId}</strong></p>` : ""}
+        <a href="https://app.algomomentum.in/admin/users" style="display:inline-block;background:#1E3A5F;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;margin-top:16px">Review User →</a>
+      </div>`,
+    });
+  } catch (e) {
+    console.error("New user alert email failed:", e);
+  }
+}
+
+export async function sendDeltaConnectedEmail(email: string, name: string) {
+  try {
+    await resend.emails.send({
+      from: FROM, to: email,
+      subject: "✅ Delta Account Connected — Pending Admin Approval",
+      html: `<div style="font-family:Arial;max-width:480px;margin:0 auto;padding:32px">
+        <div style="background:#1E3A5F;padding:24px;border-radius:8px;text-align:center;margin-bottom:24px">
+          <h1 style="color:white;margin:0">AlgoMomentum</h1>
+        </div>
+        <h2 style="color:#1E3A5F">Delta Account Connected! 🎉</h2>
+        <p style="color:#6b7280">Hi ${name},</p>
+        <p style="color:#6b7280">Your Delta Exchange account has been successfully connected to AlgoMomentum.</p>
+        <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:16px;margin:16px 0">
+          <p style="color:#16a34a;margin:0;font-weight:600">⏳ Next Step: Admin Approval</p>
+          <p style="color:#16a34a;margin:8px 0 0;font-size:14px">Our admin will verify your Delta account and approve your access shortly. You will receive another email once approved.</p>
+        </div>
+        <p style="color:#9ca3af;font-size:12px">If you have any questions, reply to this email.</p>
+      </div>`,
+    });
+  } catch (e) {
+    console.error("Delta connected email failed:", e);
+  }
+}

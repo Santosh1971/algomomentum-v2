@@ -105,7 +105,7 @@ export default function AdminUsersPage() {
           </div>
           <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search by name or email..."
-            className="border rounded-xl px-4 py-2 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-[#161B22]" />
+            className="border rounded-xl px-4 py-2 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-[#161B22]" style={{backgroundColor:"white",color:"black",colorScheme:"light"}} />
         </div>
 
         {loading ? (
@@ -126,7 +126,7 @@ export default function AdminUsersPage() {
                 {filtered.length === 0 ? (
                   <tr><td colSpan={11} className="px-5 py-10 text-center text-gray-400">No users found</td></tr>
                 ) : filtered.map((u, i) => (
-                  <tr key={u.id} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                  <tr key={u.id} className={!u.isApproved ? "bg-yellow-500/20 border-l-4 border-yellow-400" : i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
                     <td className="px-4 py-3 text-gray-400">{i + 1}</td>
                     <td className="px-4 py-3 font-medium text-gray-800 max-w-[160px]">
                       <div className="flex items-center gap-2">
@@ -161,7 +161,9 @@ export default function AdminUsersPage() {
                         </Link>
                         {!u.isApproved ? (
                           <button onClick={() => approveUser(u.id, true)}
-                            className="text-xs bg-green-600 text-white px-2 py-1 rounded-lg hover:bg-green-700 transition">
+                            disabled={!u.details?.deltaUserId}
+                            title={!u.details?.deltaUserId ? "User must connect Delta account first" : "Approve user"}
+                            className="text-xs bg-green-600 text-white px-2 py-1 rounded-lg hover:bg-green-700 transition disabled:opacity-40 disabled:cursor-not-allowed">
                             Approve
                           </button>
                         ) : (

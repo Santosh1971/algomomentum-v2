@@ -57,13 +57,14 @@ export default function SignupPage() {
     else toast.error(data.error ?? "Invalid OTP");
   }
 
-  const inp = "w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#161B22] bg-gray-50 placeholder-gray-500";
+  const inp = "w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-foreground";
+  const inpStyle = {};
   const set = (k: string) => (e: any) => setForm({...form, [k]: e.target.value});
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#161B22] to-[#0D1117] flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-        <div className="bg-[#0D1117] px-8 py-6 flex flex-col items-center gap-3">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-border/20">
+        <div className="bg-card px-8 py-6 flex flex-col items-center gap-3">
           <img src="/alm-logo.png" alt="AlgoMomentum" width="64" height="64" style={{borderRadius:"12px", objectFit:"cover"}} />
           <div className="text-center">
             <h1 className="text-xl font-bold text-white">AlgoMomentum</h1>
@@ -73,10 +74,10 @@ export default function SignupPage() {
 
         <div className="px-8 py-6">
           {(mode === "login" || mode === "signup") && (
-            <div className="flex bg-gray-100 rounded-xl p-1 mb-5">
+            <div className="flex bg-muted rounded-xl p-1 mb-5">
               {(["login", "signup"] as const).map(m => (
                 <button key={m} onClick={() => setMode(m)}
-                  className={`flex-1 py-2 rounded-lg text-sm font-medium transition ${mode === m ? "bg-white shadow text-[#161B22]" : "text-gray-500"}`}>
+                  className={`flex-1 py-2 rounded-lg text-sm font-medium transition ${mode === m ? "bg-background shadow text-foreground" : "text-muted-foreground"}`}>
                   {m === "login" ? "Sign In" : "Sign Up"}
                 </button>
               ))}
@@ -85,15 +86,15 @@ export default function SignupPage() {
 
           {mode === "login" && (
             <div className="space-y-3">
-              <input value={form.email} onChange={set("email")} placeholder="Email address" type="email" className={inp} />
-              <input value={form.password} onChange={set("password")} placeholder="Password" type="password" className={inp}
+              <input value={form.email} onChange={set("email")} placeholder="Email address" type="email" className={inp} style={inpStyle} />
+              <input value={form.password} onChange={set("password")} placeholder="Password" type="password" className={inp} style={inpStyle}
                 onKeyDown={e => e.key === "Enter" && handleLogin()} />
               <button onClick={handleLogin} disabled={loading}
-                className="w-full bg-[#161B22] hover:bg-[#161B22] text-white font-semibold py-3 rounded-xl transition disabled:opacity-50">
+                style={{backgroundColor:"#0ea5e9", color:"white"}} className="w-full hover:opacity-90 font-semibold py-3 rounded-xl transition disabled:opacity-50">
                 {loading ? "Signing in..." : "Sign In"}
               </button>
               <div className="text-center">
-                <a href="/ForgotPassword" className="text-sm text-[#161B22] hover:underline font-medium">Forgot password?</a>
+                <a href="/ForgotPassword" className="text-sm text-foreground hover:underline font-medium">Forgot password?</a>
               </div>
             </div>
           )}
@@ -101,27 +102,28 @@ export default function SignupPage() {
           {mode === "signup" && (
             <div className="space-y-3">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Basic Info</p>
-              <input value={form.name} onChange={set("name")} placeholder="Full name *" className={inp} />
-              <input value={form.email} onChange={set("email")} placeholder="Email address *" type="email" className={inp} />
-              <input value={form.password} onChange={set("password")} placeholder="Password (min 6 chars) *" type="password" className={inp} />
+              <input value={form.name} onChange={set("name")} placeholder="Full name *" className={inp} style={inpStyle} />
+              <input value={form.email} onChange={set("email")} placeholder="Email address *" type="email" className={inp} style={inpStyle} />
+                <p className="text-xs text-orange-500 mt-1">⚠️ Use the same email registered on Delta Exchange India — required to connect your trading account.</p>
+              <input value={form.password} onChange={set("password")} placeholder="Password (min 6 chars) *" type="password" className={inp} style={inpStyle} />
 
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide pt-1">Personal Details</p>
-              <input value={form.phone} onChange={set("phone")} placeholder="Mobile number" className={inp} />
+              <input value={form.phone} onChange={set("phone")} placeholder="Mobile number" className={inp} style={inpStyle} />
               <div className="grid grid-cols-2 gap-3">
-                <input value={form.city} onChange={set("city")} placeholder="City" className={inp} />
-                <input value={form.district} onChange={set("district")} placeholder="District" className={inp} />
+                <input value={form.city} onChange={set("city")} placeholder="City" className={inp} style={inpStyle} />
+                <input value={form.district} onChange={set("district")} placeholder="District" className={inp} style={inpStyle} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <select value={form.gender} onChange={set("gender")} className={inp}>
                   <option value="">Gender</option>
                   <option>Male</option><option>Female</option><option>Other</option>
                 </select>
-                <input value={form.age} onChange={set("age")} placeholder="Age" type="number" className={inp} />
+                <input value={form.age} onChange={set("age")} placeholder="Age" type="number" className={inp} style={inpStyle} />
               </div>
-              <input value={form.country} onChange={set("country")} placeholder="Country" className={inp} />
+              <input value={form.country} onChange={set("country")} placeholder="Country" className={inp} style={inpStyle} />
 
               <button onClick={handleSignup} disabled={loading}
-                className="w-full bg-[#161B22] hover:bg-[#161B22] text-white font-semibold py-3 rounded-xl transition disabled:opacity-50 mt-2">
+                style={{backgroundColor:"#0ea5e9", color:"white"}} className="w-full hover:opacity-90 font-semibold py-3 rounded-xl transition disabled:opacity-50 mt-2">
                 {loading ? "Sending OTP..." : "Create Account"}
               </button>
             </div>
@@ -131,15 +133,15 @@ export default function SignupPage() {
             <div className="space-y-4">
               <div className="text-center mb-2">
                 <p className="text-3xl mb-2">📧</p>
-                <h2 className="font-bold text-[#161B22] text-lg">Verify your email</h2>
+                <h2 className="font-bold text-foreground text-lg">Verify your email</h2>
                 <p className="text-sm text-gray-500 mt-1">OTP sent to <span className="font-medium">{form.email}</span></p>
               </div>
               <input value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
                 placeholder="Enter 6-digit OTP" maxLength={6}
-                className={`${inp} text-center text-2xl tracking-widest font-mono`}
+                style={inpStyle} className={`${inp} text-center text-2xl tracking-widest font-mono`}
                 onKeyDown={e => e.key === "Enter" && handleVerify()} />
               <button onClick={handleVerify} disabled={loading || otp.length !== 6}
-                className="w-full bg-[#161B22] hover:bg-[#161B22] text-white font-semibold py-3 rounded-xl transition disabled:opacity-50">
+                style={{backgroundColor:"#0ea5e9", color:"white"}} className="w-full hover:opacity-90 font-semibold py-3 rounded-xl transition disabled:opacity-50">
                 {loading ? "Verifying..." : "Verify OTP"}
               </button>
               <button onClick={async () => {
@@ -156,15 +158,19 @@ export default function SignupPage() {
 
           {mode === "pending" && (
             <div className="text-center space-y-4 py-4">
-              <p className="text-4xl">⏳</p>
-              <h2 className="font-bold text-[#161B22] text-lg">Registration Complete!</h2>
-              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-sm text-yellow-800">
-                <p className="font-semibold">Pending Admin Approval</p>
-                <p className="mt-1 text-xs">Your account has been verified. An admin will review and activate your account shortly. You will be able to login once approved.</p>
+              <p className="text-4xl">✅</p>
+              <h2 className="font-bold text-foreground text-lg">Email Verified!</h2>
+              <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 text-sm text-green-600">
+                <p className="font-semibold">Account created successfully!</p>
+                <p className="mt-1 text-xs">Next step: Connect your Delta Exchange account to start trading.</p>
               </div>
-              <button onClick={() => setMode("login")}
-                className="w-full bg-[#161B22] text-white font-semibold py-3 rounded-xl transition hover:bg-[#161B22]">
-                Back to Sign In
+              <button onClick={async () => {
+                const res = await signIn("credentials", { email: form.email, password: form.password, redirect: false })
+                if (res?.ok) router.push("/marketplace?welcome=1")
+                else setMode("login")
+              }}
+                style={{backgroundColor:"#0ea5e9", color:"white"}} className="w-full hover:opacity-90 font-semibold py-3 rounded-xl transition">
+                Go to Marketplace →
               </button>
             </div>
           )}

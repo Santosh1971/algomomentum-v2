@@ -1,14 +1,39 @@
 'use client'
 // components/marketplace/SubscribeModal.jsx
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export default function SubscribeModal({ strategy, onClose, onSuccess }) {
   const [amount, setAmount] = useState(1000)
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState(null)
+  const [balance, setBalance] = useState(null)
+  const [loadingBalance, setLoadingBalance] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/v1/accounts')
+      .then(r => r.json())
+      .then(d => {
+        const mainAccount = d?.accounts?.[0]
+        if (mainAccount?.id) {
+          fetch(`/api/v1/accounts/${mainAccount.id}/balance`)
+            .then(r => r.json())
+            .then(b => { setBalance(b); setLoadingBalance(false) })
+            .catch(() => setLoadingBalance(false))
+        } else setLoadingBalance(false)
+      })
+      .catch(() => setLoadingBalance(false))
+  }, [])
 
   async function handleSubscribe() {
+    const INR_TO_USD = 85
+    const requiredUsd = (strategy.minCapital || amount) / INR_TO_USD
+    if (balance && balance.available < requiredUsd) {
+      window.alert(`❌ Insufficient margin!\n\nRequired: ₹${(strategy.minCapital || amount).toLocaleString('en-IN')} (~$${requiredUsd.toFixed(2)})\nAvailable: $${balance.available.toFixed(2)} (~₹${(balance.available * INR_TO_USD).toFixed(0)})\n\nPlease add funds to your Delta account.`)
+      return
+    }
+    const confirm = window.confirm(`Subscribe to ${strategy.name}?\n\nCapital: ₹${amount}\nAvailable Balance: $${balance?.available?.toFixed(2) ?? "—"}\n\n⚠️ Your bot will be INACTIVE until admin approves your account.\n\nSubscribe anyway?`)
+    if (!confirm) return
     setLoading(true)
     setError(null)
     try {
@@ -40,6 +65,22 @@ export default function SubscribeModal({ strategy, onClose, onSuccess }) {
           <div>
             <label className="text-xs text-muted-foreground block mb-1">Symbol</label>
             <div className="text-sm font-medium bg-muted/30 rounded-lg px-3 py-2 text-muted-foreground">{strategy.symbol} (fixed)</div>
+          </div>
+
+          {/* Account Balance */}
+          <div className="bg-muted/30 rounded-lg px-4 py-3 text-sm">
+            {loadingBalance ? (
+              <div className="text-xs text-muted-foreground">Fetching account balance…</div>
+            ) : balance ? (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground text-xs">Total Balance</span>
+                <span className="font-semibold">${balance.total?.toFixed(2) ?? "—"}</span>
+                <span className="text-muted-foreground text-xs ml-4">Available</span>
+                <span className="font-semibold text-green-600">${balance.available?.toFixed(2) ?? "—"}</span>
+              </div>
+            ) : (
+              <div className="text-xs text-muted-foreground">Balance unavailable</div>
+            )}
           </div>
 
           {/* Lot size */}

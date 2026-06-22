@@ -187,6 +187,7 @@ model Strategy {
   backtestFileName String?
   properties      Json?
   webhookToken    String        @unique @default(cuid())
+  minCapital      Float?        
   isFeatured      Boolean       @default(false)
   isActive        Boolean       @default(true)
   createdAt       DateTime      @default(now())

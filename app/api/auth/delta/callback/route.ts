@@ -42,11 +42,18 @@ export async function GET(req: NextRequest) {
     }
 
     const profileRes = await fetch("https://api.india.delta.exchange/v2/profile", {
-      headers: { "Authorization": "Bearer " + tokenData.access_token },
+      headers: { "Authorization": tokenData.access_token },
     });
     const profileData = await profileRes.json();
     const deltaUserId = profileData?.result?.id?.toString() ?? null;
-    const deltaAccountName = profileData?.result?.email ?? profileData?.result?.name ?? "Delta Account";
+    const deltaEmail = profileData?.result?.email ?? null;
+    const deltaAccountName = deltaEmail ?? profileData?.result?.name ?? "Delta Account";
+
+    // Verify Delta email matches registered email
+    if (deltaEmail && deltaEmail.toLowerCase() !== session.user.email!.toLowerCase()) {
+      console.error(`Delta email mismatch: registered=${session.user.email}, delta=${deltaEmail}`);
+      return NextResponse.redirect(new URL(`/marketplace?delta_error=email_mismatch&expected=${encodeURIComponent(session.user.email!)}&got=${encodeURIComponent(deltaEmail)}`, BASE_URL));
+    }
 
     const expiresAt = tokenData.expires_in
       ? new Date(Date.now() + tokenData.expires_in * 1000)
@@ -89,7 +96,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    return NextResponse.redirect(new URL("/user/tradeconfig?delta_connected=1", BASE_URL));
+    return NextResponse.redirect(new URL("/marketplace?delta_connected=1&pending=1", BASE_URL));
   } catch (e: any) {
     console.error("Delta OAuth error:", e);
     return NextResponse.redirect(new URL("/user/tradeconfig?delta_error=3", BASE_URL));
