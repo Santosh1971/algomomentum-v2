@@ -26,6 +26,7 @@ export default function AdminUsersPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
 
@@ -43,6 +44,7 @@ export default function AdminUsersPage() {
   useEffect(() => { loadUsers(); }, []);
 
   async function approveUser(userId: string, approve: boolean) {
+    setApprovingId(userId);
     const res = await fetch("/api/v1/admin/users", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -100,7 +102,7 @@ export default function AdminUsersPage() {
       <div className="max-w-7xl mx-auto p-6 space-y-5">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-[#161B22]">All Users</h1>
+            <h1 className="text-2xl font-bold text-foreground">All Users</h1>
             <p className="text-sm text-gray-500 mt-1">{users.length} registered clients</p>
           </div>
           <input value={search} onChange={e => setSearch(e.target.value)}
@@ -161,10 +163,10 @@ export default function AdminUsersPage() {
                         </Link>
                         {!u.isApproved ? (
                           <button onClick={() => approveUser(u.id, true)}
-                            disabled={!u.details?.deltaUserId}
+                            disabled={!u.details?.deltaUserId || approvingId === u.id}
                             title={!u.details?.deltaUserId ? "User must connect Delta account first" : "Approve user"}
                             className="text-xs bg-green-600 text-white px-2 py-1 rounded-lg hover:bg-green-700 transition disabled:opacity-40 disabled:cursor-not-allowed">
-                            Approve
+                            {approvingId === u.id ? '⏳ Approving...' : 'Approve'}
                           </button>
                         ) : (
                           <button onClick={() => approveUser(u.id, false)}
