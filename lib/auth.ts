@@ -48,7 +48,6 @@ export const NEXT_AUTH: NextAuthOptions = {
           token.role = dbUser.role;
           token.isApproved = dbUser.isApproved;
           token.deltaUserId = dbUser.details?.deltaUserId ?? null;
-          console.log("JWT refresh:", email, "isApproved:", dbUser.isApproved, "deltaUserId:", dbUser.details?.deltaUserId);
         }
       }
       return token;
