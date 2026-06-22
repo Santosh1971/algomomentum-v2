@@ -47,6 +47,8 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
     return NextResponse.json({
       available: availableUSD,
       total: totalUSD,
+      availableUSD: availableUSD,
+      totalUSD: totalUSD,
       availableINR: availableUSD * INR_PER_USD,
       totalINR: totalUSD * INR_PER_USD,
       currency: "USD",
