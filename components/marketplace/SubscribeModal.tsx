@@ -104,16 +104,16 @@ export default function SubscribeModal({ strategy, onClose, onSuccess }) {
 
           {/* Lot size */}
           <div>
-            <label className="text-xs text-muted-foreground block mb-1">Capital (₹)</label>
+            <label className="text-xs text-muted-foreground block mb-1">Capital ({showUSD ? "$" : "₹"})</label>
             <input
               type="number"
               min="1"
               step="1"
-              value={amount}
-              onChange={e => setAmount(Number(e.target.value))}
+              value={showUSD ? (amount / INR_TO_USD).toFixed(2) : amount}
+              onChange={e => setAmount(showUSD ? Math.round(Number(e.target.value) * INR_TO_USD) : Number(e.target.value))}
               className="w-full bg-muted/30 border border-border/40 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
             />
-            <div className="text-xs text-muted-foreground mt-1">Amount used per trade signal in ₹</div>
+            <div className="text-xs text-muted-foreground mt-1">Amount used per trade signal in {showUSD ? "USD" : "₹"} · {showUSD ? `₹${amount}` : `$${(amount/INR_TO_USD).toFixed(2)}`}</div>
           </div>
         </div>
 
