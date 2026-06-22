@@ -9,12 +9,14 @@ export default function SubscribeModal({ strategy, onClose, onSuccess }) {
   const [error, setError]     = useState(null)
   const [balance, setBalance] = useState(null)
   const [loadingBalance, setLoadingBalance] = useState(true)
+  const [showUSD, setShowUSD] = useState(false)
+  const INR_TO_USD = 85
 
   useEffect(() => {
     fetch('/api/v1/accounts')
       .then(r => r.json())
       .then(d => {
-        const accounts = d?.accounts ?? []
+        const accounts = Array.isArray(d) ? d : (d?.accounts ?? [])
         const mainAccount = accounts.find((a: any) => a.accountType === 'main') ?? accounts[0]
         if (mainAccount?.id) {
           fetch(`/api/v1/accounts/${mainAccount.id}/balance`)
@@ -73,11 +75,27 @@ export default function SubscribeModal({ strategy, onClose, onSuccess }) {
             {loadingBalance ? (
               <div className="text-xs text-muted-foreground">Fetching account balance…</div>
             ) : balance ? (
-              <div className="flex justify-between">
-                <span className="text-muted-foreground text-xs">Total Balance</span>
-                <span className="font-semibold">${balance.total?.toFixed(2) ?? "—"}</span>
-                <span className="text-muted-foreground text-xs ml-4">Available</span>
-                <span className="font-semibold text-green-600">${balance.available?.toFixed(2) ?? "—"}</span>
+              <div className="space-y-1">
+                <div className="flex justify-between items-center">
+                  <div className="flex gap-4">
+                    <div>
+                      <span className="text-muted-foreground text-xs">Total Balance</span>
+                      <div className="font-semibold">
+                        {showUSD ? `$${balance.total?.toFixed(2)}` : `₹${(balance.total * INR_TO_USD).toFixed(0)}`}
+                      </div>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground text-xs">Available</span>
+                      <div className="font-semibold text-green-600">
+                        {showUSD ? `$${balance.available?.toFixed(2)}` : `₹${(balance.available * INR_TO_USD).toFixed(0)}`}
+                      </div>
+                    </div>
+                  </div>
+                  <button onClick={() => setShowUSD(!showUSD)}
+                    className="text-xs px-2 py-1 rounded border border-border/40 text-muted-foreground hover:bg-muted/30 transition">
+                    {showUSD ? 'Show ₹' : 'Show $'}
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="text-xs text-muted-foreground">Balance unavailable</div>
