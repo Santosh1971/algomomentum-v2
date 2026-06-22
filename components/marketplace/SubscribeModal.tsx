@@ -35,7 +35,9 @@ export default function SubscribeModal({ strategy, onClose, onSuccess }) {
       window.alert(`❌ Insufficient margin!\n\nRequired: ₹${(strategy.minCapital || amount).toLocaleString('en-IN')} (~$${requiredUsd.toFixed(2)})\nAvailable: $${balance.available.toFixed(2)} (~₹${(balance.available * INR_TO_USD).toFixed(0)})\n\nPlease add funds to your Delta account.`)
       return
     }
-    const confirm = window.confirm(`Subscribe to ${strategy.name}?\n\nCapital: ₹${amount}\nAvailable Balance: $${balance?.available?.toFixed(2) ?? "—"}\n\nConfirm subscription?`)
+    const capDisplay = showUSD ? `$${(amount/INR_TO_USD).toFixed(2)}` : `₹${amount}`
+    const balDisplay = showUSD ? `$${balance?.available?.toFixed(2) ?? "—"}` : `₹${balance ? (balance.available * INR_TO_USD).toFixed(0) : "—"}`
+    const confirm = window.confirm(`Subscribe to ${strategy.name}?\n\nCapital: ${capDisplay}\nAvailable Balance: ${balDisplay}\n\nConfirm subscription?`)
     if (!confirm) return
     setLoading(true)
     setError(null)
