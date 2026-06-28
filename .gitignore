@@ -44,3 +44,4 @@ next-env.d.ts
 .env.production
 *.log
 .DS_Store
+public/backtest-files/
