@@ -1,5 +1,6 @@
 'use client'
 import { useSession } from 'next-auth/react'
+import SubscribeModal from '@/components/marketplace/SubscribeModal'
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
@@ -17,6 +18,7 @@ const PERIODS = [
 export default function StrategyDetailPage() {
   const { data: session } = useSession()
   const hasDelta = !!(session?.user as any)?.deltaUserId
+  const isApproved = !!(session?.user as any)?.isApproved
   const { id } = useParams()
   const router = useRouter()
   const [tab, setTab] = useState<'backtest' | 'live'>('backtest')
@@ -25,6 +27,7 @@ export default function StrategyDetailPage() {
   const [loading, setLoading] = useState(true)
   const [subscribing, setSubscribing] = useState(false)
   const [subMsg, setSubMsg] = useState('')
+  const [showSubModal, setShowSubModal] = useState(false)
 
   useEffect(() => {
     fetch(`/api/v1/marketplace/${id}?period=${period}`)
@@ -32,22 +35,8 @@ export default function StrategyDetailPage() {
       .then(d => { setData(d); setLoading(false) })
   }, [id, period])
 
-  async function handleSubscribe() {
-    setSubscribing(true)
-    setSubMsg('')
-    const res = await fetch('/api/v1/marketplace/subscribe', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ strategyId: id }),
-    })
-    const json = await res.json()
-    if (res.ok) {
-      setSubMsg('Successfully subscribed!')
-      setData((prev: any) => ({ ...prev, isSubscribed: true }))
-    } else {
-      setSubMsg(json.error ?? 'Subscription failed')
-    }
-    setSubscribing(false)
+  function handleSubscribe() {
+    setShowSubModal(true)
   }
 
   async function handleUnsubscribe() {
@@ -87,16 +76,18 @@ export default function StrategyDetailPage() {
             {s.description && <p className="text-sm text-muted-foreground mt-2">{s.description}</p>}
           </div>
           <div className="flex flex-col items-end gap-2 shrink-0">
-            {data.isSubscribed ? (
+            {data.isSubscribed && isApproved ? (
               <button onClick={handleUnsubscribe} disabled={subscribing}
                 className="px-5 py-2 rounded-lg text-sm font-medium bg-red-600 hover:bg-red-700 text-white transition-colors disabled:opacity-50">
                 {subscribing ? 'Processing…' : 'Unsubscribe'}
               </button>
-            ) : hasDelta ? (
+            ) : hasDelta && isApproved ? (
               <button onClick={handleSubscribe} disabled={subscribing}
                 className="px-5 py-2 rounded-lg text-sm font-medium bg-green-600 hover:bg-green-700 text-white transition-colors disabled:opacity-50">
                 {subscribing ? 'Processing…' : 'Subscribe'}
               </button>
+            ) : hasDelta ? (
+              <span className="px-5 py-2 rounded-lg text-sm font-medium border border-yellow-400/40 text-yellow-500">⏳ Pending Approval</span>
             ) : (
               <a href="/api/auth/delta/authorize"
                 className="px-5 py-2 rounded-lg text-sm font-medium bg-orange-500 hover:bg-orange-600 text-white transition-colors">
@@ -231,6 +222,17 @@ export default function StrategyDetailPage() {
           </div>
         )}
       </div>
+      {showSubModal && s && (
+        <SubscribeModal
+          strategy={s}
+          onClose={() => setShowSubModal(false)}
+          onSubscribed={(strategyId) => {
+            setData((prev: any) => ({ ...prev, isSubscribed: true }))
+            setShowSubModal(false)
+            setSubMsg('Successfully subscribed!')
+          }}
+        />
+      )}
     </>
   )
 }

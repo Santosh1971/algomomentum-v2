@@ -1,3 +1,5 @@
+import fs from 'fs'
+import path from 'path'
 // app/api/admin/strategies/[id]/route.js
 
 import { NextResponse } from 'next/server'
@@ -33,6 +35,12 @@ export async function PATCH(req, { params }: { params: Promise<{ id: string }> }
       if (equityData) parsedStats.equityData = equityData
       if (properties) parsedStats.properties = properties
       parsedStats.backtestFileName = file.name
+      // Save file to disk
+      const uploadDir = path.join(process.cwd(), 'public', 'backtest-files')
+      if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true })
+      const safeName = `${id}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
+      fs.writeFileSync(path.join(uploadDir, safeName), buffer)
+      parsedStats.backtestFileUrl = `/backtest-files/${safeName}`
       Object.assign(data, parsedStats)
 
       // Store backtest trades

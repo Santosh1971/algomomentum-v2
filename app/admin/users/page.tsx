@@ -115,10 +115,10 @@ export default function AdminUsersPage() {
             <div className="w-8 h-8 border-4 border-[#161B22] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
-          <div className="bg-white rounded-2xl shadow-sm border">
+          <div className="bg-card rounded-2xl shadow-sm border overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="bg-[#161B22] text-white text-xs">
+                <tr className="bg-muted text-foreground text-xs border-b border-border">
                   {["#", "Name", "Email", "Phone", "Age", "Gender", "City", "Delta ID", "Country", "Status", "Actions"].map(h => (
                     <th key={h} className="px-4 py-3 text-left font-medium whitespace-nowrap">{h}</th>
                   ))}
@@ -132,7 +132,7 @@ export default function AdminUsersPage() {
                     <td className="px-4 py-3 text-gray-400">{i + 1}</td>
                     <td className="px-4 py-3 font-medium text-gray-800 max-w-[160px]">
                       <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-[#161B22] text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
+                        <div className="w-7 h-7 rounded-full bg-foreground text-background flex items-center justify-center text-xs font-bold flex-shrink-0">
                           {(u.name ?? u.email)[0].toUpperCase()}
                         </div>
                         {u.name ?? "—"}
@@ -155,8 +155,8 @@ export default function AdminUsersPage() {
                         </span>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap min-w-[160px]">
+                      <div className="flex items-center gap-1">
                         <Link href={`/admin/users/${u.id}`}
                           className="text-xs bg-blue-600 text-white px-2 py-1 rounded-lg hover:bg-blue-700 transition">
                           Bots
@@ -175,8 +175,8 @@ export default function AdminUsersPage() {
                           </button>
                         )}
                         <button onClick={() => deleteUser(u.id, u.name ?? u.email)}
-                          className="text-xs bg-red-600 text-white px-2 py-1 rounded-lg hover:bg-red-700 transition">
-                          Delete
+                          className="text-xs bg-red-600 text-white px-2 py-1 rounded-lg hover:bg-red-700 transition whitespace-nowrap">
+                          Del
                         </button>
                       </div>
                     </td>

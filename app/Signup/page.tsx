@@ -12,7 +12,7 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     email: "", password: "", name: "",
-    phone: "", city: "", district: "", country: "India", gender: "", age: ""
+    phone: "", city: "", country: "India", gender: "", age: "", confirmPassword: ""
   });
   const [otp, setOtp] = useState("");
 
@@ -30,6 +30,7 @@ export default function SignupPage() {
 
   async function handleSignup() {
     if (!form.email || !form.password || !form.name) { toast.error("Name, email and password required"); return; }
+    if (form.password !== form.confirmPassword) { toast.error("Passwords do not match"); return; }
     if (form.password.length < 6) { toast.error("Password must be at least 6 characters"); return; }
     setLoading(true);
     const res = await fetch("/api/v1/user", {
@@ -106,13 +107,10 @@ export default function SignupPage() {
               <input value={form.email} onChange={set("email")} placeholder="Email address *" type="email" className={inp} style={inpStyle} />
                 <p className="text-xs text-orange-500 mt-1">⚠️ Use the same email registered on Delta Exchange India — required to connect your trading account.</p>
               <input value={form.password} onChange={set("password")} placeholder="Password (min 6 chars) *" type="password" className={inp} style={inpStyle} />
+              <input value={form.confirmPassword} onChange={set("confirmPassword")} placeholder="Confirm Password *" type="password" className={inp} style={inpStyle} />
 
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide pt-1">Personal Details</p>
               <input value={form.phone} onChange={set("phone")} placeholder="Mobile number" className={inp} style={inpStyle} />
-              <div className="grid grid-cols-2 gap-3">
-                <input value={form.city} onChange={set("city")} placeholder="City" className={inp} style={inpStyle} />
-                <input value={form.district} onChange={set("district")} placeholder="District" className={inp} style={inpStyle} />
-              </div>
               <div className="grid grid-cols-2 gap-3">
                 <select value={form.gender} onChange={set("gender")} className={inp}>
                   <option value="">Gender</option>
@@ -120,7 +118,10 @@ export default function SignupPage() {
                 </select>
                 <input value={form.age} onChange={set("age")} placeholder="Age" type="number" className={inp} style={inpStyle} />
               </div>
-              <input value={form.country} onChange={set("country")} placeholder="Country" className={inp} style={inpStyle} />
+              <div className="grid grid-cols-2 gap-3">
+                <input value={form.city} onChange={set("city")} placeholder="City" className={inp} style={inpStyle} />
+                <input value={form.country} onChange={set("country")} placeholder="Country" className={inp} style={inpStyle} />
+              </div>
 
               <button onClick={handleSignup} disabled={loading}
                 style={{backgroundColor:"#0ea5e9", color:"white"}} className="w-full hover:opacity-90 font-semibold py-3 rounded-xl transition disabled:opacity-50 mt-2">

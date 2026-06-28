@@ -58,7 +58,74 @@ export function parseBacktestFile(buffer, filename) {
     } catch {}
   }
 
-  const stats = extractStats(rows)
+  // Read initial capital from Properties sheet
+  let initialCapital = 1000
+  if (properties) {
+    const icKey = Object.keys(properties).find(k => k.toLowerCase().includes('initial capital'))
+    if (icKey) {
+      const icVal = parseFloat(properties[icKey].replace(/[^0-9.]/g, ''))
+      if (!isNaN(icVal) && icVal > 0) initialCapital = icVal
+    }
+  }
+
+  // Read totalPnlPct from Overview sheet if available
+  let overviewPnlPct: number | null = null
+  if (ext === 'xlsx' || ext === 'xls') {
+    try {
+      const wb3 = XLSX.read(buffer, { type: 'buffer' })
+      const ovSheet = wb3.SheetNames.find((n: string) => n.toLowerCase().includes('overview') || n.toLowerCase() === 'performance summary')
+      if (ovSheet) {
+        const ws3 = wb3.Sheets[ovSheet]
+        const ovRows = XLSX.utils.sheet_to_json(ws3, { header: 1 }) as any[][]
+        for (const row of ovRows) {
+          const label = String(row[0] || '').toLowerCase()
+          if (label.includes('net profit') && row[2] !== undefined) {
+            const val = parseFloat(String(row[2]).replace(/[^0-9.-]/g, ''))
+            if (!isNaN(val)) { overviewPnlPct = val; break }
+          }
+        }
+      }
+    } catch {}
+  }
+
+  const stats = extractStats(rows, initialCapital)
+  if (overviewPnlPct !== null) stats.totalPnlPct = overviewPnlPct
+
+  // Read accurate stats from Performance sheet if available
+  if (ext === 'xlsx' || ext === 'xls') {
+    try {
+      const wb4 = XLSX.read(buffer, { type: 'buffer' })
+      const perfSheet = wb4.SheetNames.find((n: string) => n.toLowerCase().includes('performance'))
+      if (perfSheet) {
+        const ws4 = wb4.Sheets[perfSheet]
+        const perfRows = XLSX.utils.sheet_to_json(ws4, { header: 1 }) as any[][]
+        for (const row of perfRows) {
+          const label = String(row[0] || '').toLowerCase().trim()
+          // Net profit % from col C (All %)
+          if (label === 'net profit' && row[2] !== undefined) {
+            const val = parseFloat(String(row[2]).replace(/[^0-9.-]/g, ''))
+            if (!isNaN(val)) stats.totalPnlPct = val
+          }
+          // Max drawdown % — use intrabar % from col C
+          if (label === 'max drawdown (intrabar)' && row[2] !== undefined) {
+            const val = parseFloat(String(row[2]).replace(/[^0-9.-]/g, ''))
+            if (!isNaN(val)) stats.maxDrawdown = val
+          }
+          // Win rate
+          if (label.includes('percent profitable') && row[2] !== undefined) {
+            const val = parseFloat(String(row[2]).replace(/[^0-9.-]/g, ''))
+            if (!isNaN(val)) stats.winRate = val
+          }
+          // Profit factor
+          if (label === 'profit factor' && row[1] !== undefined) {
+            const val = parseFloat(String(row[1]).replace(/[^0-9.-]/g, ''))
+            if (!isNaN(val)) stats.profitFactor = val
+          }
+        }
+      }
+    } catch {}
+  }
+
   return { ...stats, properties }
 }
 
@@ -73,7 +140,7 @@ function parseCSV(text) {
   })
 }
 
-function extractStats(rows) {
+function extractStats(rows, initialCapital = 1000) {
   // TradingView exports use these column names (case-insensitive match)
   const colMap = findColumns(rows[0] ? Object.keys(rows[0]) : [])
 
@@ -122,8 +189,6 @@ function extractStats(rows) {
   const winRate = totalTrades > 0 ? (wins / totalTrades) * 100 : null
 
   // Total PnL %
-  // PnL% based on initial capital 1000 (cumPnL goes from ~0 upward)
-  const initialCapital = 1000
   let totalPnlPct = null
   if (finalEquity !== null) {
     totalPnlPct = (finalEquity / initialCapital) * 100

@@ -126,7 +126,7 @@ export default function SubscribeModal({ strategy, onClose, onSuccess }) {
           <button
             onClick={handleSubscribe}
             disabled={loading || amount < 100}
-            className="flex-1 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="flex-1 py-2 rounded-lg bg-green-500 text-white text-sm hover:bg-green-600 disabled:opacity-50 transition-colors"
           >
             {loading ? 'Subscribing…' : 'Confirm subscribe'}
           </button>

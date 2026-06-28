@@ -185,6 +185,7 @@ model Strategy {
   profitFactor    Float?
   totalTrades     Int?
   backtestFileName String?
+  backtestFileUrl  String?
   properties      Json?
   webhookToken    String        @unique @default(cuid())
   minCapital      Float?        

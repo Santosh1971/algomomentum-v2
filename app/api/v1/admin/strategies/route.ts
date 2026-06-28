@@ -6,6 +6,8 @@ import { getServerSession } from 'next-auth'
 import { NEXT_AUTH as authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { parseBacktestFile } from '@/lib/parseBacktest'
+import fs from 'fs'
+import path from 'path'
 
 // GET /api/admin/strategies — list all
 export async function GET(req) {
@@ -16,7 +18,7 @@ export async function GET(req) {
 
   const strategies = await prisma.strategy.findMany({
     orderBy: { createdAt: 'desc' },
-    include: { _count: { select: { subscribers: true } } },
+    include: { _count: { select: { subscribers: true } }, subscribers: { select: { amount: true } } },
   })
 
   return NextResponse.json({ strategies })
@@ -42,18 +44,23 @@ export async function POST(req) {
     return NextResponse.json({ error: 'name, symbol, timeframe are required' }, { status: 400 })
   }
 
-  let parsedStats = {}
+  let parsedStats: any = {}
+  let backtestFileName: string | null = null
+  let backtestFileUrl: string | null = null
 
   if (file && file.size > 0) {
     const buffer = Buffer.from(await file.arrayBuffer())
     try {
       parsedStats = parseBacktestFile(buffer, file.name)
+      backtestFileName = file.name
+      const uploadDir = path.join(process.cwd(), 'public', 'backtest-files')
+      if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true })
+      const safeName = `new_${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
+      fs.writeFileSync(path.join(uploadDir, safeName), buffer)
+      backtestFileUrl = `/backtest-files/${safeName}`
     } catch (e) {
       return NextResponse.json({ error: e.message }, { status: 422 })
     }
-    // TODO: upload buffer to your storage (S3/R2/local) and set backtestFileUrl
-    // For now we skip file storage and just use the parsed stats
-    backtestFileUrl = null
   }
 
   const strategy = await prisma.strategy.create({
@@ -64,12 +71,15 @@ export async function POST(req) {
       description,
       isFeatured,
       minCapital,
+      backtestFileName,
+      backtestFileUrl,
       equityData:    parsedStats.equityData    ?? null,
       totalPnlPct:  parsedStats.totalPnlPct   ?? null,
       winRate:      parsedStats.winRate        ?? null,
       maxDrawdown:  parsedStats.maxDrawdown    ?? null,
       profitFactor: parsedStats.profitFactor   ?? null,
       totalTrades:  parsedStats.totalTrades    ?? null,
+      properties:   parsedStats.properties     ?? null,
     },
   })
 

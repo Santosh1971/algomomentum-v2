@@ -41,7 +41,7 @@ export default function Navbar() {
       <div className="flex items-center gap-6">
         <Link href={isAdmin && !path.startsWith("/user") && !path.startsWith("/marketplace") ? "/admin/dashboard" : "/user/dashboard"}
           className="flex items-center gap-2.5 select-none">
-          <Image src="/alm-logo.png" alt="AlgoMomentum" width={38} height={38} className="rounded-lg object-cover" priority />
+          <Image src="/alm-logo.png?v=3" alt="AlgoMomentum" width={38} height={38} className="object-contain" priority />
           <div className="flex flex-col leading-tight">
             <span className="text-white font-semibold text-sm tracking-wide">AlgoMomentum</span>
             <span className="text-cyan-400 text-[10px] font-normal tracking-wider uppercase">Bridge Platform v2</span>

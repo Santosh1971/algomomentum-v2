@@ -10,7 +10,7 @@ export default function EquityChart({ data }: { data: EquityPoint[] | null | und
   }
 
   const formatted = data.map(d => ({
-    date: new Date(d.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }),
+    date: new Date(d.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: '2-digit' }),
     equity: Math.round(d.equity * 100) / 100,
   }))
 
@@ -36,6 +36,7 @@ export default function EquityChart({ data }: { data: EquityPoint[] | null | und
         <Tooltip
           contentStyle={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '12px' }}
           labelStyle={{ color: 'var(--foreground)', fontWeight: 600 }}
+          formatter={(value: number) => [`₹${value.toFixed(2)}`, 'Equity']}
           formatter={(v: any) => [`₹${v}`, 'Equity']} />
         <Area type="monotone" dataKey="equity" stroke="#1db885" strokeWidth={2}
           fill="url(#equityGrad)" dot={false} activeDot={{ r: 4, fill: '#1db885' }} />

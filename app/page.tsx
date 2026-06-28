@@ -9,7 +9,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       <nav className="w-full bg-background border-b border-border/60 px-6 py-3 flex items-center justify-between sticky top-0 z-50 shadow-lg">
         <div className="flex items-center gap-2.5">
-          <Image src="/alm-logo.png" alt="AlgoMomentum" width={40} height={40} className="rounded-lg object-cover" priority />
+          <Image src="/alm-logo.png?v=3" alt="AlgoMomentum" width={40} height={40} className="object-contain" priority />
           <div className="flex flex-col leading-tight">
             <span className="text-foreground font-semibold text-sm tracking-wide">AlgoMomentum</span>
             <span className="text-cyan-400 text-[10px] font-normal tracking-wider uppercase">Bridge Platform v2</span>
@@ -21,7 +21,7 @@ export default function LandingPage() {
         </div>
       </nav>
       <section className="flex flex-col items-center justify-center text-center px-6 py-24 bg-background">
-        <Image src="/alm-logo.png" alt="ALM" width={100} height={100} className="rounded-2xl object-cover mx-auto shadow-2xl shadow-cyan-500/20 mb-8" />
+        <Image src="/alm-logo.png?v=3" alt="ALM" width={100} height={100} className="object-contain mx-auto mb-8" />
         <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-4">
           Automate Your <span className="text-cyan-400">Crypto Trading</span>
         </h1>
@@ -88,7 +88,7 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <Image src="/alm-logo.png" alt="ALM" width={32} height={32} className="rounded-lg object-cover" />
+                <Image src="/alm-logo.png?v=3" alt="ALM" width={32} height={32} className="object-contain" />
                 <span className="text-foreground font-semibold text-sm">AlgoMomentum</span>
               </div>
               <p className="text-slate-500 text-xs leading-relaxed">Automated algo trading bridge for Delta Exchange India.</p>

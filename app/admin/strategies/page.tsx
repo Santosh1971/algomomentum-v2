@@ -58,7 +58,7 @@ export default function AdminStrategiesPage() {
               {/* Symbol · Exchange · TF */}
               <div className="text-xs text-muted-foreground">
                 {s.symbol} · {(s as any).properties?.Symbol ?? ('CRYPTO:' + s.symbol)} · {s.timeframe}
-                {(s as any).backtestFileName && <span className="ml-2 text-[10px]">📎 {(s as any).backtestFileName}</span>}
+                {(s as any).backtestFileName && (s as any).backtestFileUrl ? <a href={(s as any).backtestFileUrl} download className="ml-2 text-[10px] text-cyan-400 hover:underline">📎 {(s as any).backtestFileName} ⬇</a> : (s as any).backtestFileName ? <span className="ml-2 text-[10px]">📎 {(s as any).backtestFileName}</span> : null}
               </div>
 
               {/* Backtest range + days */}
@@ -80,7 +80,7 @@ export default function AdminStrategiesPage() {
               {/* Subscribers */}
               <div className="text-xs text-muted-foreground">
                 <span>Subscribers: <span className="text-foreground font-medium">{s._count.subscribers}</span> &nbsp;&nbsp;&nbsp;</span>
-                <span>Subscribed Amount: <span className="text-foreground font-medium">₹—</span></span>
+                <span>Subscribed Amount: <span className="text-foreground font-medium">₹{(s.subscribers?.reduce((sum: number, t: any) => sum + (t.amount || 0), 0) || 0).toLocaleString('en-IN')}</span></span>
               </div>
 
               {/* Webhook URL */}
@@ -217,13 +217,26 @@ function StrategyFormModal({ initial, onClose, onSaved }) {
               {['1m','5m','15m','30m','1h','2h','4h','8h','1D'].map(t => <option key={t}>{t}</option>)}
             </select>
           </Field>
-          <Field label="Description (optional)">
+          <Field label="Description">
             <textarea value={description} onChange={e => setDescription(e.target.value)} className="form-input" rows={2} />
-            <label className="text-xs text-muted-foreground">Min Capital (₹)</label>
+          </Field>
+          <Field label="Min Capital (₹)">
             <input type="number" value={minCapital} onChange={e => setMinCapital(Number(e.target.value))} className="form-input" placeholder="1000" min="100" />
           </Field>
-          <Field label="Backtest CSV / XLSX (optional)">
-            <input type="file" ref={fileRef} accept=".csv,.xlsx,.xls" className="text-sm text-muted-foreground" />
+          <Field label="Backtest CSV / XLSX">
+            {initial?.backtestFileName && (
+              <div className="text-xs mb-2 flex items-center gap-2">
+                <span className="text-muted-foreground">Current:</span>
+                {initial?.backtestFileUrl
+                  ? <a href={initial.backtestFileUrl} download className="text-cyan-400 hover:underline">📎 {initial.backtestFileName} ⬇</a>
+                  : <span className="text-muted-foreground">📎 {initial.backtestFileName}</span>
+                }
+              </div>
+            )}
+            <label className="cursor-pointer inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-border text-sm hover:bg-muted transition-colors">
+              📂 <span>Choose File</span>
+              <input type="file" ref={fileRef} accept=".csv,.xlsx,.xls" className="hidden" />
+            </label>
             <div className="text-xs text-muted-foreground mt-1">Equity curve and stats auto-parsed from file</div>
           </Field>
           <label className="flex items-center gap-2 text-sm cursor-pointer">

@@ -10,6 +10,7 @@ export async function sendVerificationEmail(email: string, name: string, otp: st
       subject: "Your AlgoMomentum verification code",
       html: `<div style="font-family:Arial;max-width:480px;margin:0 auto;padding:32px;background:#f9fafb;border-radius:12px">
         <div style="background:#1E3A5F;padding:24px;border-radius:8px;text-align:center;margin-bottom:24px">
+          <img src="https://app.algomomentum.in/alm-logo.png" alt="AlgoMomentum" width="64" height="64" style="object-fit:contain;margin-bottom:8px" />
           <h1 style="color:white;margin:0;font-size:24px">AlgoMomentum</h1>
           <p style="color:#93c5fd;margin:4px 0 0;font-size:14px">Bridge Platform v2</p>
         </div>
@@ -36,7 +37,9 @@ export async function sendWelcomeEmail(email: string, name: string) {
       subject: "Welcome to AlgoMomentum Bridge!",
       html: `<div style="font-family:Arial;max-width:480px;margin:0 auto;padding:32px">
         <div style="background:#1E3A5F;padding:24px;border-radius:8px;text-align:center;margin-bottom:24px">
-          <h1 style="color:white;margin:0">AlgoMomentum</h1>
+          <img src="https://app.algomomentum.in/alm-logo.png" alt="AlgoMomentum" width="64" height="64" style="object-fit:contain;margin-bottom:8px" />
+          <h1 style="color:white;margin:0;font-size:24px">AlgoMomentum</h1>
+          <p style="color:#93c5fd;margin:4px 0 0;font-size:14px">Bridge Platform v2</p>
         </div>
         <h2 style="color:#1E3A5F">Welcome aboard, ${name}!</h2>
         <p style="color:#6b7280">Your account is now active. Connect your Delta Exchange API keys to start trading.</p>
@@ -60,6 +63,7 @@ export async function sendPasswordResetEmail(email: string, name: string, resetU
       subject: "Reset your AlgoMomentum password",
       html: `<div style="font-family:Arial;max-width:480px;margin:0 auto;padding:32px;background:#f9fafb;border-radius:12px">
         <div style="background:#1E3A5F;padding:24px;border-radius:8px;text-align:center;margin-bottom:24px">
+          <img src="https://app.algomomentum.in/alm-logo.png" alt="AlgoMomentum" width="64" height="64" style="object-fit:contain;margin-bottom:8px" />
           <h1 style="color:white;margin:0;font-size:24px">AlgoMomentum</h1>
           <p style="color:#93c5fd;margin:4px 0 0;font-size:14px">Bridge Platform v2</p>
         </div>
@@ -87,7 +91,9 @@ export async function sendAdminNotification(adminEmail: string, userName: string
       subject: `✅ User Approved: ${userName}`,
       html: `<div style="font-family:Arial;max-width:480px;margin:0 auto;padding:32px">
         <div style="background:#1E3A5F;padding:24px;border-radius:8px;text-align:center;margin-bottom:24px">
-          <h1 style="color:white;margin:0">AlgoMomentum</h1>
+          <img src="https://app.algomomentum.in/alm-logo.png" alt="AlgoMomentum" width="64" height="64" style="object-fit:contain;margin-bottom:8px" />
+          <h1 style="color:white;margin:0;font-size:24px">AlgoMomentum</h1>
+          <p style="color:#93c5fd;margin:4px 0 0;font-size:14px">Bridge Platform v2</p>
         </div>
         <h2 style="color:#1E3A5F">User Approved</h2>
         <p style="color:#6b7280"><strong>${userName}</strong> (${userEmail}) has been approved and their bots have been activated.</p>
@@ -106,7 +112,9 @@ export async function sendNewUserAlert(adminEmail: string, userName: string, use
       subject: `🆕 New User Waiting Approval: ${userName}`,
       html: `<div style="font-family:Arial;max-width:480px;margin:0 auto;padding:32px">
         <div style="background:#1E3A5F;padding:24px;border-radius:8px;text-align:center;margin-bottom:24px">
-          <h1 style="color:white;margin:0">AlgoMomentum</h1>
+          <img src="https://app.algomomentum.in/alm-logo.png" alt="AlgoMomentum" width="64" height="64" style="object-fit:contain;margin-bottom:8px" />
+          <h1 style="color:white;margin:0;font-size:24px">AlgoMomentum</h1>
+          <p style="color:#93c5fd;margin:4px 0 0;font-size:14px">Bridge Platform v2</p>
         </div>
         <h2 style="color:#F59E0B">New User Waiting for Approval</h2>
         <p style="color:#6b7280"><strong>${userName}</strong> (${userEmail}) has registered and is waiting for approval.</p>
@@ -126,7 +134,9 @@ export async function sendDeltaConnectedEmail(email: string, name: string) {
       subject: "✅ Delta Account Connected — Pending Admin Approval",
       html: `<div style="font-family:Arial;max-width:480px;margin:0 auto;padding:32px">
         <div style="background:#1E3A5F;padding:24px;border-radius:8px;text-align:center;margin-bottom:24px">
-          <h1 style="color:white;margin:0">AlgoMomentum</h1>
+          <img src="https://app.algomomentum.in/alm-logo.png" alt="AlgoMomentum" width="64" height="64" style="object-fit:contain;margin-bottom:8px" />
+          <h1 style="color:white;margin:0;font-size:24px">AlgoMomentum</h1>
+          <p style="color:#93c5fd;margin:4px 0 0;font-size:14px">Bridge Platform v2</p>
         </div>
         <h2 style="color:#1E3A5F">Delta Account Connected! 🎉</h2>
         <p style="color:#6b7280">Hi ${name},</p>
