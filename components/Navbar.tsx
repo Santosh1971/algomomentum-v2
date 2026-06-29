@@ -18,7 +18,7 @@ export default function Navbar() {
 
   const userLinks = isApproved ? [
     { href: "/user/dashboard", label: "Dashboard" },
-    { href: "/user/tradeconfig", label: "Accounts" },
+    { href: "/user/tradeconfig", label: "Subscriptions" },
     { href: "/user/pnl-report", label: "PnL Report" },
     { href: "/marketplace", label: "Marketplace" },
     { href: "/user/payments", label: "Billing & Payment" },
@@ -43,7 +43,7 @@ export default function Navbar() {
           className="flex items-center gap-2.5 select-none">
           <Image src="/alm-logo.png?v=3" alt="AlgoMomentum" width={38} height={38} className="object-contain" priority />
           <div className="flex flex-col leading-tight">
-            <span className="text-white font-semibold text-sm tracking-wide">AlgoMomentum</span>
+            <span className="text-sm tracking-wide font-extrabold" style={{fontFamily:"var(--font-nunito)"}}><span className="text-green-500">Algo</span><span className="text-white">Momentum</span></span>
             <span className="text-cyan-400 text-[10px] font-normal tracking-wider uppercase">Bridge Platform v2</span>
           </div>
         </Link>

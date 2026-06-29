@@ -18,6 +18,11 @@ export async function POST(req: NextRequest) {
   const strategy = await prisma.strategy.findUnique({ where: { id: strategyId, isActive: true } })
   if (!strategy) return NextResponse.json({ error: 'Strategy not found or inactive' }, { status: 404 })
 
+  // Validate minimum capital
+  if (strategy.minCapital && amount && amount < strategy.minCapital) {
+    return NextResponse.json({ error: `Minimum capital for this strategy is ₹${strategy.minCapital.toLocaleString('en-IN')}` }, { status: 400 })
+  }
+
   const existing = await prisma.tradeConfig.findFirst({
     where: { userId: user.id, strategyId, isSubscription: true },
   })
@@ -45,6 +50,7 @@ export async function POST(req: NextRequest) {
       mode:           'bridge',
       strategy:       strategy.name,
       timeframe:      strategy.timeframe,
+      leverage:      strategy.defaultLeverage ?? 1,
     },
   })
 

@@ -9,7 +9,7 @@ import Link from "next/link";
 const INR_PER_USD = 85;
 
 interface TradeConfig {
-  id: string; script: string; amount: number; initial_amount: number | null;
+  id: string; script: string; amount: number; initial_amount: number | null; strategyRef?: { minCapital: number | null } | null;
   isActive: boolean; userActive: boolean; mode: string; strategy: string | null;
   leverage: number; compoundMode: string; platformFeePercent: number;
   webhookToken: string; createdAt: string;
@@ -72,15 +72,21 @@ export default function AdminUserDetailPage() {
     else toast.error("Failed to delete");
   }
 
-  async function updateAmount(tcId: string, current: number) {
-    const input = prompt(`New amount (₹) for this bot:`, String(current));
+  async function updateAmount(tcId: string, current: number, minCapital?: number | null) {
+    const minHint = minCapital ? ` (Min: ₹${minCapital.toLocaleString('en-IN')})` : '';
+    const input = prompt(`New amount (₹) for this bot${minHint}:`, String(current));
     if (!input || isNaN(parseFloat(input))) return;
+    const newAmount = parseFloat(input);
+    if (minCapital && newAmount < minCapital) {
+      toast.error(`Minimum capital for this strategy is ₹${minCapital.toLocaleString('en-IN')}`);
+      return;
+    }
     const res = await fetch("/api/v1/tradeconfig", {
       method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: tcId, amount: parseFloat(input) }),
+      body: JSON.stringify({ id: tcId, amount: newAmount }),
     });
     if (res.ok) { toast.success("Amount updated"); load(); }
-    else toast.error("Failed to update");
+    else { const d = await res.json(); toast.error(d.error ?? "Failed to update"); }
   }
 
   const totalConfigs = user?.deltaAccounts.flatMap(a => a.tradeConfigs) ?? [];
@@ -219,11 +225,13 @@ export default function AdminUserDetailPage() {
                           <div className="col-span-3 flex items-center justify-end gap-1">
                             {/* Admin toggle isActive */}
                             <button onClick={() => toggleActive(tc.id, "isActive", !tc.isActive)}
-                              className={`text-xs px-2 py-1 rounded font-medium transition ${tc.isActive ? "bg-red-50 text-red-600 hover:bg-red-100" : "bg-green-50 text-green-600 hover:bg-green-100"}`}>
+                              disabled={!tc.isActive && !user.isApproved}
+                              title={!tc.isActive && !user.isApproved ? "Approve user first before activating bots" : ""}
+                              className={`text-xs px-2 py-1 rounded font-medium transition disabled:opacity-40 disabled:cursor-not-allowed ${tc.isActive ? "bg-red-50 text-red-600 hover:bg-red-100" : "bg-green-50 text-green-600 hover:bg-green-100"}`}>
                               {tc.isActive ? "Deactivate" : "Activate"}
                             </button>
                             {/* Edit amount */}
-                            <button onClick={() => updateAmount(tc.id, tc.amount)}
+                            <button onClick={() => updateAmount(tc.id, tc.amount, tc.strategyRef?.minCapital)}
                               className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium">
                               ✎ Edit
                             </button>

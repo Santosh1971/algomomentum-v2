@@ -58,6 +58,21 @@ export const NEXT_AUTH: NextAuthOptions = {
         session.user.role = token.role as string;
         session.user.isApproved = token.isApproved as boolean;
         session.user.deltaUserId = token.deltaUserId as string | null;
+        // Always refresh isApproved from DB to reflect admin changes immediately
+        if (token.id) {
+          try {
+            const { prisma } = await import("@/lib/prisma");
+            const dbUser = await prisma.user.findUnique({
+              where: { id: token.id as string },
+              select: { isApproved: true, role: true, details: { select: { deltaUserId: true } } },
+            });
+            if (dbUser) {
+              session.user.isApproved = dbUser.isApproved;
+              session.user.role = dbUser.role;
+              session.user.deltaUserId = dbUser.details?.deltaUserId ?? null;
+            }
+          } catch {}
+        }
       }
       return session;
     },

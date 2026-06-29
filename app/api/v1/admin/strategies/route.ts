@@ -37,6 +37,7 @@ export async function POST(req) {
   const timeframe   = formData.get('timeframe')?.toString()
   const description = formData.get('description')?.toString() || null
   const isFeatured  = formData.get('isFeatured') === 'true'
+  const defaultLeverage = parseInt(formData.get('defaultLeverage')?.toString() || '1')
   const minCapital  = parseFloat(formData.get('minCapital')?.toString() || '1000')
   const file        = formData.get('backtestFile') // File object or null
 

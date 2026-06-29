@@ -50,8 +50,7 @@ export async function PATCH(req: NextRequest) {
     }
     // Send welcome email
     try {
-      const { sendWelcomeEmail } = await import("@/lib/email");
-      await sendWelcomeEmail(user.email ?? "", user.name ?? "User");
+
     } catch (e) {
       console.error("Welcome email failed:", e);
     }

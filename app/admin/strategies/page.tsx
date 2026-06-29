@@ -169,6 +169,7 @@ function StrategyFormModal({ initial, onClose, onSaved }) {
   const [timeframe,   setTimeframe]   = useState(initial?.timeframe || '1h')
   const [description, setDescription] = useState(initial?.description || '')
   const [isFeatured,  setIsFeatured]  = useState(initial?.isFeatured ?? false)
+  const [defaultLeverage, setDefaultLeverage] = useState(initial?.defaultLeverage ?? 1)
   const [minCapital,  setMinCapital]  = useState(initial?.minCapital || 1000)
   const [loading,     setLoading]     = useState(false)
   const [error,       setError]       = useState(null)
@@ -184,6 +185,7 @@ function StrategyFormModal({ initial, onClose, onSaved }) {
       fd.append('timeframe', timeframe)
       fd.append('description', description)
       fd.append('isFeatured', String(isFeatured))
+      fd.append('defaultLeverage', String(defaultLeverage))
       fd.append('minCapital', String(minCapital))
       const file = fileRef.current?.files?.[0]
       if (file) fd.append('backtestFile', file)
@@ -222,6 +224,11 @@ function StrategyFormModal({ initial, onClose, onSaved }) {
           </Field>
           <Field label="Min Capital (₹)">
             <input type="number" value={minCapital} onChange={e => setMinCapital(Number(e.target.value))} className="form-input" placeholder="1000" min="100" />
+          </Field>
+          <Field label="Default Leverage">
+            <select value={defaultLeverage} onChange={e => setDefaultLeverage(Number(e.target.value))} className="form-input">
+              {[1,2,3,5,10,25,50,100,200].map(l => <option key={l} value={l}>{l}x</option>)}
+            </select>
           </Field>
           <Field label="Backtest CSV / XLSX">
             {initial?.backtestFileName && (

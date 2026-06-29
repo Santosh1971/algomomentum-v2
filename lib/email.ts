@@ -44,7 +44,7 @@ export async function sendWelcomeEmail(email: string, name: string) {
         <h2 style="color:#1E3A5F">Welcome aboard, ${name}!</h2>
         <p style="color:#6b7280">Your account is now active. Connect your Delta Exchange API keys to start trading.</p>
         <div style="text-align:center;margin-top:24px">
-          <a href="https://www.algomomentum.in/user/tradeconfig"
+          <a href="https://app.algomomentum.in/user/tradeconfig"
              style="background:#1E3A5F;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold">
             Get Started
           </a>

@@ -15,7 +15,7 @@ export async function GET(_: NextRequest, context: { params: Promise<{ id: strin
     where: { id },
     select: {
       id: true, email: true, name: true, role: true,
-      isVerified: true, createdAt: true, phone: true,
+      isApproved: true, isVerified: true, createdAt: true, phone: true,
       deltaAccounts: {
         orderBy: { createdAt: "asc" },
         select: {
@@ -27,7 +27,7 @@ export async function GET(_: NextRequest, context: { params: Promise<{ id: strin
               id: true, script: true, amount: true, initial_amount: true,
               isActive: true, userActive: true, mode: true, strategy: true,
               leverage: true, compoundMode: true, platformFeePercent: true,
-              webhookToken: true, createdAt: true, lastToggledAt: true,
+              webhookToken: true, createdAt: true, lastToggledAt: true, strategyRef: { select: { minCapital: true } },
             },
           },
         },

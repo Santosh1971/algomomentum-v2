@@ -115,6 +115,65 @@ export default function AdminUsersPage() {
             <div className="w-8 h-8 border-4 border-[#161B22] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
+          <>
+          {/* NEW ACCOUNTS — pending approval */}
+          {filtered.filter(u => !u.isApproved).length > 0 && (
+            <div className="rounded-2xl border-2 border-yellow-400 overflow-x-auto mb-2">
+              <div className="bg-yellow-400/20 px-4 py-2 flex items-center gap-2">
+                <span className="text-yellow-600 font-bold text-sm">🆕 New Accounts</span>
+                <span className="bg-yellow-400 text-yellow-900 text-xs font-bold px-2 py-0.5 rounded-full">{filtered.filter(u => !u.isApproved).length} pending</span>
+              </div>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-muted text-foreground text-xs border-b border-border">
+                    {["#", "Name", "Email", "Phone", "Age", "Gender", "City", "Delta ID", "Country", "Status", "Actions"].map(h => (
+                      <th key={h} className="px-4 py-3 text-left font-medium whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.filter(u => !u.isApproved).map((u, i) => (
+                    <tr key={u.id} className="bg-yellow-500/10 border-l-4 border-yellow-400">
+                      <td className="px-4 py-3 text-gray-400">{i + 1}</td>
+                      <td className="px-4 py-3 font-medium text-gray-800 max-w-[160px]">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-foreground text-background flex items-center justify-center text-xs font-bold flex-shrink-0">
+                            {(u.name ?? u.email ?? "?")[0].toUpperCase()}
+                          </div>
+                          <span className="truncate">{u.name ?? "—"}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">{u.email}</td>
+                      <td className="px-4 py-3 text-green-600 whitespace-nowrap">{u.phone || "—"}</td>
+                      <td className="px-4 py-3">{u.details?.age ?? "—"}</td>
+                      <td className="px-4 py-3">{u.details?.gender ?? "—"}</td>
+                      <td className="px-4 py-3">{u.details?.city ?? "—"}</td>
+                      <td className="px-4 py-3 text-xs font-mono">{u.details?.deltaUserId || "—"}</td>
+                      <td className="px-4 py-3">{u.details?.country ?? "—"}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col gap-1">
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium w-fit ${u.role === "admin" ? "bg-yellow-100 text-yellow-700" : "bg-blue-100 text-blue-700"}`}>{u.role}</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full font-medium w-fit bg-red-100 text-red-600">⏳ Pending</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap min-w-[160px]">
+                        <div className="flex items-center gap-1">
+                          <Link href={`/admin/users/${u.id}`} className="text-xs bg-blue-600 text-white px-2 py-1 rounded-lg hover:bg-blue-700 transition">Bots</Link>
+                          <button onClick={() => approveUser(u.id, true)} disabled={!u.details?.deltaUserId || approvingId === u.id}
+                            title={!u.details?.deltaUserId ? "User must connect Delta account first" : "Approve user"}
+                            className="text-xs bg-green-600 text-white px-2 py-1 rounded-lg hover:bg-green-700 transition disabled:opacity-40 disabled:cursor-not-allowed">
+                            {approvingId === u.id ? '⏳' : 'Approve'}
+                          </button>
+                          <button onClick={() => deleteUser(u.id, u.name ?? u.email)} className="text-xs bg-red-600 text-white px-2 py-1 rounded-lg hover:bg-red-700 transition">Del</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          {/* ALL USERS TABLE */}
           <div className="bg-card rounded-2xl shadow-sm border overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
@@ -185,6 +244,7 @@ export default function AdminUsersPage() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
     </div>

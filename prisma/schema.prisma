@@ -193,6 +193,7 @@ model Strategy {
   isActive        Boolean       @default(true)
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+  defaultLeverage Int      @default(1)
   subscribers     TradeConfig[]
 }
 

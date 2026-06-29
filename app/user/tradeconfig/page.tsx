@@ -9,7 +9,7 @@ import ConnectDeltaModal from "@/components/ConnectDeltaModal";
 const INR_PER_USD = 85;
 
 interface TradeConfig {
-  id: string; script: string; amount: number; initial_amount: number | null;
+  id: string; script: string; amount: number; initial_amount: number | null; strategyRef?: { minCapital: number | null } | null;
   isActive: boolean; userActive: boolean; mode: string; strategy: string | null; isSubscription: boolean;
   leverage: number; compoundMode: string; platformFeePercent: number;
   webhookToken: string; createdAt: string;
@@ -176,6 +176,11 @@ export default function TradeConfigPage() {
 
   async function updateSymbol() {
     if (!activeConfig) return;
+    const minCap = activeConfig.strategyRef?.minCapital;
+    if (minCap && parseFloat(symbolForm.amount) < minCap) {
+      toast.error(`Minimum capital for this strategy is ₹${minCap.toLocaleString('en-IN')}`);
+      return;
+    }
     const res = await fetch("/api/v1/tradeconfig", {
       method: "PUT", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -231,21 +236,21 @@ export default function TradeConfigPage() {
       <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-[#161B22]">Trading Accounts</h1>
-            <p className="text-sm text-gray-500 mt-1">Manage Delta Exchange accounts and symbol configs</p>
+            <h1 className="text-2xl font-bold text-[#161B22]">Subscriptions</h1>
+            <p className="text-sm text-gray-500 mt-1">Manage your strategy subscriptions and Delta Exchange account</p>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex bg-white border rounded-lg overflow-hidden text-sm">
               {(["USD", "INR"] as CurrencyMode[]).map(c => (
                 <button key={c} onClick={() => setCurrency(c)}
-                  className={`px-3 py-1.5 font-medium transition ${currency === c ? "bg-[#161B22] text-white" : "text-gray-600 hover:bg-gray-50"}`}>
+                  className={`px-3 py-1.5 font-medium transition ${currency === c ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted"}`}>
                   {c}
                 </button>
               ))}
             </div>
             {availableTypes.length > 0 && (session as any)?.user?.role === "admin" && (
               <button onClick={() => { const available = ACCOUNT_TYPES.filter(t => !accounts.map(a => a.accountType).includes(t.value)); setAccountForm({ accountName: "", accountType: available[0]?.value ?? "sub1" }); setModal("addAccount"); }}
-                className="bg-[#161B22] text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#161B22] transition">
+                className="bg-foreground text-background px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition">
                 + Add Account
               </button>
             )}
@@ -312,14 +317,10 @@ export default function TradeConfigPage() {
                           className="text-xs px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium">
                           {account.delta_account_name ? "Reconnect" : "Connect"}
                         </button>
-                        <button onClick={() => {
-                            setActiveAccountId(account.id);
-                            setActiveBalance(balances[account.id] ?? null);
-                            setModal("addSymbol");
-                          }}
-                          className="text-xs px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 font-medium">+ Symbol</button>
-                        <button onClick={() => deleteAccount(account.id)}
-                          className="text-xs px-3 py-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 font-medium">Delete</button>
+                        {(session as any)?.user?.role === "admin" && <button onClick={() => { setActiveAccountId(account.id); setActiveBalance(balances[account.id] ?? null); setModal("addSymbol"); }}
+                          className="text-xs px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 font-medium">+ Symbol</button>}
+                        {(session as any)?.user?.role === "admin" && <button onClick={() => deleteAccount(account.id)}
+                          className="text-xs px-3 py-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 font-medium">Delete</button>}
                       </div>
                     </div>
                     {pos && pos.positions.length > 0 && (
@@ -333,9 +334,7 @@ export default function TradeConfigPage() {
                     <div>
                       {account.tradeConfigs.length === 0 ? (
                         <div className="p-6 text-center text-sm text-gray-400">
-                          No symbols yet —
-                          <button onClick={() => { setActiveAccountId(account.id); setActiveBalance(balances[account.id] ?? null); setModal("addSymbol"); }}
-                            className="ml-1 text-blue-500 hover:underline">add one</button>
+                          No symbols yet — <a href="/marketplace" className="ml-1 text-blue-500 hover:underline">go to Marketplace to subscribe a strategy</a>
                         </div>
                       ) : (
                         <div>
@@ -513,9 +512,13 @@ export default function TradeConfigPage() {
 
             <div className="space-y-3">
               <div>
-                <label className="text-sm font-medium text-gray-700">Allocated Amount (₹)</label>
+                <label className="text-sm font-medium text-gray-700">Allocated Amount (₹){activeConfig.strategyRef?.minCapital ? <span className="text-xs text-gray-400 ml-2">Min: ₹{activeConfig.strategyRef.minCapital.toLocaleString('en-IN')}</span> : null}</label>
                 <input type="number" value={symbolForm.amount} onChange={e => setSymbolForm({ ...symbolForm, amount: e.target.value })}
+                  min={activeConfig.strategyRef?.minCapital ?? 100}
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#161B22]" />
+                {activeConfig.strategyRef?.minCapital && parseFloat(symbolForm.amount) < activeConfig.strategyRef.minCapital && (
+                  <p className="text-xs text-red-400 mt-1">⚠️ Amount cannot be less than ₹{activeConfig.strategyRef.minCapital.toLocaleString('en-IN')}</p>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

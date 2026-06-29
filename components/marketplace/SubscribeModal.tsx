@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react'
 
 export default function SubscribeModal({ strategy, onClose, onSuccess }) {
-  const [amount, setAmount] = useState(1000)
+  const [amount, setAmount] = useState(strategy.minCapital || 1000)
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState(null)
   const [balance, setBalance] = useState(null)
@@ -125,8 +125,8 @@ export default function SubscribeModal({ strategy, onClose, onSuccess }) {
           <button onClick={onClose} className="flex-1 py-2 rounded-lg border border-border/40 text-sm hover:bg-muted/30 transition-colors">Cancel</button>
           <button
             onClick={handleSubscribe}
-            disabled={loading || amount < 100}
-            className="flex-1 py-2 rounded-lg bg-green-500 text-white text-sm hover:bg-green-600 disabled:opacity-50 transition-colors"
+            disabled={loading || amount < (strategy.minCapital || 100)}
+            className="flex-1 py-2 rounded-lg bg-green-500 text-white text-sm hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {loading ? 'Subscribing…' : 'Confirm subscribe'}
           </button>

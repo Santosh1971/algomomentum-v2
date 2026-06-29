@@ -24,6 +24,7 @@ export async function PATCH(req, { params }: { params: Promise<{ id: string }> }
     if (key === 'backtestFile') continue
     if (key === 'isFeatured' || key === 'isActive') { data[key] = val === 'true'; continue }
     if (key === 'minCapital') { data[key] = parseFloat(val); continue }
+    if (key === 'defaultLeverage') { data[key] = parseInt(val); continue }
     if (val !== '') data[key] = val
   }
 
@@ -74,6 +75,14 @@ export async function PATCH(req, { params }: { params: Promise<{ id: string }> }
     where: { id },
     data,
   })
+
+  // If defaultLeverage changed, propagate to all subscriber TradeConfigs
+  if (data.defaultLeverage !== undefined) {
+    await prisma.tradeConfig.updateMany({
+      where: { strategyId: id, isSubscription: true },
+      data: { leverage: data.defaultLeverage },
+    })
+  }
 
   return NextResponse.json({ strategy })
 }

@@ -1,6 +1,7 @@
 // app/layout.tsx
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Nunito } from "next/font/google";
+const nunito = Nunito({ subsets: ["latin"], weight: ["700", "800", "900"], variable: "--font-nunito" });
 import "./globals.css";
 import { Toaster } from "sonner";
 import { Providers } from "./providers";
@@ -21,7 +22,7 @@ export const viewport = { colorScheme: "light dark", themeColor: [{ media: "(pre
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={`${inter.className} ${nunito.variable}`}>
         <Providers>
           <ThemeToggle />
           {children}
