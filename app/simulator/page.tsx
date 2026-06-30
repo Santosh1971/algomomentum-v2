@@ -276,46 +276,31 @@ export default function SimulatorPage() {
     addLog({ time, msg: `→ ${trade} ${tradeSide.toUpperCase()} ${activeSymbol} @ ${entry || fmt(livePrice!)}`, status: "pending" });
     setIpWarning(null);
     try {
-      const res = await fetch(`/api/v1/webhook/${activeSymbol}`, {
+      const res = await fetch(`/api/v1/admin/simulate-webhook`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ side: tradeSide, trade, price: entry || livePrice, trigger_time: new Date().toISOString() }),
+        body: JSON.stringify({ symbol: activeSymbol, side: tradeSide, trade, price: entry || livePrice }),
       });
       const data = await res.json();
       if (!res.ok) { addLog({ time, msg: `✗ Server error: ${data.error || res.status}`, status: "err" }); return false; }
-      if (!data.success) { addLog({ time, msg: `✗ ${data.error || "No active configs"}`, status: "err" }); return false; }
-      const summary: any[] = data.summary ?? [];
-      let allOk = true;
+      if (!data.ok) { addLog({ time, msg: `✗ ${data.error || "No active subscribers"}`, status: "err" }); return false; }
+      if (data.fired === 0 && data.total === 0) { addLog({ time, msg: `✗ No active subscribers for ${activeSymbol}`, status: "err" }); return false; }
+      addLog({ time, msg: `✓ Fired ${data.fired}/${data.total}`, status: "ok" });
+      const summary: any[] = data.errors ?? [];
+      let allOk = summary.length === 0;
       for (const s of summary) {
-        if (s.status === "rejected") {
-          let reason = s.reason || "Unknown";
-          if (reason.includes("401")) reason = "Authentication failed — IP may not be whitelisted";
-          addLog({ time, msg: `✗ Order FAILED`, status: "err", detail: reason }); allOk = false; continue;
-        }
-        const val = s.value;
-        if (val?.success === false) {
-          const errCode = val?.error?.error?.code ?? val?.error?.code ?? "unknown";
-          const clientIp = val?.error?.error?.context?.client_ip ?? val?.error?.context?.client_ip;
-          if (errCode === "ip_not_whitelisted_for_api_key") {
-            setIpWarning(clientIp ?? outboundIp);
-            addLog({ time, msg: `🚫 IP NOT WHITELISTED — ${clientIp}`, status: "err", detail: `Delta → API Keys → add ${clientIp}` });
-          } else { addLog({ time, msg: `✗ Order rejected: ${errCode}`, status: "err" }); }
-          allOk = false;
-        } else if (val?.result) {
-          const fillPrice = parseFloat(val.result.avg_fill_price ?? val.result.average_fill_price ?? "0");
-          const slippage = marketPrice && fillPrice ? fillPrice - marketPrice : null;
-          const slippageStr = slippage !== null && Math.abs(slippage) > 0
-            ? ` | Slippage: ${slippage > 0 ? "+" : ""}${fmt(slippage)}`
-            : "";
-          const fillStr = fillPrice > 0 ? ` | Filled @ ${fmt(fillPrice)}` : "";
-          const mktStr = marketPrice ? ` | Mkt @ ${fmt(marketPrice)}` : "";
-          addLog({ time, msg: `✅ ${trade} ${tradeSide.toUpperCase()} ${activeSymbol} — ORDER PLACED`, status: "ok", detail: `Order ID: ${val.result.id ?? "placed"}${mktStr}${fillStr}${slippageStr}` });
-          toast.success("Order placed on Delta!");
-        } else if (val?.message === "No open position") {
-          addLog({ time, msg: `⚠️ No open position to exit`, status: "err" });
+        let reason = String(s.error ?? "Unknown");
+        if (reason.includes("401")) reason = "Authentication failed — IP may not be whitelisted";
+        if (reason.includes("ip_not_whitelisted_for_api_key")) {
+          addLog({ time, msg: `🚫 IP NOT WHITELISTED for user ${s.userId}`, status: "err", detail: reason });
+        } else {
+          addLog({ time, msg: `✗ Order FAILED (user ${s.userId})`, status: "err", detail: reason });
         }
       }
-      if (summary.length === 0) addLog({ time, msg: `✅ ${trade} ${tradeSide.toUpperCase()} ${activeSymbol} — processed`, status: "ok" });
+      if (allOk) {
+        addLog({ time, msg: `✅ ${trade} ${tradeSide.toUpperCase()} ${activeSymbol} — ORDER PLACED on ${data.fired} account(s)`, status: "ok" });
+        toast.success("Order placed on Delta!");
+      }
       return allOk;
     } catch (e: any) { addLog({ time, msg: `✗ Network error: ${e.message}`, status: "err" }); return false; }
   }
