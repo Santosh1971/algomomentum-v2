@@ -204,3 +204,48 @@ export async function getPositionsOAuth(token: string) {
     return { success: false, error: e.response?.data ?? e.message };
   }
 }
+
+export async function getBalancesOAuth(token: string) {
+  try {
+    const r = await axios.get(`${BASE_URL}/v2/wallet/balances`, { headers: oauthHeaders(token) });
+    return r.data;
+  } catch (e: any) {
+    console.error("getBalancesOAuth error:", e.response?.data ?? e.message);
+    return { success: false, error: e.response?.data ?? e.message };
+  }
+}
+
+export async function getFillsOAuth(token: string, params: {
+  product_symbol: string;
+  start_time?: number;
+  end_time?: number;
+  page_size?: number;
+  after?: string;
+}) {
+  const qs = new URLSearchParams();
+  qs.set("product_symbol", params.product_symbol);
+  qs.set("page_size", String(params.page_size ?? 100));
+  if (params.start_time) qs.set("start_time", String(params.start_time));
+  if (params.end_time) qs.set("end_time", String(params.end_time));
+  if (params.after) qs.set("after", params.after);
+  const qStr = "?" + qs.toString();
+  const r = await axios.get(`${BASE_URL}/v2/fills${qStr}`, { headers: oauthHeaders(token) });
+  return r.data;
+}
+
+export async function getAllFillsOAuth(token: string, params: {
+  product_symbol: string;
+  start_time?: number;
+  end_time?: number;
+}) {
+  const allFills: any[] = [];
+  let after: string | undefined;
+  while (true) {
+    const data = await getFillsOAuth(token, { ...params, after });
+    const fills = data?.result ?? [];
+    allFills.push(...fills);
+    after = data?.meta?.after;
+    if (!after || fills.length === 0) break;
+  }
+  return allFills;
+}

@@ -1,5 +1,5 @@
 // lib/pnlEngine.ts
-import { getAllFills } from "@/lib/deltaClient";
+import { getAllFills, getAllFillsOAuth } from "@/lib/deltaClient";
 import { prisma } from "@/lib/prisma";
 import { DateTime } from "luxon";
 
@@ -78,15 +78,22 @@ export async function computePnlReport(
   product_symbol: string,
   fromIST: string,
   toIST: string,
+  oauthToken?: string | null,
 ): Promise<PnlReport> {
   const startUTC = DateTime.fromISO(fromIST, { zone: "Asia/Kolkata" }).startOf("day").toUTC().toMillis();
   const endUTC = DateTime.fromISO(toIST, { zone: "Asia/Kolkata" }).endOf("day").toUTC().toMillis();
 
-  const fills = await getAllFills(apiKeyEnc, apiSecretEnc, {
-    product_symbol,
-    start_time: startUTC * 1000,
-    end_time: endUTC * 1000,
-  });
+  const fills = oauthToken
+    ? await getAllFillsOAuth(oauthToken, {
+        product_symbol,
+        start_time: startUTC * 1000,
+        end_time: endUTC * 1000,
+      })
+    : await getAllFills(apiKeyEnc, apiSecretEnc, {
+        product_symbol,
+        start_time: startUTC * 1000,
+        end_time: endUTC * 1000,
+      });
 
   // Fetch contract size (lot) from Script table — e.g. DUSK=100, SOL=1, ETH=0.01
   const scriptRecord = await prisma.script.findUnique({ where: { symbol: product_symbol } });

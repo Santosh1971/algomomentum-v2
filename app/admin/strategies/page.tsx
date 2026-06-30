@@ -87,9 +87,9 @@ export default function AdminStrategiesPage() {
               <div className="flex items-center gap-2">
                 <span className="text-[10px] text-muted-foreground w-16 flex-shrink-0">Webhook:</span>
                 <div className="text-[10px] font-mono bg-muted/30 border border-border/30 rounded px-2 py-1 flex-1 break-all">
-                  http://87.76.191.157/api/v1/webhook/strategy/{s.symbol}?secret=algobc2026$
+                  https://app.algomomentum.in/api/v1/webhook/strategy/{s.symbol}?secret=algobc2026$
                 </div>
-                <button onClick={(e) => { e.stopPropagation(); const txt=`http://87.76.191.157/api/v1/webhook/strategy/${s.symbol}?secret=algobc2026$`; const el=document.createElement('textarea'); el.value=txt; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el); const b=e.currentTarget; b.textContent='✓ Copied!'; b.style.color='green'; setTimeout(()=>{ b.textContent='Copy'; b.style.color='' },2000) }}
+                <button onClick={(e) => { e.stopPropagation(); const txt=`https://app.algomomentum.in/api/v1/webhook/strategy/${s.symbol}?secret=algobc2026$`; const el=document.createElement('textarea'); el.value=txt; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el); const b=e.currentTarget; b.textContent='✓ Copied!'; b.style.color='green'; setTimeout(()=>{ b.textContent='Copy'; b.style.color='' },2000) }}
                   className="text-[10px] px-2 py-1 rounded bg-muted/50 border border-border/30 hover:bg-muted whitespace-nowrap">Copy</button>
               </div>
 

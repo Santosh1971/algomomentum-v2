@@ -20,7 +20,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ tradeCo
     select: {
       userId: true,
       script: true,
-      account: { select: { api_key_enc: true, api_secret_enc: true } },
+      account: { select: { api_key_enc: true, api_secret_enc: true, is_oauth: true, oauth_access_token: true } },
     },
   });
 
@@ -31,7 +31,8 @@ export async function GET(req: NextRequest, context: { params: Promise<{ tradeCo
   }
 
   try {
-    const report = await computePnlReport(config.account.api_key_enc, config.account.api_secret_enc, config.script, from, to);
+    const oauthToken = config.account.is_oauth ? config.account.oauth_access_token : null;
+    const report = await computePnlReport(config.account.api_key_enc, config.account.api_secret_enc, config.script, from, to, oauthToken);
     return NextResponse.json({ tradeConfigId, symbol: config.script, from, to, ...report });
   } catch (err: any) {
     const detail = err?.response?.data ?? err?.message ?? "Unknown error";

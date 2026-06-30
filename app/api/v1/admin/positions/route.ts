@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { NEXT_AUTH } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getPositions, getBalances } from "@/lib/deltaClient";
+import { getPositions, getBalances, getPositionsOAuth, getBalancesOAuth } from "@/lib/deltaClient";
 
 export async function GET() {
   const session = await getServerSession(NEXT_AUTH);
@@ -10,16 +10,27 @@ export async function GET() {
     return NextResponse.json({ error: "Admin only" }, { status: 403 });
 
   const accounts = await prisma.deltaAccount.findMany({
-    where: { isActive: true, api_key_enc: { not: "" } },
+    where: {
+      isActive: true,
+      OR: [
+        { api_key_enc: { not: "" } },
+        { is_oauth: true, oauth_access_token: { not: null } },
+      ],
+    },
     include: { user: { select: { name: true, email: true } } },
   });
 
   const results = await Promise.allSettled(accounts.map(async (account) => {
     try {
-      const [posData, balData] = await Promise.allSettled([
-        getPositions(account.api_key_enc, account.api_secret_enc),
-        getBalances(account.api_key_enc, account.api_secret_enc),
-      ]);
+      const [posData, balData] = account.is_oauth && account.oauth_access_token
+        ? await Promise.allSettled([
+            getPositionsOAuth(account.oauth_access_token),
+            getBalancesOAuth(account.oauth_access_token),
+          ])
+        : await Promise.allSettled([
+            getPositions(account.api_key_enc, account.api_secret_enc),
+            getBalances(account.api_key_enc, account.api_secret_enc),
+          ]);
 
       const positions = posData.status === "fulfilled"
         ? (posData.value?.result ?? []).map((p: any) => ({

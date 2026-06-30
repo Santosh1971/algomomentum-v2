@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { NEXT_AUTH } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getPositions } from "@/lib/deltaClient";
+import { getPositions, getPositionsOAuth } from "@/lib/deltaClient";
 
 const INR_PER_USD = 85;
 
@@ -19,12 +19,15 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
     where: { id, userId: session.user.id },
   });
   if (!account) return NextResponse.json({ error: "Account not found" }, { status: 404 });
-  if (!account.api_key_enc || account.api_key_enc === "") {
+  const hasOAuth = account.is_oauth && account.oauth_access_token;
+  if (!hasOAuth && (!account.api_key_enc || account.api_key_enc === "")) {
     return NextResponse.json({ error: "Account not connected" }, { status: 400 });
   }
 
   try {
-    const data = await getPositions(account.api_key_enc, account.api_secret_enc);
+    const data = hasOAuth
+      ? await getPositionsOAuth(account.oauth_access_token!)
+      : await getPositions(account.api_key_enc, account.api_secret_enc);
     const positions: any[] = (data?.result ?? []).filter((p: any) => Math.abs(p.size) > 0);
 
     const enriched = positions.map((p: any) => {
