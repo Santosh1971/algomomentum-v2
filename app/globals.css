@@ -51,7 +51,7 @@ body {
 .border-gray-100, .border-gray-200 { border-color: var(--border) !important; }
 
 /* Table hover */
-tr:hover { background-color: var(--muted) !important; }
+tbody tr:hover { background-color: var(--muted) !important; }
 
 /* Inputs follow theme */
 input, textarea, select {

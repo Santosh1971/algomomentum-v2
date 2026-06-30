@@ -24,6 +24,7 @@ export default function BotStatusPage() {
   const [bots, setBots] = useState<BotConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "active" | "inactive">("all");
+  const [symbolFilter, setSymbolFilter] = useState<string>("all");
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/Signup");
@@ -36,7 +37,10 @@ export default function BotStatusPage() {
       .then(d => { setBots(d); setLoading(false); });
   }, []);
 
+  const uniqueSymbols = Array.from(new Set(bots.map(b => b.script))).sort();
+
   const filtered = bots.filter(b => {
+    if (symbolFilter !== "all" && b.script !== symbolFilter) return false;
     if (filter === "active") return b.isActive && b.userActive;
     if (filter === "inactive") return !b.isActive || !b.userActive;
     return true;
@@ -55,13 +59,20 @@ export default function BotStatusPage() {
               {activeCount} active · {bots.length - activeCount} inactive · {bots.length} total
             </p>
           </div>
-          <div className="flex bg-muted/30 border border-border/40 rounded-lg overflow-hidden text-sm">
-            {(["all", "active", "inactive"] as const).map(f => (
-              <button key={f} onClick={() => setFilter(f)}
-                className={`px-3 py-1.5 font-medium capitalize transition ${filter === f ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted/50"}`}>
-                {f}
-              </button>
-            ))}
+          <div className="flex items-center gap-3">
+            <select value={symbolFilter} onChange={e => setSymbolFilter(e.target.value)}
+              className="text-sm border border-border/40 rounded-lg px-3 py-1.5 bg-card text-foreground">
+              <option value="all">All Symbols</option>
+              {uniqueSymbols.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <div className="flex bg-muted/30 border border-border/40 rounded-lg overflow-hidden text-sm">
+              {(["all", "active", "inactive"] as const).map(f => (
+                <button key={f} onClick={() => setFilter(f)}
+                  className={`px-3 py-1.5 font-medium capitalize transition ${filter === f ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted/50"}`}>
+                  {f}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -73,7 +84,7 @@ export default function BotStatusPage() {
           <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-foreground/90 text-background text-xs">
+                <tr className="bg-foreground text-background text-xs">
                   {["User", "Account", "Symbol", "Amount", "Lev", "Mode", "Status", "Actions"].map(h => (
                     <th key={h} className="px-4 py-3 text-left font-medium">{h}</th>
                   ))}

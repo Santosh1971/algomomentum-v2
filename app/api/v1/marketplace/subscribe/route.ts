@@ -28,9 +28,10 @@ export async function POST(req: NextRequest) {
   })
   if (existing) return NextResponse.json({ error: 'Already subscribed' }, { status: 409 })
 
-  const account = await prisma.deltaAccount.findFirst({
+  const allAccounts = await prisma.deltaAccount.findMany({
     where: { userId: user.id, isActive: true },
   })
+  const account = allAccounts.find(a => a.accountType === 'main') ?? allAccounts[0]
   if (!account) return NextResponse.json({ error: 'No active Delta account found. Please connect one first.' }, { status: 400 })
 
   const scriptExists = await prisma.tradeConfig.findFirst({

@@ -226,7 +226,7 @@ export default function StrategyDetailPage() {
         <SubscribeModal
           strategy={s}
           onClose={() => setShowSubModal(false)}
-          onSubscribed={(strategyId) => {
+          onSuccess={(strategyId) => {
             setData((prev: any) => ({ ...prev, isSubscribed: true }))
             setShowSubModal(false)
             setSubMsg('Successfully subscribed!')
