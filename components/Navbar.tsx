@@ -44,7 +44,7 @@ export default function Navbar() {
           <Image src="/alm-logo.png?v=3" alt="AlgoMomentum" width={38} height={38} className="object-contain" priority />
           <div className="flex flex-col leading-tight">
             <span className="text-sm tracking-wide font-extrabold" style={{fontFamily:"var(--font-nunito)"}}><span className="text-green-500">Algo</span><span className="text-white">Momentum</span></span>
-            <span className="text-cyan-400 text-[10px] font-normal tracking-wider uppercase">Bridge Platform v2</span>
+            <span className="text-cyan-400 text-[10px] font-normal tracking-wider uppercase">V2.0</span>
           </div>
         </Link>
         <div className="hidden md:flex items-center gap-1">
@@ -53,7 +53,7 @@ export default function Navbar() {
               className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
                 path === l.href
                   ? "bg-white/20 text-white font-medium"
-                  : "text-cyan-300 hover:text-white hover:bg-white/10"
+                  : "text-gray-400 hover:text-white hover:bg-white/10"
               }`}>
               {l.label}
             </Link>

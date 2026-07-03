@@ -69,7 +69,7 @@ export default function SignupPage() {
           <img src="/alm-logo.png" alt="AlgoMomentum" width="64" height="64" style={{borderRadius:"12px", objectFit:"cover"}} />
           <div className="text-center">
             <h1 className="text-xl font-extrabold" style={{fontFamily:"var(--font-nunito)"}}><span className="text-green-500">Algo</span><span className="text-white">Momentum</span></h1>
-            <p className="text-cyan-400 text-xs mt-0.5 uppercase tracking-wider">Bridge Platform v2</p>
+            <p className="text-cyan-400 text-xs mt-0.5 uppercase tracking-wider">V2.0</p>
           </div>
         </div>
 

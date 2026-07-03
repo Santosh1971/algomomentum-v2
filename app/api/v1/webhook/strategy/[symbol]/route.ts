@@ -62,7 +62,7 @@ async function handleEntry({ tc, side, script }: any) {
   const quantity = Math.max(1, Math.floor((tc.amount / INR_TO_USD) / marketPrice / (script.lot || 1)))
 
   if (tc.account.is_oauth && tc.account.oauth_access_token) {
-    if (tc.leverage > 1) await setLeverageOAuth(tc.account.oauth_access_token, script.productId, tc.leverage)
+    await setLeverageOAuth(tc.account.oauth_access_token, script.productId, tc.leverage)
     return placeOrderOAuth(tc.account.oauth_access_token, {
       product_id: script.productId, product_symbol: script.exchange_symbol,
       size: quantity, side, order_type: 'market_order', time_in_force: 'ioc',
@@ -70,7 +70,7 @@ async function handleEntry({ tc, side, script }: any) {
     })
   }
 
-  if (tc.leverage > 1) await setLeverage(tc.account.api_key_enc, tc.account.api_secret_enc, script.productId, tc.leverage)
+  await setLeverage(tc.account.api_key_enc, tc.account.api_secret_enc, script.productId, tc.leverage)
   return placeOrder(tc.account.api_key_enc, tc.account.api_secret_enc, {
     product_id: script.productId, product_symbol: script.exchange_symbol,
     size: quantity, side, order_type: 'market_order', time_in_force: 'ioc',

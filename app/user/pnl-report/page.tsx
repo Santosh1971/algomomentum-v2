@@ -188,7 +188,7 @@ export default function PnlReportPage() {
                 className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#161B22]" />
             </div>
             <button onClick={loadReport} disabled={loading}
-              className="bg-[#161B22] text-white px-5 py-2 rounded-xl font-semibold text-sm hover:bg-[#161B22] disabled:opacity-50 transition">
+              className="bg-foreground text-background px-5 py-2 rounded-xl font-semibold text-sm hover:opacity-90 disabled:opacity-50 transition">
               {loading ? "Loading..." : "Load Report"}
             </button>
           </div>
