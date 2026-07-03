@@ -82,44 +82,39 @@ export default function AdminStrategiesPage() {
                 <span>Subscribers: <span className="text-foreground font-medium">{s._count.subscribers}</span> &nbsp;&nbsp;&nbsp;</span>
                 <span>Subscribed Amount: <span className="text-foreground font-medium">₹{(s.subscribers?.reduce((sum: number, t: any) => sum + (t.amount || 0), 0) || 0).toLocaleString('en-IN')}</span></span>
               </div>
-
-              {/* Webhook URL */}
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] text-muted-foreground w-16 flex-shrink-0">Webhook:</span>
-                <div className="text-[10px] font-mono bg-muted/30 border border-border/30 rounded px-2 py-1 flex-1 break-all">
-                  https://app.algomomentum.in/api/v1/webhook/strategy/{s.symbol}?secret=algobc2026$
-                </div>
-                <button onClick={(e) => { e.stopPropagation(); const txt=`https://app.algomomentum.in/api/v1/webhook/strategy/${s.symbol}?secret=algobc2026$`; const el=document.createElement('textarea'); el.value=txt; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el); const b=e.currentTarget; b.textContent='✓ Copied!'; b.style.color='green'; setTimeout(()=>{ b.textContent='Copy'; b.style.color='' },2000) }}
-                  className="text-[10px] px-2 py-1 rounded bg-muted/50 border border-border/30 hover:bg-muted whitespace-nowrap">Copy</button>
-              </div>
-
-              {/* Msg */}
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] text-muted-foreground w-16 flex-shrink-0">Msg:</span>
-                <div className="text-[10px] font-mono text-foreground bg-muted/20 border border-border/20 rounded px-2 py-1 flex-1 break-all">
-                  {'{"symbol":"{{ticker}}","side":"{{strategy.order.action}}","trade":"{{strategy.order.comment}}","price":"{{strategy.order.price}}","trigger_time":"{{timenow}}"}'}
-                </div>
-                <button onClick={(e) => { e.stopPropagation(); const txt2='{"symbol":"{{ticker}}","side":"{{strategy.order.action}}","trade":"{{strategy.order.comment}}","price":"{{strategy.order.price}}","trigger_time":"{{timenow}}"}'; const el2=document.createElement('textarea'); el2.value=txt2; document.body.appendChild(el2); el2.select(); document.execCommand('copy'); document.body.removeChild(el2); const b2=e.currentTarget; b2.textContent='✓ Copied!'; b2.style.color='green'; setTimeout(()=>{ b2.textContent='Copy'; b2.style.color='' },2000) }}
-                  className="text-[10px] px-2 py-1 rounded bg-muted/50 border border-border/30 hover:bg-muted whitespace-nowrap">Copy</button>
-              </div>
-
-              {/* H-Line Messages */}
-              {[
-                { label: "📈 Long Entry", side: "buy", trade: "entry" },
-                { label: "📉 Short Entry", side: "sell", trade: "entry" },
-                { label: "🚪 Long Exit", side: "sell", trade: "exit" },
-                { label: "🚪 Short Exit", side: "buy", trade: "exit" },
-              ].map(({ label, side, trade }) => {
-                const payload = `{"symbol":"${s.symbol}","side":"${side}","trade":"${trade}","price":"{{close}}","trigger_time":"{{timenow}}"}`;
-                return (
-                  <div key={`${side}-${trade}`} className="flex items-center gap-2">
-                    <span className="text-[10px] text-muted-foreground w-16 flex-shrink-0">{label}:</span>
-                    <div className="text-[10px] font-mono text-foreground bg-muted/20 border border-border/20 rounded px-2 py-1 flex-1 break-all">{payload}</div>
-                    <button onClick={(e) => { e.stopPropagation(); const el=document.createElement('textarea'); el.value=payload; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el); const b=e.currentTarget; b.textContent='✓'; b.style.color='green'; setTimeout(()=>{ b.textContent='Copy'; b.style.color='' },2000) }}
-                      className="text-[10px] px-2 py-1 rounded bg-muted/50 border border-border/30 hover:bg-muted whitespace-nowrap">Copy</button>
+              {(() => {
+                const copy = (txt: string) => (e: any) => {
+                  e.stopPropagation();
+                  const el = document.createElement('textarea'); el.value = txt;
+                  document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el);
+                  const b = e.currentTarget; b.textContent = '✓ Copied!'; b.style.color = 'green';
+                  setTimeout(() => { b.textContent = 'Copy'; b.style.color = '' }, 2000);
+                };
+                const sym = s.symbol;
+                const rows = [
+                  { label: "Webhook All",    val: `https://app.algomomentum.in/api/v1/webhook/strategy/${sym}?secret=algobc2026$`, bg: "bg-muted/20 border-border/20" },
+                  { label: "Webhook Test (Santosh)", val: `https://app.algomomentum.in/api/v1/webhook/test?secret=algobc2026$&email=jha.santosh.kr%40gmail.com`, bg: "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-700" },
+                  { label: "Webhook Test (Amit)",    val: `https://app.algomomentum.in/api/v1/webhook/test?secret=algobc2026$&email=kumaridipali693%40gmail.com`, bg: "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-700" },
+                  { label: "Message",        val: `{"symbol":"{{ticker}}","side":"{{strategy.order.action}}","trade":"{{strategy.order.comment}}","price":"{{strategy.order.price}}","trigger_time":"{{timenow}}"}`, bg: "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700" },
+                  { label: "── H-Line Testing ──", val: "", bg: "bg-transparent border-transparent", heading: true },
+                  { label: "Long Entry",     val: `{"symbol":"${sym}","side":"buy","trade":"entry","price":"{{close}}","trigger_time":"{{timenow}}"}`, bg: "bg-muted/20 border-border/20" },
+                  { label: "Long Exit",      val: `{"symbol":"${sym}","side":"sell","trade":"exit","price":"{{close}}","trigger_time":"{{timenow}}"}`, bg: "bg-muted/20 border-border/20" },
+                  { label: "Short Entry",    val: `{"symbol":"${sym}","side":"sell","trade":"entry","price":"{{close}}","trigger_time":"{{timenow}}"}`, bg: "bg-muted/20 border-border/20" },
+                  { label: "Short Exit",     val: `{"symbol":"${sym}","side":"buy","trade":"exit","price":"{{close}}","trigger_time":"{{timenow}}"}`, bg: "bg-muted/20 border-border/20" },
+                ];
+                return rows.map(({ label, val, bg, heading }: any) => heading ? (
+                  <div key={label} className="pt-1">
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide border-b border-border/30 pb-0.5">{label}</p>
                   </div>
-                );
-              })}
+                ) : (
+                  <div key={label} className="flex items-center gap-2">
+                    <span className="text-[10px] text-muted-foreground w-28 flex-shrink-0">{label}:</span>
+                    <div className={`text-[10px] font-mono text-foreground border rounded px-2 py-1 flex-1 break-all ${bg}`}>{val}</div>
+                    <button onClick={copy(val)} className="text-[10px] px-2 py-1 rounded bg-muted/50 border border-border/30 hover:bg-muted whitespace-nowrap">Copy</button>
+                  </div>
+                ));
+              })()}
+
             </div>
 
             {/* RIGHT: controls */}
