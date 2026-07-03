@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { placeOrder, placeOrderOAuth, getPositions, getPositionsOAuth, getTicker, setLeverage, setLeverageOAuth } from '@/lib/deltaClient'
+import { placeOrder, placeOrderOAuth, getPositions, getPositionsOAuth, getBalances, getBalancesOAuth, getTicker, setLeverage, setLeverageOAuth } from '@/lib/deltaClient'
 import cache from '@/lib/cache'
 import { prisma } from '@/lib/prisma'
 
@@ -60,6 +60,36 @@ async function handleEntry({ tc, side, script }: any) {
   const marketPrice = await getTicker(script.exchange_symbol)
   if (!marketPrice) throw new Error(`No price for ${script.exchange_symbol}`)
   const quantity = Math.max(1, Math.floor((tc.amount / INR_TO_USD) / marketPrice / (script.lot || 1)))
+
+  // Pre-trade margin check: available_margin - open_positions_margin >= allocated_amount
+  try {
+    const isOAuth = tc.account.is_oauth && tc.account.oauth_access_token
+    const balData = isOAuth
+      ? await getBalancesOAuth(tc.account.oauth_access_token)
+      : await getBalances(tc.account.api_key_enc, tc.account.api_secret_enc)
+    const posData = isOAuth
+      ? await getPositionsOAuth(tc.account.oauth_access_token)
+      : await getPositions(tc.account.api_key_enc, tc.account.api_secret_enc)
+
+    const balances = balData?.result ?? []
+    const wallet = balances.find((b: any) => b.asset_symbol === "USD") ?? balances[0]
+    const availableUSD = parseFloat(wallet?.available_balance ?? "0")
+
+    const positions = posData?.result ?? []
+    const totalPositionMargin = positions.reduce((sum: number, p: any) => {
+      return sum + parseFloat(p.margin ?? "0")
+    }, 0)
+
+    const effectiveAvailable = availableUSD - totalPositionMargin
+    const requiredUSD = tc.amount / INR_TO_USD
+
+    if (effectiveAvailable < requiredUSD) {
+      throw new Error(`Insufficient margin: Available $${availableUSD.toFixed(2)}, Used in positions $${totalPositionMargin.toFixed(2)}, Effective $${effectiveAvailable.toFixed(2)}, Required $${requiredUSD.toFixed(2)} for ₹${tc.amount} allocation`)
+    }
+  } catch (e: any) {
+    if (e.message?.includes('Insufficient margin')) throw e
+    console.warn('Margin check failed, proceeding:', e.message)
+  }
 
   if (tc.account.is_oauth && tc.account.oauth_access_token) {
     await setLeverageOAuth(tc.account.oauth_access_token, script.productId, tc.leverage)
