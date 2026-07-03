@@ -499,7 +499,7 @@ export default function TradeConfigPage() {
             </div>
             <div className="flex gap-3 mt-5">
               <button onClick={closeModal} className="flex-1 border rounded-lg py-2 text-sm text-gray-600">Cancel</button>
-              <button onClick={() => addSymbol()} className="flex-1 bg-[#161B22] text-white rounded-lg py-2 text-sm font-semibold">Add Symbol</button>
+              <button onClick={() => addSymbol()} className="flex-1 bg-foreground text-background rounded-lg py-2 text-sm font-semibold">Add Symbol</button>
             </div>
           </div>
         </div>

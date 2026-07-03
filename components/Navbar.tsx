@@ -31,7 +31,6 @@ export default function Navbar() {
     { href: "/admin/billing-report", label: "Billing" },
     { href: "/admin/bot-status", label: "Bot Status" },
     { href: "/admin/positions", label: "Positions" },
-    { href: "/admin/managesymbols", label: "Symbols" },
     { href: "/admin/strategies", label: "Strategies" },
     { href: "/simulator", label: "Simulator" },
   ];

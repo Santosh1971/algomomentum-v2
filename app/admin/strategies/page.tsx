@@ -102,6 +102,24 @@ export default function AdminStrategiesPage() {
                 <button onClick={(e) => { e.stopPropagation(); const txt2='{"symbol":"{{ticker}}","side":"{{strategy.order.action}}","trade":"{{strategy.order.comment}}","price":"{{strategy.order.price}}","trigger_time":"{{timenow}}"}'; const el2=document.createElement('textarea'); el2.value=txt2; document.body.appendChild(el2); el2.select(); document.execCommand('copy'); document.body.removeChild(el2); const b2=e.currentTarget; b2.textContent='✓ Copied!'; b2.style.color='green'; setTimeout(()=>{ b2.textContent='Copy'; b2.style.color='' },2000) }}
                   className="text-[10px] px-2 py-1 rounded bg-muted/50 border border-border/30 hover:bg-muted whitespace-nowrap">Copy</button>
               </div>
+
+              {/* H-Line Messages */}
+              {[
+                { label: "📈 Long Entry", side: "buy", trade: "entry" },
+                { label: "📉 Short Entry", side: "sell", trade: "entry" },
+                { label: "🚪 Long Exit", side: "sell", trade: "exit" },
+                { label: "🚪 Short Exit", side: "buy", trade: "exit" },
+              ].map(({ label, side, trade }) => {
+                const payload = `{"symbol":"${s.symbol}","side":"${side}","trade":"${trade}","price":"{{close}}","trigger_time":"{{timenow}}"}`;
+                return (
+                  <div key={`${side}-${trade}`} className="flex items-center gap-2">
+                    <span className="text-[10px] text-muted-foreground w-16 flex-shrink-0">{label}:</span>
+                    <div className="text-[10px] font-mono text-foreground bg-muted/20 border border-border/20 rounded px-2 py-1 flex-1 break-all">{payload}</div>
+                    <button onClick={(e) => { e.stopPropagation(); const el=document.createElement('textarea'); el.value=payload; document.body.appendChild(el); el.select(); document.execCommand('copy'); document.body.removeChild(el); const b=e.currentTarget; b.textContent='✓'; b.style.color='green'; setTimeout(()=>{ b.textContent='Copy'; b.style.color='' },2000) }}
+                      className="text-[10px] px-2 py-1 rounded bg-muted/50 border border-border/30 hover:bg-muted whitespace-nowrap">Copy</button>
+                  </div>
+                );
+              })}
             </div>
 
             {/* RIGHT: controls */}
