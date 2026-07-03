@@ -55,16 +55,20 @@ export async function POST(req: NextRequest) {
 
         const balances = balData?.result ?? []
         const wallet = balances.find((b: any) => b.asset_symbol === "USD") ?? balances[0]
-        const availableUSD = parseFloat(wallet?.available_balance ?? "0")
-        const totalPositionMargin = (posData?.result ?? []).reduce((sum: number, p: any) => sum + parseFloat(p.margin ?? "0"), 0)
-        const effectiveAvailable = availableUSD - totalPositionMargin
-        const requiredUSD = config.amount / INR_TO_USD
+        const totalBalanceUSD = parseFloat(wallet?.balance ?? "0")
 
-        if (effectiveAvailable < requiredUSD) {
-          throw new Error(`Insufficient margin: Available $${availableUSD.toFixed(2)}, Used in positions $${totalPositionMargin.toFixed(2)}, Effective $${effectiveAvailable.toFixed(2)}, Required $${requiredUSD.toFixed(2)} for ₹${config.amount} allocation`)
+        // Get total allocated across ALL active bots on this account
+        const allBots = await prisma.tradeConfig.findMany({
+          where: { accountId: config.accountId, isActive: true, userActive: true },
+          select: { amount: true },
+        })
+        const totalAllocatedUSD = allBots.reduce((sum: number, b: any) => sum + b.amount / INR_TO_USD, 0)
+
+        if (totalAllocatedUSD > totalBalanceUSD) {
+          throw new Error(`Insufficient balance: Total balance $${totalBalanceUSD.toFixed(2)}, Total allocated across all bots $${totalAllocatedUSD.toFixed(2)} for ₹${config.amount} allocation`)
         }
       } catch (e: any) {
-        if (e.message?.includes('Insufficient margin')) throw e
+        if (e.message?.includes('Insufficient')) throw e
         console.warn('Margin check failed, proceeding:', e.message)
       }
 

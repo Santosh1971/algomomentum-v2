@@ -61,34 +61,29 @@ async function handleEntry({ tc, side, script }: any) {
   if (!marketPrice) throw new Error(`No price for ${script.exchange_symbol}`)
   const quantity = Math.max(1, Math.floor((tc.amount / INR_TO_USD) / marketPrice / (script.lot || 1)))
 
-  // Pre-trade margin check: available_margin - open_positions_margin >= allocated_amount
+  // Pre-trade check: total allocated across all bots <= total account balance
   try {
     const isOAuth = tc.account.is_oauth && tc.account.oauth_access_token
     const balData = isOAuth
       ? await getBalancesOAuth(tc.account.oauth_access_token)
       : await getBalances(tc.account.api_key_enc, tc.account.api_secret_enc)
-    const posData = isOAuth
-      ? await getPositionsOAuth(tc.account.oauth_access_token)
-      : await getPositions(tc.account.api_key_enc, tc.account.api_secret_enc)
 
-    const balances = balData?.result ?? []
-    const wallet = balances.find((b: any) => b.asset_symbol === "USD") ?? balances[0]
-    const availableUSD = parseFloat(wallet?.available_balance ?? "0")
+    const balList = balData?.result ?? []
+    const walletEntry = balList.find((b: any) => b.asset_symbol === "USD") ?? balList[0]
+    const totalBalanceUSD = parseFloat(walletEntry?.balance ?? "0")
 
-    const positions = posData?.result ?? []
-    const totalPositionMargin = positions.reduce((sum: number, p: any) => {
-      return sum + parseFloat(p.margin ?? "0")
-    }, 0)
+    const allBots = await prisma.tradeConfig.findMany({
+      where: { accountId: tc.accountId, isActive: true, userActive: true },
+      select: { amount: true },
+    })
+    const totalAllocatedUSD = allBots.reduce((sum: number, b: any) => sum + b.amount / INR_TO_USD, 0)
 
-    const effectiveAvailable = availableUSD - totalPositionMargin
-    const requiredUSD = tc.amount / INR_TO_USD
-
-    if (effectiveAvailable < requiredUSD) {
-      throw new Error(`Insufficient margin: Available $${availableUSD.toFixed(2)}, Used in positions $${totalPositionMargin.toFixed(2)}, Effective $${effectiveAvailable.toFixed(2)}, Required $${requiredUSD.toFixed(2)} for ₹${tc.amount} allocation`)
+    if (totalAllocatedUSD > totalBalanceUSD) {
+      throw new Error(`Insufficient balance: Total balance $${totalBalanceUSD.toFixed(2)}, Total allocated across all bots $${totalAllocatedUSD.toFixed(2)} for ₹${tc.amount} allocation`)
     }
   } catch (e: any) {
-    if (e.message?.includes('Insufficient margin')) throw e
-    console.warn('Margin check failed, proceeding:', e.message)
+    if (e.message?.includes('Insufficient balance')) throw e
+    console.warn('Balance check failed, proceeding:', e.message)
   }
 
   if (tc.account.is_oauth && tc.account.oauth_access_token) {
