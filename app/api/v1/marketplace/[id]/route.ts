@@ -91,16 +91,26 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const allPaired    = pairTrades(allTrades)
   const periodPaired = period === 'all' ? allPaired : pairTrades(periodTrades)
 
-  const liveEquity = periodPaired.slice().reverse().map((t) => ({
+  // Live-only trades, paired independently so a backtest leg never gets
+  // paired with a live leg and vice versa (affects chart + top stats below)
+  const liveTrades       = allTrades.filter(t => t.source === 'live')
+  const periodLiveTrades = period === 'all' ? liveTrades : liveTrades.filter(t => {
+    const daysAgo = new Date()
+    daysAgo.setDate(daysAgo.getDate() - parseInt(period))
+    return new Date(t.firedAt) >= daysAgo
+  })
+  const periodLivePaired = pairTrades(periodLiveTrades)
+
+  const liveEquity = periodLivePaired.slice().reverse().map((t) => ({
     date:   t.exitDate,
     equity: 1000 + (1000 * t.aggPnlPct / 100),
   }))
 
-  const wins   = periodPaired.filter(t => t.pnlPct > 0).length
-  const losses = periodPaired.filter(t => t.pnlPct < 0).length
+  const wins   = periodLivePaired.filter(t => t.pnlPct > 0).length
+  const losses = periodLivePaired.filter(t => t.pnlPct < 0).length
 
   // Live PnL stats
-  const livePeriod = periodPaired.filter(t => t.source === 'live')
+  const livePeriod = periodLivePaired
   const livePnlPct = livePeriod.length > 0 ? Math.round(livePeriod.reduce((s, t) => s + t.pnlPct, 0) * 100) / 100 : null
   const liveMaxDD = livePeriod.length > 0 ? Math.round(Math.max(...livePeriod.map(t => t.pnlPct < 0 ? Math.abs(t.pnlPct) : 0)) * 100) / 100 : null
   const liveWins = livePeriod.filter(t => t.pnlPct > 0)
@@ -117,12 +127,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     periodPaired,
     liveEquity,
     stats: {
-      total:      periodPaired.length,
+      total:      periodLivePaired.length,
       wins,
       losses,
-      winRate:    periodPaired.length > 0 ? Math.round(wins / periodPaired.length * 1000) / 10 : 0,
-      entries:    periodTrades.filter(t => /entry/i.test(t.trade)).length,
-      exits:      periodTrades.filter(t => /exit/i.test(t.trade)).length,
+      winRate:    periodLivePaired.length > 0 ? Math.round(wins / periodLivePaired.length * 1000) / 10 : 0,
+      entries:    periodLiveTrades.filter(t => /entry/i.test(t.trade)).length,
+      exits:      periodLiveTrades.filter(t => /exit/i.test(t.trade)).length,
       livePnlPct,
       liveMaxDD,
       liveProfitFactor,
