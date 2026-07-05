@@ -586,8 +586,6 @@ export default function SimulatorPage() {
                 };
                 const sym = activeSymbol;
                 const rows = [
-                  { label: "Webhook Test (Santosh)", val: `https://app.algomomentum.in/api/v1/webhook/test?secret=algobc2026$&email=jha.santosh.kr%40gmail.com`, bg: "bg-yellow-50 border-yellow-200" },
-                  { label: "Webhook Test (Amit)",     val: `https://app.algomomentum.in/api/v1/webhook/test?secret=algobc2026$&email=kumaridipali693%40gmail.com`, bg: "bg-yellow-50 border-yellow-200" },
                   { label: "Message",                 val: `{"symbol":"{{ticker}}","side":"{{strategy.order.action}}","trade":"{{strategy.order.comment}}","price":"{{strategy.order.price}}","trigger_time":"{{timenow}}"}`, bg: "bg-blue-50 border-blue-200" },
                   { label: "── H-Line Testing ──",    val: "", bg: "", heading: true },
                   { label: "Long Entry",  val: `{"symbol":"${sym}","side":"buy","trade":"entry","price":"{{close}}","trigger_time":"{{timenow}}"}`, bg: "bg-gray-50 border-gray-200" },
