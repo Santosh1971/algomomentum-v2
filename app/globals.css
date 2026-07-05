@@ -107,3 +107,13 @@ input::placeholder, textarea::placeholder {
 .border-purple-200 { border-color: rgb(168 85 247 / 0.3) !important; }
 .border-gray-300 { border-color: var(--border) !important; }
 .border-gray-400 { border-color: var(--border) !important; }
+
+/* Sidebar layout: every page follows <Navbar /><div>...page content...</div>
+   as direct siblings, so this single rule pushes content right of the
+   fixed desktop sidebar without editing each page. */
+@media (min-width: 1024px) {
+  .app-sidebar-desktop + div {
+    margin-left: 16rem;
+  }
+}
+
