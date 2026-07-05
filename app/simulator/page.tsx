@@ -48,6 +48,13 @@ export default function SimulatorPage() {
   const [dragMode, setDragMode] = useState(false);
   const [activeDrag, setActiveDrag] = useState<"entry"|"sl"|"tp"|null>(null);
 
+  interface Subscriber { userId: string; name: string; email: string; amount: number; leverage: number; }
+  const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [selectAll, setSelectAll] = useState(true);
+  const [testAmount, setTestAmount] = useState("2000");
+  const [testLeverage, setTestLeverage] = useState("1");
+
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstanceRef = useRef<any>(null);
   const candleSeriesRef = useRef<any>(null);
@@ -262,6 +269,20 @@ export default function SimulatorPage() {
   }
 
   const activeSymbol = customSymbol.trim() || symbol;
+
+  useEffect(() => {
+    if (!activeSymbol) return;
+    fetch(`/api/v1/admin/strategy-subscribers?symbol=${encodeURIComponent(activeSymbol)}`)
+      .then(r => r.json())
+      .then(d => setSubscribers(Array.isArray(d.subscribers) ? d.subscribers : []))
+      .catch(() => setSubscribers([]));
+  }, [activeSymbol]);
+
+  function toggleUser(userId: string) {
+    setSelectAll(false);
+    setSelectedUserIds(prev => prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]);
+  }
+
   function addLog(e: LogEntry) {
     setLog(prev => {
       const next = [e, ...prev].slice(0, 50);
@@ -279,7 +300,11 @@ export default function SimulatorPage() {
       const res = await fetch(`/api/v1/admin/simulate-webhook`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ symbol: activeSymbol, side: tradeSide, trade, price: entry || livePrice }),
+        body: JSON.stringify({
+          symbol: activeSymbol, side: tradeSide, trade, price: entry || livePrice,
+          userIds: selectAll ? 'all' : selectedUserIds,
+          amount: testAmount, leverage: testLeverage,
+        }),
       });
       const data = await res.json();
       if (!res.ok) { addLog({ time, msg: `✗ Server error: ${data.error || res.status}`, status: "err" }); return false; }
@@ -393,6 +418,40 @@ export default function SimulatorPage() {
               <div className="grid grid-cols-2 gap-2">
                 <button onClick={() => setSide("buy")} className={`py-2 rounded-xl border-2 text-sm font-semibold transition ${side === "buy" ? "bg-green-500 border-green-500 text-white" : "border-green-300 text-green-700 hover:bg-green-50"}`}>📈 Long</button>
                 <button onClick={() => setSide("sell")} className={`py-2 rounded-xl border-2 text-sm font-semibold transition ${side === "sell" ? "bg-red-500 border-red-500 text-white" : "border-red-300 text-red-700 hover:bg-red-50"}`}>📉 Short</button>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl p-4 shadow-sm border space-y-3">
+              <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">Test Fire — Target &amp; Size</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs text-gray-500 font-semibold block mb-1">Amount (₹)</label>
+                  <input type="number" value={testAmount} onChange={e => setTestAmount(e.target.value)} className={inp} />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 font-semibold block mb-1">Leverage</label>
+                  <input type="number" value={testLeverage} onChange={e => setTestLeverage(e.target.value)} className={inp} />
+                </div>
+              </div>
+              <div>
+                <label className="flex items-center gap-2 text-xs font-semibold text-gray-600 mb-1">
+                  <input type="checkbox" checked={selectAll} onChange={e => { setSelectAll(e.target.checked); if (e.target.checked) setSelectedUserIds([]); }} />
+                  All subscribers ({subscribers.length})
+                </label>
+                {!selectAll && (
+                  <div className="max-h-40 overflow-y-auto border rounded-lg divide-y">
+                    {subscribers.length === 0 && <p className="text-xs text-gray-400 px-2 py-2">No subscribers for {activeSymbol}</p>}
+                    {subscribers.map(s => (
+                      <label key={s.userId} className="flex items-center gap-2 px-2 py-1.5 text-xs cursor-pointer hover:bg-gray-50">
+                        <input type="checkbox" checked={selectedUserIds.includes(s.userId)} onChange={() => toggleUser(s.userId)} />
+                        <span className="truncate">{s.name || s.email}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+                <p className="text-[11px] text-gray-400 mt-1">
+                  {selectAll ? `Will fire for all ${subscribers.length} subscriber(s)` : `${selectedUserIds.length} selected`} — tagged as test data, excluded from live stats.
+                </p>
               </div>
             </div>
 
