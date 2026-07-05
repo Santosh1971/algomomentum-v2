@@ -107,6 +107,7 @@ export default function AdminPositionsPage() {
                 ) : a.positions.length === 0 ? (
                   <div className="px-5 py-3 text-sm text-gray-400">No open positions</div>
                 ) : (
+                  <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-xs text-gray-400 uppercase border-b bg-gray-50">
@@ -137,6 +138,7 @@ export default function AdminPositionsPage() {
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 )}
               </div>
             ))}

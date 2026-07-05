@@ -112,7 +112,7 @@ export default function StrategyDetailPage() {
 
         {tab === 'backtest' && (
           <div className="space-y-4">
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <KpiCard label="Total PnL"     value={s.totalPnlPct  != null ? `+${s.totalPnlPct.toFixed(1)}%`  : '—'} color="green" />
               <KpiCard label="Profit factor" value={s.profitFactor?.toFixed(2) ?? '—'} />
               <KpiCard label="Win rate"      value={s.winRate != null ? `${s.winRate.toFixed(1)}%` : '—'} />
@@ -124,7 +124,7 @@ export default function StrategyDetailPage() {
                 <EquityChart data={s.equityData} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="border border-border/40 rounded-xl p-4 space-y-2">
                 <div className="text-sm font-medium mb-2">Backtesting Result</div>
                 <Row label="Initial Capital" value="₹1,000" />
@@ -158,13 +158,13 @@ export default function StrategyDetailPage() {
                 </button>
               ))}
             </div>
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <KpiCard label="Total Trades"  value={data.stats?.total ?? 0} />
               <KpiCard label="Win Rate"      value={data.stats?.winRate ? `${data.stats.winRate}%` : '—'} color="green" />
               <KpiCard label="Wins"          value={data.stats?.wins ?? 0} color="green" />
               <KpiCard label="Losses"        value={data.stats?.losses ?? 0} color="red" />
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
               <KpiCard label="Live PnL"      value={data.stats?.livePnlPct != null ? `${data.stats.livePnlPct > 0 ? '+' : ''}${data.stats.livePnlPct}%` : '—'} color={data.stats?.livePnlPct >= 0 ? 'green' : 'red'} />
               <KpiCard label="Max Drawdown"  value={data.stats?.liveMaxDD != null ? `-${data.stats.liveMaxDD}%` : '—'} color="red" />
               <KpiCard label="Profit Factor" value={data.stats?.liveProfitFactor?.toFixed(2) ?? '—'} />

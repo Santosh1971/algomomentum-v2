@@ -82,6 +82,7 @@ export default function BotStatusPage() {
           </div>
         ) : (
           <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-foreground text-background text-xs">
@@ -140,6 +141,7 @@ export default function BotStatusPage() {
                 )}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </div>

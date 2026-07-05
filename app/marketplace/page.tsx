@@ -267,7 +267,7 @@ function StrategyDetail({ strategy: s, isSubscribed, onClose, onSubscribe, onUns
           </div>
 
           {/* KPI row */}
-          <div className="grid grid-cols-4 gap-3 mb-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
             <KpiCard label="Total PnL"     value={s.totalPnlPct != null ? `+${s.totalPnlPct.toFixed(1)}%` : '—'} color="green" />
             <KpiCard label="Profit factor" value={s.profitFactor?.toFixed(2) ?? '—'} />
             <KpiCard label="Win rate"      value={s.winRate != null ? `${s.winRate.toFixed(1)}%` : '—'} />

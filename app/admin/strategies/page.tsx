@@ -135,6 +135,7 @@ export default function AdminStrategiesPage() {
               <button onClick={() => setPropsModal(null)} className="text-muted-foreground hover:text-foreground text-xl">×</button>
             </div>
             {(propsModal as any).properties ? (
+              <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <tbody>
                   {Object.entries((propsModal as any).properties).map(([k, v]) => (
@@ -145,6 +146,7 @@ export default function AdminStrategiesPage() {
                   ))}
                 </tbody>
               </table>
+              </div>
             ) : (
               <div className="text-sm text-muted-foreground">No properties data. Re-upload the XLSX file to extract properties.</div>
             )}

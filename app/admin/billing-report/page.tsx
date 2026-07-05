@@ -242,6 +242,7 @@ export default function AdminBillingPage() {
                     <span className="text-cyan-300">Platform fees: <span className="font-bold text-white">${totalFee.toFixed(2)}</span></span>
                   </div>
                 </div>
+                <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-xs text-gray-400 uppercase border-b bg-gray-50">
@@ -294,6 +295,7 @@ export default function AdminBillingPage() {
                     })}
                   </tbody>
                 </table>
+                </div>
               </div>
             );
           })
