@@ -93,14 +93,7 @@ export default function AdminStrategiesPage() {
                 const sym = s.symbol;
                 const rows = [
                   { label: "Webhook All",    val: `https://app.algomomentum.in/api/v1/webhook/strategy/${sym}?secret=algobc2026$`, bg: "bg-muted/20 border-border/20" },
-                  { label: "Webhook Test (Santosh)", val: `https://app.algomomentum.in/api/v1/webhook/test?secret=algobc2026$&email=jha.santosh.kr%40gmail.com`, bg: "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-700" },
-                  { label: "Webhook Test (Amit)",    val: `https://app.algomomentum.in/api/v1/webhook/test?secret=algobc2026$&email=kumaridipali693%40gmail.com`, bg: "bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-700" },
                   { label: "Message",        val: `{"symbol":"{{ticker}}","side":"{{strategy.order.action}}","trade":"{{strategy.order.comment}}","price":"{{strategy.order.price}}","trigger_time":"{{timenow}}"}`, bg: "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-700" },
-                  { label: "── H-Line Testing ──", val: "", bg: "bg-transparent border-transparent", heading: true },
-                  { label: "Long Entry",     val: `{"symbol":"${sym}","side":"buy","trade":"entry","price":"{{close}}","trigger_time":"{{timenow}}"}`, bg: "bg-muted/20 border-border/20" },
-                  { label: "Long Exit",      val: `{"symbol":"${sym}","side":"sell","trade":"exit","price":"{{close}}","trigger_time":"{{timenow}}"}`, bg: "bg-muted/20 border-border/20" },
-                  { label: "Short Entry",    val: `{"symbol":"${sym}","side":"sell","trade":"entry","price":"{{close}}","trigger_time":"{{timenow}}"}`, bg: "bg-muted/20 border-border/20" },
-                  { label: "Short Exit",     val: `{"symbol":"${sym}","side":"buy","trade":"exit","price":"{{close}}","trigger_time":"{{timenow}}"}`, bg: "bg-muted/20 border-border/20" },
                 ];
                 return rows.map(({ label, val, bg, heading }: any) => heading ? (
                   <div key={label} className="pt-1">

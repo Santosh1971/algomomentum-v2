@@ -54,6 +54,7 @@ export default function SimulatorPage() {
   const [selectAll, setSelectAll] = useState(true);
   const [testAmount, setTestAmount] = useState("2000");
   const [testLeverage, setTestLeverage] = useState("1");
+  const [showWebhooks, setShowWebhooks] = useState(false);
 
   const chartRef = useRef<HTMLDivElement>(null);
   const chartInstanceRef = useRef<any>(null);
@@ -553,6 +554,44 @@ export default function SimulatorPage() {
                 </div>
               </div>
               <div ref={chartRef} className="w-full" />
+            </div>
+
+            <div className="bg-white rounded-2xl p-5 shadow-sm border">
+              <div className="flex justify-between items-center mb-3">
+                <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">TradingView Webhooks — {activeSymbol}</p>
+                <button onClick={() => setShowWebhooks(v => !v)} className="text-xs text-blue-600 hover:underline">{showWebhooks ? "Hide" : "Show"}</button>
+              </div>
+              {showWebhooks && (() => {
+                const copy = (txt: string) => (e: any) => {
+                  navigator.clipboard?.writeText(txt).catch(() => {});
+                  const b = e.currentTarget; const orig = b.textContent; b.textContent = '✓ Copied!';
+                  setTimeout(() => { b.textContent = orig; }, 1500);
+                };
+                const sym = activeSymbol;
+                const rows = [
+                  { label: "Webhook Test (Santosh)", val: `https://app.algomomentum.in/api/v1/webhook/test?secret=algobc2026$&email=jha.santosh.kr%40gmail.com`, bg: "bg-yellow-50 border-yellow-200" },
+                  { label: "Webhook Test (Amit)",     val: `https://app.algomomentum.in/api/v1/webhook/test?secret=algobc2026$&email=kumaridipali693%40gmail.com`, bg: "bg-yellow-50 border-yellow-200" },
+                  { label: "Message",                 val: `{"symbol":"{{ticker}}","side":"{{strategy.order.action}}","trade":"{{strategy.order.comment}}","price":"{{strategy.order.price}}","trigger_time":"{{timenow}}"}`, bg: "bg-blue-50 border-blue-200" },
+                  { label: "── H-Line Testing ──",    val: "", bg: "", heading: true },
+                  { label: "Long Entry",  val: `{"symbol":"${sym}","side":"buy","trade":"entry","price":"{{close}}","trigger_time":"{{timenow}}"}`, bg: "bg-gray-50 border-gray-200" },
+                  { label: "Long Exit",   val: `{"symbol":"${sym}","side":"sell","trade":"exit","price":"{{close}}","trigger_time":"{{timenow}}"}`, bg: "bg-gray-50 border-gray-200" },
+                  { label: "Short Entry", val: `{"symbol":"${sym}","side":"sell","trade":"entry","price":"{{close}}","trigger_time":"{{timenow}}"}`, bg: "bg-gray-50 border-gray-200" },
+                  { label: "Short Exit",  val: `{"symbol":"${sym}","side":"buy","trade":"exit","price":"{{close}}","trigger_time":"{{timenow}}"}`, bg: "bg-gray-50 border-gray-200" },
+                ];
+                return (
+                  <div className="space-y-1.5">
+                    {rows.map(({ label, val, bg, heading }: any) => heading ? (
+                      <p key={label} className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide border-b pb-0.5 pt-1">{label}</p>
+                    ) : (
+                      <div key={label} className="flex items-center gap-2">
+                        <span className="text-[10px] text-gray-500 w-32 flex-shrink-0">{label}:</span>
+                        <div className={`text-[10px] font-mono border rounded px-2 py-1 flex-1 break-all ${bg}`}>{val}</div>
+                        <button onClick={copy(val)} className="text-[10px] px-2 py-1 rounded bg-gray-100 border hover:bg-gray-200 whitespace-nowrap">Copy</button>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
 
             <div className="bg-white rounded-2xl p-5 shadow-sm border">
