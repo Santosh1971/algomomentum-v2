@@ -118,7 +118,7 @@ export default function AdminUserDetailPage() {
       <div className="max-w-5xl mx-auto p-6 space-y-5">
 
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-3">
             <Link href="/admin/users"
               className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1">
@@ -126,7 +126,7 @@ export default function AdminUserDetailPage() {
             </Link>
             <div>
               <h1 className="text-xl font-bold text-[#161B22]">{user.name ?? user.email}</h1>
-              <p className="text-sm text-gray-500">{user.email} · {user.phone}</p>
+              <p className="text-sm text-gray-500 break-all">{user.email} · {user.phone}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -142,7 +142,7 @@ export default function AdminUserDetailPage() {
         </div>
 
         {/* Summary cards */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-white rounded-xl p-4 shadow-sm border">
             <p className="text-xs text-gray-400 uppercase font-medium">Total Bots</p>
             <p className="text-2xl font-bold text-gray-800 mt-1">{totalConfigs.length}</p>
@@ -172,7 +172,7 @@ export default function AdminUserDetailPage() {
               <div key={account.id} className="bg-white rounded-2xl shadow-sm border overflow-hidden">
 
                 {/* Account header */}
-                <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50">
+                <div className="px-5 py-4 border-b border-gray-100 flex flex-wrap items-center justify-between gap-2 bg-gray-50">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-gray-800">{account.accountName}</span>
                     <span className="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-500">{account.accountType}</span>
@@ -189,7 +189,7 @@ export default function AdminUserDetailPage() {
                   <div className="px-5 py-4 text-sm text-gray-400">No bots in this account.</div>
                 ) : (
                   <div>
-                    <div className="grid grid-cols-12 gap-2 px-5 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide border-b border-gray-50">
+                    <div className="hidden sm:grid grid-cols-12 gap-2 px-5 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide border-b border-gray-50">
                       <div className="col-span-2">Symbol</div>
                       <div className="col-span-2">Amount</div>
                       <div className="col-span-1">Lev</div>
@@ -199,8 +199,62 @@ export default function AdminUserDetailPage() {
                     </div>
                     {account.tradeConfigs.map(tc => {
                       const isOn = tc.isActive && tc.userActive;
+                      const actionButtons = (
+                        <>
+                          <button onClick={() => toggleActive(tc.id, "isActive", !tc.isActive)}
+                            disabled={!tc.isActive && !user.isApproved}
+                            title={!tc.isActive && !user.isApproved ? "Approve user first before activating bots" : ""}
+                            className={`text-xs px-2 py-1 rounded font-medium transition disabled:opacity-40 disabled:cursor-not-allowed ${tc.isActive ? "bg-red-50 text-red-600 hover:bg-red-100" : "bg-green-50 text-green-600 hover:bg-green-100"}`}>
+                            {tc.isActive ? "Deactivate" : "Activate"}
+                          </button>
+                          <button onClick={() => updateAmount(tc.id, tc.amount, tc.strategyRef?.minCapital)}
+                            className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium">
+                            ✎ Edit
+                          </button>
+                          <Link href={`/admin/pnl?configId=${tc.id}&userId=${userId}`}
+                            className="text-xs px-2 py-1 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 font-medium">
+                            Trades
+                          </Link>
+                          <button onClick={() => deleteConfig(tc.id, tc.script)}
+                            className="text-xs px-2 py-1 rounded bg-red-50 text-red-500 hover:bg-red-100">
+                            ✕
+                          </button>
+                        </>
+                      );
                       return (
-                        <div key={tc.id} className="grid grid-cols-12 gap-2 px-5 py-3 items-center border-b border-gray-50 last:border-0 hover:bg-gray-50/50">
+                        <div key={tc.id}>
+                          {/* Mobile stacked card */}
+                          <div className="sm:hidden px-4 py-2.5 border-b border-gray-50 last:border-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-bold text-gray-800">{tc.script}</span>
+                              <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium ${tc.isActive ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-400"}`}>
+                                {tc.isActive ? "Active" : "Inactive"}
+                              </span>
+                              <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium ${isOn ? "bg-blue-100 text-blue-700" : "bg-yellow-100 text-yellow-600"}`}>
+                                {isOn ? "Running" : tc.userActive ? "Paused(admin)" : "Paused"}
+                              </span>
+                              <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium ${tc.mode === "standalone" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"}`}>
+                                {tc.mode === "standalone" ? `⚡ ${tc.strategy ?? "standalone"}` : "🔗 bridge"}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-4 mt-1.5 text-sm">
+                              <div>
+                                <span className="text-[11px] text-gray-400">Amount: </span>
+                                <span className="font-medium">{fmt(tc.amount)}</span>
+                                {tc.initial_amount && tc.initial_amount !== tc.amount && (
+                                  <span className="text-[11px] text-gray-400"> (init: {fmt(tc.initial_amount)})</span>
+                                )}
+                              </div>
+                              <div>
+                                <span className="text-[11px] text-gray-400">Lev: </span>
+                                <span className="font-medium">{tc.leverage}x</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">{actionButtons}</div>
+                          </div>
+
+                          {/* Desktop table row */}
+                          <div className="hidden sm:grid grid-cols-12 gap-2 px-5 py-3 items-center border-b border-gray-50 last:border-0 hover:bg-gray-50/50">
                           <div className="col-span-2 font-bold text-gray-800">{tc.script}</div>
                           <div className="col-span-2 text-sm">
                             <div>{fmt(tc.amount)}</div>
@@ -222,29 +276,7 @@ export default function AdminUserDetailPage() {
                               {isOn ? "Running" : tc.userActive ? "Paused(admin)" : "Paused"}
                             </span>
                           </div>
-                          <div className="col-span-3 flex items-center justify-end gap-1">
-                            {/* Admin toggle isActive */}
-                            <button onClick={() => toggleActive(tc.id, "isActive", !tc.isActive)}
-                              disabled={!tc.isActive && !user.isApproved}
-                              title={!tc.isActive && !user.isApproved ? "Approve user first before activating bots" : ""}
-                              className={`text-xs px-2 py-1 rounded font-medium transition disabled:opacity-40 disabled:cursor-not-allowed ${tc.isActive ? "bg-red-50 text-red-600 hover:bg-red-100" : "bg-green-50 text-green-600 hover:bg-green-100"}`}>
-                              {tc.isActive ? "Deactivate" : "Activate"}
-                            </button>
-                            {/* Edit amount */}
-                            <button onClick={() => updateAmount(tc.id, tc.amount, tc.strategyRef?.minCapital)}
-                              className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium">
-                              ✎ Edit
-                            </button>
-                            {/* View trades — opens PnL report for this config */}
-                            <Link href={`/admin/pnl?configId=${tc.id}&userId=${userId}`}
-                              className="text-xs px-2 py-1 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 font-medium">
-                              Trades
-                            </Link>
-                            {/* Delete */}
-                            <button onClick={() => deleteConfig(tc.id, tc.script)}
-                              className="text-xs px-2 py-1 rounded bg-red-50 text-red-500 hover:bg-red-100">
-                              ✕
-                            </button>
+                          <div className="col-span-3 flex items-center justify-end gap-1">{actionButtons}</div>
                           </div>
                         </div>
                       );

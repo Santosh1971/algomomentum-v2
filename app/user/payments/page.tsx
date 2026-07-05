@@ -60,7 +60,7 @@ export default function UserBillingPage() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       <div className="max-w-3xl mx-auto p-6 space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-bold text-[#161B22]">Billing & Payment</h1>
           {totalDue > 0 && (
             <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-2 text-right">
