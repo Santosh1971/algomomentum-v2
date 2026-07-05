@@ -335,9 +335,10 @@ export default function TradeConfigPage() {
                           No symbols yet — <a href="/marketplace" className="ml-1 text-blue-500 hover:underline">go to Marketplace to subscribe a strategy</a>
                         </div>
                       ) : (
-                        <div>
-                          {/* Desktop table header */}
-                          <div className="hidden sm:grid grid-cols-12 gap-2 px-5 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide border-b border-gray-50">
+                        <div className="overflow-x-auto">
+                          <div className="min-w-[720px]">
+                          {/* Table header */}
+                          <div className="grid grid-cols-12 gap-2 px-5 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide border-b border-gray-50">
                             <div className="col-span-2">Symbol</div>
                             <div className="col-span-2">Allocated</div>
                             <div className="col-span-1">Lev</div>
@@ -369,44 +370,7 @@ export default function TradeConfigPage() {
                               </>
                             );
                             return (
-                              <div key={tc.id}>
-                                {/* Mobile stacked card */}
-                                <div className="sm:hidden px-4 py-2.5 border-b border-gray-50 last:border-0">
-                                  <div className="flex items-center gap-1.5 flex-wrap">
-                                    <span className="font-bold text-gray-800">{tc.script}</span>
-                                    <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium ${isOn ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-400"}`}>
-                                      {isOn ? "● Active" : "○ Off"}
-                                    </span>
-                                    <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium ${tc.mode === "standalone" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"}`}>
-                                      {tc.mode === "standalone" ? `⚡ ${tc.strategy ?? "standalone"}` : "🔗 bridge"}
-                                    </span>
-                                    {tc.isSubscription && <span className="text-[11px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">📊 {tc.strategy ?? "Strategy"}</span>}
-                                  </div>
-                                  <div className="flex items-center gap-4 mt-1.5 text-sm">
-                                    <div>
-                                      <span className="text-[11px] text-gray-400">Allocated: </span>
-                                      <span className="font-medium">{fmt(tc.amount / INR_PER_USD)}</span>
-                                      {tc.initial_amount && tc.initial_amount !== tc.amount && (
-                                        <span className="text-[11px] text-gray-400"> (init: {fmt(tc.initial_amount / INR_PER_USD)})</span>
-                                      )}
-                                    </div>
-                                    <div>
-                                      <span className="text-[11px] text-gray-400">Lev: </span>
-                                      <span className="font-medium">{tc.leverage}x</span>
-                                    </div>
-                                  </div>
-                                  {tcPos && (
-                                    <div className="mt-1 text-sm">
-                                      <span className="text-[11px] text-gray-400">Position: </span>
-                                      <span className="font-medium capitalize">{tcPos.side} {tcPos.size}</span>
-                                      <span className={`ml-2 text-xs font-semibold ${tcPos.upnlUSD >= 0 ? "text-green-600" : "text-red-500"}`}>{fmt(tcPos.upnlUSD)}</span>
-                                    </div>
-                                  )}
-                                  <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">{actionButtons}</div>
-                                </div>
-
-                                {/* Desktop table row */}
-                                <div className="hidden sm:grid grid-cols-12 gap-2 px-5 py-3 items-center border-b border-gray-50 last:border-0 hover:bg-gray-50/50">
+                              <div key={tc.id} className="grid grid-cols-12 gap-2 px-5 py-3 items-center border-b border-gray-50 last:border-0 hover:bg-gray-50/50">
                                 <div className="col-span-2">
                                   <span className="font-bold text-gray-800">{tc.script}</span>
                                   <div className="text-xs text-gray-400 mt-0.5">{tc.compoundMode}</div>
@@ -438,10 +402,11 @@ export default function TradeConfigPage() {
                                   </span>
                                 </div>
                                 <div className="col-span-2 flex items-center justify-end gap-1">{actionButtons}</div>
-                                </div>
                               </div>
                             );
                           })}
+                          </div>
+                          </div>
                           {pos && pos.positions.length > 0 && (
                             <div className="px-4 sm:px-5 py-3 bg-gray-50 border-t border-gray-100">
                               <p className="text-xs font-semibold text-gray-400 uppercase mb-2">Open Positions</p>
@@ -465,7 +430,6 @@ export default function TradeConfigPage() {
                               </div>
                             </div>
                           )}
-                        </div>
                       )}
                     </div>
                   )}
