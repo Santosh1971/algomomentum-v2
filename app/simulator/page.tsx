@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 
-interface Script { symbol: string; }
+interface Script { symbol: string; name?: string; }
 interface LogEntry { time: string; msg: string; status: string; detail?: string; }
 
 function decimals(price: number): number {
@@ -83,11 +83,14 @@ export default function SimulatorPage() {
   const rrColor = rr ? (parseFloat(rr) >= 2 ? "text-green-600" : parseFloat(rr) >= 1 ? "text-yellow-600" : "text-red-600") : "";
 
   useEffect(() => {
-    fetch("/api/v1/script").then(r => r.json()).then(data => {
-      if (Array.isArray(data) && data.length > 0) {
-        setSymbols(data);
+    fetch("/api/v1/marketplace").then(r => r.json()).then(data => {
+      const list: Script[] = Array.isArray(data.strategies)
+        ? data.strategies.map((s: any) => ({ symbol: s.symbol, name: s.name }))
+        : [];
+      if (list.length > 0) {
+        setSymbols(list);
         const saved = localStorage.getItem("am_sim_symbol");
-        setSymbol(saved && data.find((s: Script) => s.symbol === saved) ? saved : data[0].symbol);
+        setSymbol(saved && list.find((s: Script) => s.symbol === saved) ? saved : list[0].symbol);
       }
     });
     fetch("/api/v1/myip").then(r => r.json()).then(d => { if (d.ip) setOutboundIp(d.ip); });
@@ -107,7 +110,7 @@ export default function SimulatorPage() {
       width: chartRef.current.clientWidth, height: 400,
       layout: { background: { color: isDark ? "#0a0a0a" : "#ffffff" }, textColor: isDark ? "#ededed" : "#161B22" },
       grid: { vertLines: { color: isDark ? "#27272a" : "#f3f4f6" }, horzLines: { color: isDark ? "#27272a" : "#f3f4f6" } },
-      timeScale: { timeVisible: true, secondsVisible: false },
+      timeScale: { timeVisible: true, secondsVisible: false, rightOffset: 10 },
       crosshair: { mode: 1 },
     });
     chartInstanceRef.current = chart;
@@ -395,7 +398,7 @@ export default function SimulatorPage() {
             <div className="bg-white rounded-2xl p-4 shadow-sm border space-y-3">
               <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">Symbol</p>
               <select value={symbol} onChange={e => { setSymbol(e.target.value); try { localStorage.setItem("am_sim_symbol", e.target.value); } catch {} }} className={inp}>
-                {symbols.map(s => <option key={s.symbol} value={s.symbol}>{s.symbol}</option>)}
+                {symbols.map(s => <option key={s.symbol} value={s.symbol}>{s.name ? `${s.name}(${s.symbol})` : s.symbol}</option>)}
               </select>
               <input value={customSymbol} onChange={e => { setCustomSymbol(e.target.value); try { localStorage.setItem("am_sim_custom", e.target.value); } catch {} }} placeholder="Custom e.g. PIUSD" className={inp} />
               {livePrice && (
