@@ -39,7 +39,7 @@ export default function AdminStrategiesPage() {
 
   return (
     <><Navbar /><div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <h1 className="text-xl font-medium">Marketplace strategies</h1>
         <button onClick={() => { setEditing(null); setShowForm(true) }} className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm hover:bg-blue-700">
           + New strategy
@@ -48,7 +48,7 @@ export default function AdminStrategiesPage() {
 
       <div className="space-y-3">
         {strategies.map(s => (
-          <div key={s.id} className="border border-border/40 rounded-xl p-4 flex gap-4">
+          <div key={s.id} className="border border-border/40 rounded-xl p-4 flex flex-col sm:flex-row gap-4">
             {/* LEFT: strategy info */}
             <div className="flex-1 min-w-0 space-y-1">
 
@@ -100,10 +100,12 @@ export default function AdminStrategiesPage() {
                     <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide border-b border-border/30 pb-0.5">{label}</p>
                   </div>
                 ) : (
-                  <div key={label} className="flex items-center gap-2">
-                    <span className="text-[10px] text-muted-foreground w-28 flex-shrink-0">{label}:</span>
-                    <div className={`text-[10px] font-mono text-foreground border rounded px-2 py-1 flex-1 break-all ${bg}`}>{val}</div>
-                    <button onClick={copy(val)} className="text-[10px] px-2 py-1 rounded bg-muted/50 border border-border/30 hover:bg-muted whitespace-nowrap">Copy</button>
+                  <div key={label} className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                    <span className="text-[10px] text-muted-foreground sm:w-28 sm:flex-shrink-0">{label}:</span>
+                    <div className="flex items-center gap-2">
+                      <div className={`text-[10px] font-mono text-foreground border rounded px-2 py-1 flex-1 break-all ${bg}`}>{val}</div>
+                      <button onClick={copy(val)} className="text-[10px] px-2 py-1 rounded bg-muted/50 border border-border/30 hover:bg-muted whitespace-nowrap flex-shrink-0">Copy</button>
+                    </div>
                   </div>
                 ));
               })()}
@@ -111,12 +113,12 @@ export default function AdminStrategiesPage() {
             </div>
 
             {/* RIGHT: controls */}
-            <div className="flex flex-col items-end gap-2 flex-shrink-0">
-              <div className="flex gap-3">
+            <div className="flex flex-col items-start sm:items-end gap-2 sm:flex-shrink-0">
+              <div className="flex gap-3 flex-wrap">
                 <Toggle label="Featured" value={s.isFeatured} onChange={() => handleToggle(s, 'isFeatured')} />
                 <Toggle label="Active"   value={s.isActive}   onChange={() => handleToggle(s, 'isActive')} />
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <button onClick={() => { setEditing(s); setShowForm(true) }} className="text-xs px-3 py-1.5 rounded border border-border/40 hover:bg-muted/30">Edit</button>
                 <button onClick={() => setPropsModal(s)} className="text-xs px-3 py-1.5 rounded border border-blue-500/40 text-blue-400 hover:bg-blue-500/10">Properties</button>
                 <button onClick={() => handleDelete(s.id)} className="text-xs px-3 py-1.5 rounded border border-red-500/30 text-red-400 hover:bg-red-500/10">Delete</button>
