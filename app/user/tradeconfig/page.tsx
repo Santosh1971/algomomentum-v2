@@ -232,14 +232,14 @@ export default function TradeConfigPage() {
   return (
 <>
       <Navbar />
-      <div className="min-h-screen bg-gray-50 p-6">
+      <div className="min-h-screen bg-gray-50 p-3 sm:p-6">
       <div className="max-w-5xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-[#161B22]">Subscriptions</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-[#161B22]">Subscriptions</h1>
             <p className="text-sm text-gray-500 mt-1">Manage your strategy subscriptions and Delta Exchange account</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <div className="flex bg-white border rounded-lg overflow-hidden text-sm">
               {(["USD", "INR"] as CurrencyMode[]).map(c => (
                 <button key={c} onClick={() => setCurrency(c)}
@@ -278,8 +278,8 @@ export default function TradeConfigPage() {
               const isExpanded = expandedAccounts.has(account.id);
               return (
                 <div key={account.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                  <div className="p-5 border-b border-gray-100">
-                    <div className="flex items-start justify-between">
+                  <div className="p-4 sm:p-5 border-b border-gray-100">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="flex items-center gap-3">
                         <button onClick={() => setExpandedAccounts(prev => {
                           const next = new Set(prev);
@@ -289,8 +289,8 @@ export default function TradeConfigPage() {
                           {isExpanded ? "▾" : "▸"}
                         </button>
                         <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-lg text-gray-800">{account.accountName}</span>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-base sm:text-lg text-gray-800">{account.accountName}</span>
                             <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium">{account.accountType}</span>
                             {account.delta_account_name ? (
                               <span className="text-xs text-green-600 font-medium">✓ {account.delta_account_name}</span>
@@ -308,7 +308,7 @@ export default function TradeConfigPage() {
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         {account.delta_account_name && (
                           <button onClick={() => { loadBalance(account.id); loadPositions(account.id); }}
                             className="text-xs px-2 py-1 rounded-lg bg-gray-100 text-gray-500 hover:bg-gray-200" title="Refresh">↻</button>
@@ -336,7 +336,8 @@ export default function TradeConfigPage() {
                         </div>
                       ) : (
                         <div>
-                          <div className="grid grid-cols-12 gap-2 px-5 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide border-b border-gray-50">
+                          {/* Desktop table header */}
+                          <div className="hidden sm:grid grid-cols-12 gap-2 px-5 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide border-b border-gray-50">
                             <div className="col-span-2">Symbol</div>
                             <div className="col-span-2">Allocated</div>
                             <div className="col-span-1">Lev</div>
@@ -348,8 +349,68 @@ export default function TradeConfigPage() {
                           {account.tradeConfigs.map(tc => {
                             const tcPos = pos?.positions.find(p => p.symbol === tc.script);
                             const isOn = tc.isActive && tc.userActive;
+                            const actionButtons = (
+                              <>
+                                <button onClick={() => toggleSymbol(tc)}
+                                  className={`text-xs px-2 py-1 rounded font-medium transition ${tc.userActive ? "bg-yellow-50 text-yellow-600 hover:bg-yellow-100" : "bg-green-50 text-green-600 hover:bg-green-100"}`}>
+                                  {tc.userActive ? "Pause" : "On"}
+                                </button>
+                                {tcPos && (
+                                  <button onClick={() => exitPosition(account.id, tc.id, tc.script)}
+                                    className="text-xs px-2 py-1 rounded bg-red-50 text-red-500 hover:bg-red-100 font-medium">Exit</button>
+                                )}
+                                <button onClick={() => {
+                                  setActiveConfig(tc);
+                                  setSymbolForm({ script: tc.script, amount: String(tc.amount), leverage: String(tc.leverage), compoundMode: tc.compoundMode, mode: tc.mode });
+                                  setModal("editSymbol");
+                                }} className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-500 hover:bg-gray-200">✎</button>
+                                <button onClick={() => deleteSymbol(tc.id, tc.script)}
+                                  className="text-xs px-2 py-1 rounded bg-red-50 text-red-400 hover:bg-red-100">✕</button>
+                              </>
+                            );
                             return (
-                              <div key={tc.id} className="grid grid-cols-12 gap-2 px-5 py-3 items-center border-b border-gray-50 last:border-0 hover:bg-gray-50/50">
+                              <div key={tc.id}>
+                                {/* Mobile stacked card */}
+                                <div className="sm:hidden px-4 py-3 border-b border-gray-50 last:border-0">
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <span className="font-bold text-gray-800">{tc.script}</span>
+                                      <span className={`ml-2 text-xs px-2 py-0.5 rounded-full font-medium ${isOn ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-400"}`}>
+                                        {isOn ? "● Active" : "○ Off"}
+                                      </span>
+                                    </div>
+                                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${tc.mode === "standalone" ? "bg-purple-100 text-purple-700" : "bg-blue-100 text-blue-700"}`}>
+                                      {tc.mode === "standalone" ? `⚡ ${tc.strategy ?? "standalone"}` : "🔗 bridge"}
+                                    </span>
+                                  </div>
+                                  {tc.isSubscription && <span className="text-xs px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-medium mt-1 inline-block">📊 {tc.strategy ?? "Strategy"}</span>}
+                                  <div className="grid grid-cols-2 gap-2 mt-2 text-sm">
+                                    <div>
+                                      <span className="text-xs text-gray-400 block">Allocated</span>
+                                      <span className="font-medium">{fmt(tc.amount / INR_PER_USD)}</span>
+                                      {tc.initial_amount && tc.initial_amount !== tc.amount && (
+                                        <span className="text-xs text-gray-400 block">init: {fmt(tc.initial_amount / INR_PER_USD)}</span>
+                                      )}
+                                    </div>
+                                    <div>
+                                      <span className="text-xs text-gray-400 block">Leverage</span>
+                                      <span className="font-medium">{tc.leverage}x</span>
+                                    </div>
+                                    <div className="col-span-2">
+                                      <span className="text-xs text-gray-400 block">Position / UPNL</span>
+                                      {tcPos ? (
+                                        <span>
+                                          <span className="font-medium capitalize">{tcPos.side} {tcPos.size}</span>
+                                          <span className={`ml-2 text-xs font-semibold ${tcPos.upnlUSD >= 0 ? "text-green-600" : "text-red-500"}`}>{fmt(tcPos.upnlUSD)}</span>
+                                        </span>
+                                      ) : <span className="text-gray-300 text-xs">—</span>}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">{actionButtons}</div>
+                                </div>
+
+                                {/* Desktop table row */}
+                                <div className="hidden sm:grid grid-cols-12 gap-2 px-5 py-3 items-center border-b border-gray-50 last:border-0 hover:bg-gray-50/50">
                                 <div className="col-span-2">
                                   <span className="font-bold text-gray-800">{tc.script}</span>
                                   <div className="text-xs text-gray-400 mt-0.5">{tc.compoundMode}</div>
@@ -380,38 +441,26 @@ export default function TradeConfigPage() {
                                     {isOn ? "●" : "○"}
                                   </span>
                                 </div>
-                                <div className="col-span-2 flex items-center justify-end gap-1">
-                                  <button onClick={() => toggleSymbol(tc)}
-                                    className={`text-xs px-2 py-1 rounded font-medium transition ${tc.userActive ? "bg-yellow-50 text-yellow-600 hover:bg-yellow-100" : "bg-green-50 text-green-600 hover:bg-green-100"}`}>
-                                    {tc.userActive ? "Pause" : "On"}
-                                  </button>
-                                  {tcPos && (
-                                    <button onClick={() => exitPosition(account.id, tc.id, tc.script)}
-                                      className="text-xs px-2 py-1 rounded bg-red-50 text-red-500 hover:bg-red-100 font-medium">Exit</button>
-                                  )}
-
-                                  <button onClick={() => {
-                                    setActiveConfig(tc);
-                                    setSymbolForm({ script: tc.script, amount: String(tc.amount), leverage: String(tc.leverage), compoundMode: tc.compoundMode, mode: tc.mode });
-                                    setModal("editSymbol");
-                                  }} className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-500 hover:bg-gray-200">✎</button>
-                                  <button onClick={() => deleteSymbol(tc.id, tc.script)}
-                                    className="text-xs px-2 py-1 rounded bg-red-50 text-red-400 hover:bg-red-100">✕</button>
+                                <div className="col-span-2 flex items-center justify-end gap-1">{actionButtons}</div>
                                 </div>
                               </div>
                             );
                           })}
                           {pos && pos.positions.length > 0 && (
-                            <div className="px-5 py-3 bg-gray-50 border-t border-gray-100">
+                            <div className="px-4 sm:px-5 py-3 bg-gray-50 border-t border-gray-100">
                               <p className="text-xs font-semibold text-gray-400 uppercase mb-2">Open Positions</p>
                               <div className="space-y-2">
                                 {pos.positions.map((p, i) => (
-                                  <div key={i} className="flex items-center justify-between text-sm">
-                                    <span className="font-medium text-gray-700">{p.symbol}</span>
-                                    <span className="text-gray-500 capitalize">{p.side} {p.size} @ {p.entryPrice}</span>
-                                    <span className="text-gray-400">Mark: {p.markPrice}</span>
-                                    <span className="text-gray-400">Liq: {p.liquidationPrice}</span>
-                                    <span className={`font-semibold ${p.upnlUSD >= 0 ? "text-green-600" : "text-red-500"}`}>{fmt(p.upnlUSD)}</span>
+                                  <div key={i} className="text-sm border-b border-gray-100 last:border-0 pb-2 last:pb-0 sm:flex sm:items-center sm:justify-between sm:border-0 sm:pb-0">
+                                    <div className="flex items-center justify-between sm:contents">
+                                      <span className="font-medium text-gray-700">{p.symbol}</span>
+                                      <span className={`font-semibold sm:order-last ${p.upnlUSD >= 0 ? "text-green-600" : "text-red-500"}`}>{fmt(p.upnlUSD)}</span>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5 sm:text-sm sm:mt-0 sm:contents">
+                                      <span className="capitalize">{p.side} {p.size} @ {p.entryPrice}</span>
+                                      <span className="text-gray-400">Mark: {p.markPrice}</span>
+                                      <span className="text-gray-400">Liq: {p.liquidationPrice}</span>
+                                    </div>
                                   </div>
                                 ))}
                               </div>
