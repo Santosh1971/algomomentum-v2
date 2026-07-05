@@ -215,7 +215,7 @@ function StrategyCard({ strategy: s, isSubscribed, onDetail, onSubscribe, onUnsu
       <div className="p-4 pb-2">
         <div className="flex items-center gap-2 mb-2">
           {s.isFeatured && <Badge color="blue">featured</Badge>}
-          {isSubscribed && isApproved && <Badge color="green">subscribed</Badge>}
+          {isSubscribed && <Badge color="green">subscribed</Badge>}
         </div>
         <div className="font-medium text-sm">{s.name}</div>
         <div className="text-xs text-muted-foreground mt-0.5">{s.symbol} · {s.timeframe}</div>
@@ -240,12 +240,10 @@ function StrategyCard({ strategy: s, isSubscribed, onDetail, onSubscribe, onUnsu
       >
         <span className="text-xs text-muted-foreground">{s._count.subscribers} subscribers</span>
           {s.minCapital && <span className="text-xs text-muted-foreground">Min: ₹{s.minCapital.toLocaleString('en-IN')}</span>}
-        {isSubscribed && isApproved
+        {isSubscribed
           ? <button onClick={onUnsubscribe} className="text-xs px-3 py-1 rounded-md border border-border/40 text-green-500 hover:bg-muted/40 transition-colors">Subscribed ✓</button>
-          : hasDelta && isApproved
+          : hasDelta
             ? <button onClick={onSubscribe} className="text-xs px-4 py-2 rounded-xl bg-green-500 hover:bg-green-600 text-white font-semibold transition-colors shadow-md">Subscribe</button>
-            : hasDelta
-            ? <span className="text-xs px-3 py-1 rounded-md border border-yellow-400/40 text-yellow-500">⏳ Pending Approval</span>
             : <button onClick={() => { const ok = window.confirm("⚠️ Please login to Delta Exchange using the SAME email you registered here.\n\nProceed?"); if(ok) window.location.href="/api/auth/delta/authorize" }} className="text-xs px-3 py-1 rounded-md border border-orange-400/40 text-orange-500 hover:bg-orange-500/10 transition-colors">🔗 Connect Delta</button>
         }
       </div>
@@ -286,12 +284,10 @@ function StrategyDetail({ strategy: s, isSubscribed, onClose, onSubscribe, onUns
 
           {/* Action */}
           <div className="flex items-center gap-3">
-            {isSubscribed && isApproved
+            {isSubscribed
               ? <button onClick={onUnsubscribe} className="flex-1 py-2 rounded-lg border border-green-500/40 text-green-500 text-sm hover:bg-green-500/10 transition-colors">Unsubscribe</button>
-              : hasDelta && isApproved
+              : hasDelta
                 ? <button onClick={onSubscribe} className="flex-1 py-2 rounded-lg bg-green-500 text-white text-sm hover:bg-green-600 transition-colors">Subscribe to this strategy</button>
-                : hasDelta
-                ? <span className="flex-1 py-2 rounded-lg border border-yellow-400/40 text-yellow-500 text-sm text-center">⏳ Pending Approval</span>
                 : <a href="/api/auth/delta/authorize" className="flex-1 py-2 rounded-lg bg-orange-500 text-white text-sm hover:bg-orange-600 transition-colors text-center">🔗 Connect Delta to Subscribe</a>
             }
           </div>
