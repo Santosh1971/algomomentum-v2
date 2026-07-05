@@ -10,8 +10,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid secret' }, { status: 401 })
   }
 
-  // Email comes from query param only - NOT from message body
-  const targetEmail = req.nextUrl.searchParams.get('email') || 'jha.santosh.kr@gmail.com'
+  // Email(s) come from query param only - NOT from message body.
+  // Supports a single email, or a comma-separated list for multi-user test fires.
+  const emailParam = req.nextUrl.searchParams.get('email') || 'jha.santosh.kr@gmail.com'
+  const targetEmails = emailParam.split(',').map(e => e.trim()).filter(Boolean)
+  const overrideAmount   = req.nextUrl.searchParams.get('amount')   ? parseFloat(req.nextUrl.searchParams.get('amount')!)   : undefined
+  const overrideLeverage = req.nextUrl.searchParams.get('leverage') ? parseInt(req.nextUrl.searchParams.get('leverage')!)   : undefined
 
   const { symbol, side, trade, price } = await req.json()
 
@@ -19,98 +23,118 @@ export async function POST(req: NextRequest) {
   const isExit  = /EXIT/i.test(trade)
   if (!isEntry && !isExit) return NextResponse.json({ error: 'Invalid trade type' }, { status: 400 })
 
-  const config = await prisma.tradeConfig.findFirst({
+  const configs = await prisma.tradeConfig.findMany({
     where: {
       script: symbol?.toUpperCase(),
       isActive: true,
       userActive: true,
-      user: { email: targetEmail },
+      user: { email: { in: targetEmails } },
     },
     include: {
       account: { select: { api_key_enc: true, api_secret_enc: true, is_oauth: true, oauth_access_token: true } },
+      user: { select: { email: true } },
     },
   })
 
-  if (!config) return NextResponse.json({ error: `No active bot for ${symbol} on ${targetEmail}` }, { status: 404 })
+  if (!configs.length) return NextResponse.json({ error: `No active bot for ${symbol} on ${targetEmails.join(', ')}` }, { status: 404 })
 
   const script = await prisma.script.findUnique({ where: { symbol: symbol?.toUpperCase() } })
   if (!script) return NextResponse.json({ error: `Unknown symbol: ${symbol}` }, { status: 400 })
 
-  try {
-    let result
-    if (isEntry) {
-      const marketPrice = await getTicker(script.exchange_symbol)
-      if (!marketPrice) throw new Error(`No price for ${script.exchange_symbol}`)
-      const quantity = Math.max(1, Math.floor((config.amount / INR_TO_USD) / marketPrice / (script.lot || 1)))
-
-      // Pre-trade margin check (identical to strategy webhook)
-      try {
-        const isOAuth = config.account.is_oauth && config.account.oauth_access_token
-        const balData = isOAuth
-          ? await getBalancesOAuth(config.account.oauth_access_token!)
-          : await getBalances(config.account.api_key_enc, config.account.api_secret_enc)
-        const posData = isOAuth
-          ? await getPositionsOAuth(config.account.oauth_access_token!)
-          : await getPositions(config.account.api_key_enc, config.account.api_secret_enc)
-
-        const balances = balData?.result ?? []
-        const wallet = balances.find((b: any) => b.asset_symbol === "USD") ?? balances[0]
-        const totalBalanceUSD = parseFloat(wallet?.balance ?? "0")
-
-        // Get total allocated across ALL active bots on this account
-        const allBots = await prisma.tradeConfig.findMany({
-          where: { accountId: config.accountId, isActive: true, userActive: true },
-          select: { amount: true },
-        })
-        const totalAllocatedUSD = allBots.reduce((sum: number, b: any) => sum + b.amount / INR_TO_USD, 0)
-
-        if (totalAllocatedUSD > totalBalanceUSD) {
-          throw new Error(`Insufficient balance: Total balance $${totalBalanceUSD.toFixed(2)}, Total allocated across all bots $${totalAllocatedUSD.toFixed(2)} for ₹${config.amount} allocation`)
-        }
-      } catch (e: any) {
-        if (e.message?.includes('Insufficient')) throw e
-        console.warn('Margin check failed, proceeding:', e.message)
-      }
-
-      if (config.account.is_oauth && config.account.oauth_access_token) {
-        await setLeverageOAuth(config.account.oauth_access_token, script.productId, config.leverage)
-        result = await placeOrderOAuth(config.account.oauth_access_token, {
-          product_id: script.productId, product_symbol: script.exchange_symbol,
-          size: quantity, side, order_type: 'market_order', time_in_force: 'ioc',
-          client_order_id: `am-test-${config.id.slice(-6)}-${Date.now()}`,
-        })
-      } else {
-        await setLeverage(config.account.api_key_enc, config.account.api_secret_enc, script.productId, config.leverage)
-        result = await placeOrder(config.account.api_key_enc, config.account.api_secret_enc, {
-          product_id: script.productId, product_symbol: script.exchange_symbol,
-          size: quantity, side, order_type: 'market_order', time_in_force: 'ioc',
-          client_order_id: `am-test-${config.id.slice(-6)}-${Date.now()}`,
-        })
-      }
-    } else {
-      if (config.account.is_oauth && config.account.oauth_access_token) {
-        const posData = await getPositionsOAuth(config.account.oauth_access_token)
-        const openPos = (posData?.result ?? []).find((p: any) => p.product_symbol === script.exchange_symbol && Math.abs(p.size) > 0)
-        if (!openPos) return NextResponse.json({ ok: true, message: 'No open position to exit' })
-        result = await placeOrderOAuth(config.account.oauth_access_token, {
-          product_id: script.productId, product_symbol: script.exchange_symbol,
-          size: Math.abs(openPos.size), side, order_type: 'market_order', time_in_force: 'ioc',
-          client_order_id: `am-test-${config.id.slice(-6)}-${Date.now()}`,
-        })
-      } else {
-        const posData = await getPositions(config.account.api_key_enc, config.account.api_secret_enc)
-        const openPos = (posData?.result ?? []).find((p: any) => p.product_symbol === script.exchange_symbol && Math.abs(p.size) > 0)
-        if (!openPos) return NextResponse.json({ ok: true, message: 'No open position to exit' })
-        result = await placeOrder(config.account.api_key_enc, config.account.api_secret_enc, {
-          product_id: script.productId, product_symbol: script.exchange_symbol,
-          size: Math.abs(openPos.size), side, order_type: 'market_order', time_in_force: 'ioc',
-          client_order_id: `am-test-${config.id.slice(-6)}-${Date.now()}`,
-        })
-      }
-    }
-    console.log(`🧪 TEST [${targetEmail}] ${symbol} ${trade} ${side}:`, JSON.stringify(result))
-    return NextResponse.json({ ok: true, test: true, target: targetEmail, symbol, trade, side, result })
-  } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e.message }, { status: 500 })
+  const strategy = await prisma.strategy.findFirst({ where: { symbol: symbol?.toUpperCase(), isActive: true } })
+  if (strategy) {
+    await prisma.strategyTrade.create({
+      data: {
+        strategyId: strategy.id,
+        side, trade,
+        price:      price ? parseFloat(price) : null,
+        symbol:     strategy.symbol,
+        source:     'test',
+        totalFired: configs.length,
+      },
+    })
   }
+
+  const results = await Promise.allSettled(
+    configs.map((config: any) => isEntry
+      ? handleEntry({ config, side, script, overrideAmount, overrideLeverage })
+      : handleExit({ config, side, script }))
+  )
+
+  const success = results.filter(r => r.status === 'fulfilled').length
+  const errors  = results.map((r, i) => r.status === 'rejected' ? { userId: configs[i].userId, email: configs[i].user.email, error: (r as any).reason?.message } : null).filter(Boolean)
+
+  console.log(`🧪 TEST [${targetEmails.join(', ')}] ${symbol} ${trade} ${side}: ${success}/${configs.length}`)
+  return NextResponse.json({ ok: true, test: true, targets: targetEmails, fired: success, total: configs.length, errors })
+}
+
+async function handleEntry({ config, side, script, overrideAmount, overrideLeverage }: any) {
+  const amount   = overrideAmount   ?? config.amount
+  const leverage = overrideLeverage ?? config.leverage
+
+  const marketPrice = await getTicker(script.exchange_symbol)
+  if (!marketPrice) throw new Error(`No price for ${script.exchange_symbol}`)
+  const quantity = Math.max(1, Math.floor((amount / INR_TO_USD) / marketPrice / (script.lot || 1)))
+
+  // Pre-trade margin check (identical to strategy webhook)
+  try {
+    const isOAuth = config.account.is_oauth && config.account.oauth_access_token
+    const balData = isOAuth
+      ? await getBalancesOAuth(config.account.oauth_access_token!)
+      : await getBalances(config.account.api_key_enc, config.account.api_secret_enc)
+
+    const balances = balData?.result ?? []
+    const wallet = balances.find((b: any) => b.asset_symbol === "USD") ?? balances[0]
+    const totalBalanceUSD = parseFloat(wallet?.balance ?? "0")
+
+    const allBots = await prisma.tradeConfig.findMany({
+      where: { accountId: config.accountId, isActive: true, userActive: true },
+      select: { amount: true },
+    })
+    const totalAllocatedUSD = allBots.reduce((sum: number, b: any) => sum + b.amount / INR_TO_USD, 0)
+      - (config.amount / INR_TO_USD) + (amount / INR_TO_USD) // swap real allocation for the test amount
+
+    if (totalAllocatedUSD > totalBalanceUSD) {
+      throw new Error(`Insufficient balance: Total balance $${totalBalanceUSD.toFixed(2)}, Total allocated across all bots $${totalAllocatedUSD.toFixed(2)} for ₹${amount} test allocation`)
+    }
+  } catch (e: any) {
+    if (e.message?.includes('Insufficient')) throw e
+    console.warn('Margin check failed, proceeding:', e.message)
+  }
+
+  if (config.account.is_oauth && config.account.oauth_access_token) {
+    await setLeverageOAuth(config.account.oauth_access_token, script.productId, leverage)
+    return placeOrderOAuth(config.account.oauth_access_token, {
+      product_id: script.productId, product_symbol: script.exchange_symbol,
+      size: quantity, side, order_type: 'market_order', time_in_force: 'ioc',
+      client_order_id: `am-test-${config.id.slice(-6)}-${Date.now()}`,
+    })
+  }
+  await setLeverage(config.account.api_key_enc, config.account.api_secret_enc, script.productId, leverage)
+  return placeOrder(config.account.api_key_enc, config.account.api_secret_enc, {
+    product_id: script.productId, product_symbol: script.exchange_symbol,
+    size: quantity, side, order_type: 'market_order', time_in_force: 'ioc',
+    client_order_id: `am-test-${config.id.slice(-6)}-${Date.now()}`,
+  })
+}
+
+async function handleExit({ config, side, script }: any) {
+  if (config.account.is_oauth && config.account.oauth_access_token) {
+    const posData = await getPositionsOAuth(config.account.oauth_access_token)
+    const openPos = (posData?.result ?? []).find((p: any) => p.product_symbol === script.exchange_symbol && Math.abs(p.size) > 0)
+    if (!openPos) return { message: 'No open position to exit' }
+    return placeOrderOAuth(config.account.oauth_access_token, {
+      product_id: script.productId, product_symbol: script.exchange_symbol,
+      size: Math.abs(openPos.size), side, order_type: 'market_order', time_in_force: 'ioc',
+      client_order_id: `am-test-${config.id.slice(-6)}-${Date.now()}`,
+    })
+  }
+  const posData = await getPositions(config.account.api_key_enc, config.account.api_secret_enc)
+  const openPos = (posData?.result ?? []).find((p: any) => p.product_symbol === script.exchange_symbol && Math.abs(p.size) > 0)
+  if (!openPos) return { message: 'No open position to exit' }
+  return placeOrder(config.account.api_key_enc, config.account.api_secret_enc, {
+    product_id: script.productId, product_symbol: script.exchange_symbol,
+    size: Math.abs(openPos.size), side, order_type: 'market_order', time_in_force: 'ioc',
+    client_order_id: `am-test-${config.id.slice(-6)}-${Date.now()}`,
+  })
 }

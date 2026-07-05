@@ -457,6 +457,23 @@ export default function SimulatorPage() {
                   {selectAll ? `Will fire for all ${subscribers.length} subscriber(s)` : `${selectedUserIds.length} selected`} — tagged as test data, excluded from live stats.
                 </p>
               </div>
+              {(() => {
+                const targetEmails = selectAll
+                  ? subscribers.map(s => s.email)
+                  : subscribers.filter(s => selectedUserIds.includes(s.userId)).map(s => s.email);
+                if (!targetEmails.length) return null;
+                const webhookUrl = `https://app.algomomentum.in/api/v1/webhook/test?secret=algobc2026$&email=${encodeURIComponent(targetEmails.join(','))}&amount=${testAmount}&leverage=${testLeverage}`;
+                return (
+                  <div>
+                    <label className="text-xs text-gray-500 font-semibold block mb-1">Webhook URL — for selected user(s) above</label>
+                    <div className="flex items-center gap-2">
+                      <div className="text-[10px] font-mono border rounded px-2 py-1.5 flex-1 break-all bg-yellow-50 border-yellow-200">{webhookUrl}</div>
+                      <button onClick={(e) => { navigator.clipboard?.writeText(webhookUrl).catch(() => {}); const b = e.currentTarget; const orig = b.textContent; b.textContent = '✓'; setTimeout(() => { b.textContent = orig; }, 1200); }}
+                        className="text-[10px] px-2 py-1.5 rounded bg-gray-100 border hover:bg-gray-200 whitespace-nowrap flex-shrink-0">Copy</button>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             <div className="bg-white rounded-2xl p-4 shadow-sm border space-y-3">
