@@ -317,8 +317,6 @@ export default function TradeConfigPage() {
                           className="text-xs px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium">
                           {account.delta_account_name ? "Reconnect" : "Connect"}
                         </button>
-                        {(session as any)?.user?.role === "admin" && <button onClick={() => { setActiveAccountId(account.id); setActiveBalance(balances[account.id] ?? null); setModal("addSymbol"); }}
-                          className="text-xs px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 font-medium">+ Symbol</button>}
                         {(session as any)?.user?.role === "admin" && <button onClick={() => deleteAccount(account.id)}
                           className="text-xs px-3 py-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 font-medium">Delete</button>}
                       </div>
