@@ -335,6 +335,7 @@ export default function TradeConfigPage() {
                           No symbols yet — <a href="/marketplace" className="ml-1 text-blue-500 hover:underline">go to Marketplace to subscribe a strategy</a>
                         </div>
                       ) : (
+                        <div>
                         <div className="overflow-x-auto">
                           <div className="min-w-[720px]">
                           {/* Table header */}
@@ -430,6 +431,7 @@ export default function TradeConfigPage() {
                               </div>
                             </div>
                           )}
+                        </div>
                       )}
                     </div>
                   )}
