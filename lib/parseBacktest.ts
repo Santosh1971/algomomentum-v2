@@ -31,8 +31,8 @@ export function parseBacktestFile(buffer, filename) {
     rows = parseCSV(text)
   } else if (ext === 'xlsx' || ext === 'xls') {
     const wb = XLSX.read(buffer, { type: 'buffer' })
-    // Use 'Trades' sheet if available, otherwise first sheet
-    const tradesSheet = wb.SheetNames.find((n: string) => n.toLowerCase() === 'trades')
+    // Use a sheet containing "trade" if available (covers "Trades", "List of trades", etc.), otherwise first sheet
+    const tradesSheet = wb.SheetNames.find((n: string) => n.toLowerCase().includes('trade'))
     const ws = wb.Sheets[tradesSheet ?? wb.SheetNames[0]]
     rows = XLSX.utils.sheet_to_json(ws, { defval: '' })
   } else {
@@ -231,6 +231,10 @@ function extractStats(rows, initialCapital = 1000) {
       cumulativePnlUsd: cumPnlCol ? parseFloat(row[cumPnlCol]) || 0 : 0,
       firedAt: excelDateToISO(dateVal),
     })
+  }
+
+  if (rows.length > 0 && backtestTrades.length === 0) {
+    console.warn(`[parseBacktest] Found ${rows.length} row(s) but extracted 0 trades — sheet columns may not match expected format. Headers seen: ${Object.keys(rows[0]).join(', ')}`)
   }
 
   return {
