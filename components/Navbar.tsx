@@ -40,7 +40,7 @@ export default function Navbar() {
     <Link href={homeHref} className="flex items-center gap-2.5 select-none" onClick={() => setDrawerOpen(false)}>
       <Image src="/alm-logo.png?v=3" alt="AlgoMomentum" width={34} height={34} className="object-contain" priority />
       <div className="flex flex-col leading-tight">
-        <span className="text-sm tracking-wide font-extrabold" style={{fontFamily:"var(--font-nunito)"}}><span className="text-green-500">Algo</span><span className="text-white">Momentum</span></span>
+        <span className="text-sm tracking-wide font-extrabold" style={{fontFamily:"var(--font-nunito)"}}><span className="text-green-500">Algo</span><span className="text-foreground">Momentum</span></span>
         <span className="text-cyan-400 text-[10px] font-normal tracking-wider uppercase">V2.0</span>
       </div>
     </Link>
@@ -52,8 +52,8 @@ export default function Navbar() {
         <Link key={l.href} href={l.href} onClick={() => setDrawerOpen(false)}
           className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
             path === l.href
-              ? "bg-white/15 text-white font-medium"
-              : "text-gray-400 hover:text-white hover:bg-white/10"
+              ? "bg-foreground/10 text-foreground font-medium"
+              : "text-muted-foreground hover:text-foreground hover:bg-foreground/5"
           }`}>
           <span className="text-base">{l.icon}</span>
           {l.label}
@@ -63,7 +63,7 @@ export default function Navbar() {
   );
 
   const Footer = (
-    <div className="px-3 py-3 space-y-2 border-t border-white/10">
+    <div className="px-3 py-3 space-y-2 border-t border-border">
       {isAdmin && (
         <Link href={inAdminSection ? "/user/dashboard" : "/admin/dashboard"} onClick={() => setDrawerOpen(false)}
           className="block text-center text-xs bg-yellow-500 text-black px-3 py-2 rounded-full font-semibold hover:bg-yellow-400 transition">
@@ -71,11 +71,11 @@ export default function Navbar() {
         </Link>
       )}
       <div className="flex items-center justify-between px-1">
-        <span className="text-[11px] text-cyan-400 truncate">{session?.user?.email}</span>
+        <span className="text-[11px] text-muted-foreground truncate">{session?.user?.email}</span>
         <ThemeToggle inline />
       </div>
       <button onClick={() => signOut({ callbackUrl: "/Signup" })}
-        className="w-full text-xs bg-white/10 hover:bg-white/20 px-3 py-2 rounded-lg transition">
+        className="w-full text-xs bg-foreground/5 hover:bg-foreground/10 text-foreground px-3 py-2 rounded-lg transition">
         Sign Out
       </button>
     </div>
@@ -84,10 +84,10 @@ export default function Navbar() {
   return (
     <>
       {/* Mobile top bar */}
-      <div className="lg:hidden bg-[#0D1117] text-white px-4 py-2.5 flex items-center justify-between shadow-lg sticky top-0 z-40">
+      <div className="lg:hidden bg-background text-foreground border-b border-border px-4 py-2.5 flex items-center justify-between shadow-lg sticky top-0 z-40">
         {Logo}
         <button onClick={() => setDrawerOpen(true)} aria-label="Open menu"
-          className="p-2 rounded-lg hover:bg-white/10 transition">
+          className="p-2 rounded-lg hover:bg-foreground/10 text-foreground transition">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
           </svg>
@@ -98,10 +98,10 @@ export default function Navbar() {
       {drawerOpen && (
         <div className="lg:hidden fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/60" onClick={() => setDrawerOpen(false)} />
-          <div className="absolute inset-y-0 left-0 w-72 max-w-[80%] bg-[#0D1117] flex flex-col shadow-xl">
+          <div className="absolute inset-y-0 left-0 w-72 max-w-[80%] bg-background border-r border-border flex flex-col shadow-xl">
             <div className="px-4 py-4 flex items-center justify-between">
               {Logo}
-              <button onClick={() => setDrawerOpen(false)} aria-label="Close menu" className="p-1 text-gray-400 hover:text-white">
+              <button onClick={() => setDrawerOpen(false)} aria-label="Close menu" className="p-1 text-muted-foreground hover:text-foreground">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                   <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
@@ -114,7 +114,7 @@ export default function Navbar() {
       )}
 
       {/* Desktop sidebar */}
-      <div className="app-sidebar-desktop hidden lg:flex lg:flex-col fixed inset-y-0 left-0 w-64 bg-[#0D1117] text-white z-30">
+      <div className="app-sidebar-desktop hidden lg:flex lg:flex-col fixed inset-y-0 left-0 w-64 bg-background text-foreground border-r border-border z-30">
         <div className="px-4 py-5">{Logo}</div>
         <div className="flex-1 overflow-y-auto py-2">{NavLinks}</div>
         {Footer}

@@ -109,17 +109,6 @@ export default function AdminDashboard() {
         ) : (
           <div className="bg-white rounded-2xl p-6 shadow-sm border text-center text-sm text-gray-400">Loading platform stats…</div>
         )}
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {cards.map((card) => (
-            <Link key={card.href} href={card.href}
-              className={`${card.color} border rounded-2xl p-5 hover:shadow-md transition-shadow`}>
-              <div className="text-3xl mb-2">{card.icon}</div>
-              <p className="text-2xl font-bold text-gray-800">{card.value}</p>
-              <p className="text-sm text-gray-500 mt-1">{card.title}</p>
-            </Link>
-          ))}
-        </div>
       </div>
     </div>
   );
