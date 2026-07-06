@@ -106,28 +106,38 @@ export default function AdminDashboard() {
               <p className="text-xs text-gray-400 text-right mt-2">Updated {minutesAgo(p.updatedAt)}</p>
             </div>
 
-            {p.equityCurve.length > 1 && (
-              <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border">
-                <p className="font-semibold text-gray-700 mb-3 text-sm sm:text-base">
-                  Equity Curve — {selected === "ALL" ? "All Strategies" : selected}
-                </p>
-                <ResponsiveContainer width="100%" height={220}>
-                  <AreaChart data={p.equityCurve}>
-                    <defs>
-                      <linearGradient id="platformEquityFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4} />
-                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="date" tick={{ fontSize: 10 }} minTickGap={30} />
-                    <YAxis tick={{ fontSize: 10 }} width={50} />
-                    <Tooltip formatter={(v: any) => [`$${Number(v).toFixed(2)}`, "Cumulative PnL"]} />
-                    <Area type="monotone" dataKey="cumPnl" stroke="#3b82f6" strokeWidth={2} fill="url(#platformEquityFill)" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            )}
+            {p.equityCurve.length > 1 && (() => {
+              const values = p.equityCurve.map(d => d.cumPnl);
+              const dataMax = Math.max(...values);
+              const dataMin = Math.min(...values);
+              const gradientOffset = dataMax <= 0 ? 0 : dataMin >= 0 ? 1 : dataMax / (dataMax - dataMin);
+              return (
+                <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border">
+                  <p className="font-semibold text-gray-700 mb-3 text-sm sm:text-base">
+                    Equity Curve — {selected === "ALL" ? "All Strategies" : selected}
+                  </p>
+                  <ResponsiveContainer width="100%" height={220}>
+                    <AreaChart data={p.equityCurve}>
+                      <defs>
+                        <linearGradient id="platformEquityFill" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset={gradientOffset} stopColor="#3b82f6" stopOpacity={0.4} />
+                          <stop offset={gradientOffset} stopColor="#ef4444" stopOpacity={0.4} />
+                        </linearGradient>
+                        <linearGradient id="platformEquityStroke" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset={gradientOffset} stopColor="#3b82f6" />
+                          <stop offset={gradientOffset} stopColor="#ef4444" />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis dataKey="date" tick={{ fontSize: 10 }} minTickGap={30} />
+                      <YAxis tick={{ fontSize: 10 }} width={50} />
+                      <Tooltip formatter={(v: any) => [`$${Number(v).toFixed(2)}`, "Cumulative PnL"]} />
+                      <Area type="monotone" dataKey="cumPnl" stroke="url(#platformEquityStroke)" strokeWidth={2} fill="url(#platformEquityFill)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              );
+            })()}
           </>
         ) : (
           <div className="bg-white rounded-2xl p-6 shadow-sm border text-center text-sm text-gray-400">Loading platform stats…</div>
