@@ -31,8 +31,15 @@ export function parseBacktestFile(buffer, filename) {
     rows = parseCSV(text)
   } else if (ext === 'xlsx' || ext === 'xls') {
     const wb = XLSX.read(buffer, { type: 'buffer' })
-    // Use a sheet containing "trade" if available (covers "Trades", "List of trades", etc.), otherwise first sheet
-    const tradesSheet = wb.SheetNames.find((n: string) => n.toLowerCase().includes('trade'))
+    // Prefer an exact "Trades" sheet; some exports also have a "Trades analysis"
+    // summary sheet which must NOT be picked over the real per-trade list.
+    // Fall back to any sheet containing "trade" (but not "analysis") for exports
+    // that name it differently (e.g. "List of trades"), then any "trade" match,
+    // then finally the first sheet.
+    const tradesSheet =
+      wb.SheetNames.find((n: string) => n.toLowerCase() === 'trades') ??
+      wb.SheetNames.find((n: string) => n.toLowerCase().includes('trade') && !n.toLowerCase().includes('analysis')) ??
+      wb.SheetNames.find((n: string) => n.toLowerCase().includes('trade'))
     const ws = wb.Sheets[tradesSheet ?? wb.SheetNames[0]]
     rows = XLSX.utils.sheet_to_json(ws, { defval: '' })
   } else {
