@@ -51,7 +51,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const paired: any[] = []
     let tradeNum = 0
     let pendingEntry: any = null
-    let aggPnl = 0
+    let aggFactor = 1 // tracks cumulative growth as a multiplier, compounded properly (not a simple % sum)
 
     for (const t of trades) {
       const isEntry = /entry/i.test(t.trade) || /entry/i.test(t.signal ?? '')
@@ -64,7 +64,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         const pnlPct = t.netPnlPct ?? (pendingEntry.side === 'buy'
           ? ((t.price - pendingEntry.price) / pendingEntry.price) * 100
           : ((pendingEntry.price - t.price) / pendingEntry.price) * 100)
-        aggPnl += pnlPct
+        aggFactor *= (1 + pnlPct / 100)
+        const aggPnl = (aggFactor - 1) * 100
 
         paired.push({
           tradeNum,
