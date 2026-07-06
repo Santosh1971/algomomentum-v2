@@ -10,8 +10,8 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { startBillingCron } from "@/lib/billingCron";
 if (typeof window === "undefined") { startBillingCron(); }
 
-import { startPlatformStatsCron } from "@/lib/platformStatsCron";
-if (typeof window === "undefined") { startPlatformStatsCron(); }
+import { startDashboardStatsCron } from "@/lib/dashboardStatsCron";
+if (typeof window === "undefined") { startDashboardStatsCron(); }
 
 const inter = Inter({ subsets: ["latin"] });
 

@@ -9,23 +9,22 @@ export async function GET() {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const stats = await prisma.platformStats.findUnique({ where: { id: "singleton" } });
+  const rows = await prisma.platformStats.findMany();
+  if (!rows.length) return NextResponse.json({ pending: true });
 
-  if (!stats) {
-    return NextResponse.json({ pending: true });
+  const bySymbol: Record<string, any> = {};
+  for (const r of rows) {
+    bySymbol[r.symbol] = {
+      activeBots: r.activeBots, inactiveBots: r.inactiveBots,
+      activeBotsAllocInr: r.activeBotsAllocInr, inactiveBotsAllocInr: r.inactiveBotsAllocInr,
+      totalRealizedPnl: r.totalRealizedPnl, totalNetPnl: r.totalNetPnl,
+      monthlyRealizedPnl: r.monthlyRealizedPnl, monthlyNetPnl: r.monthlyNetPnl,
+      totalDeltaCharge: r.totalDeltaCharge, monthlyDeltaCharge: r.monthlyDeltaCharge,
+      equityCurve: r.equityCurve ?? [],
+      updatedAt: r.updatedAt,
+    };
   }
+  const symbols = rows.map(r => r.symbol).filter(s => s !== "ALL").sort();
 
-  return NextResponse.json({
-    activeBots: stats.activeBots,
-    inactiveBots: stats.inactiveBots,
-    activeBotsAllocInr: stats.activeBotsAllocInr,
-    inactiveBotsAllocInr: stats.inactiveBotsAllocInr,
-    totalRealizedPnl: stats.totalRealizedPnl,
-    totalNetPnl: stats.totalNetPnl,
-    monthlyRealizedPnl: stats.monthlyRealizedPnl,
-    monthlyNetPnl: stats.monthlyNetPnl,
-    totalDeltaCharge: stats.totalDeltaCharge,
-    monthlyDeltaCharge: stats.monthlyDeltaCharge,
-    updatedAt: stats.updatedAt,
-  });
+  return NextResponse.json({ symbols, bySymbol });
 }

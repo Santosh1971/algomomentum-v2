@@ -173,7 +173,8 @@ model PlatformSettings {
 }
 
 model PlatformStats {
-  id                  String   @id @default("singleton")
+  id                  String   @id @default(cuid())
+  symbol              String   @unique @default("ALL") // strategy symbol, or "ALL" for platform-wide aggregate
   activeBots          Int      @default(0)
   inactiveBots        Int      @default(0)
   activeBotsAllocInr  Float    @default(0)
@@ -184,7 +185,26 @@ model PlatformStats {
   monthlyNetPnl       Float    @default(0)
   totalDeltaCharge    Float    @default(0)
   monthlyDeltaCharge  Float    @default(0)
+  equityCurve         Json?
   updatedAt           DateTime @updatedAt
+}
+
+model UserDashboardStats {
+  id              String   @id @default(cuid())
+  userId          String
+  symbol          String   // strategy symbol, or "ALL" for this user's combined aggregate
+  totalRealizedPnl Float   @default(0)
+  totalNetPnl     Float    @default(0)
+  monthlyRealizedPnl Float @default(0)
+  monthlyNetPnl   Float    @default(0)
+  totalTrades     Int      @default(0)
+  winRate         Float    @default(0)
+  avgProfitLoss   Float    @default(0)
+  avgTradeSize    Float    @default(0)
+  equityCurve     Json?
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, symbol])
 }
 
 model Strategy {
