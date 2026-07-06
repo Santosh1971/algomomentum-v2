@@ -10,6 +10,9 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { startBillingCron } from "@/lib/billingCron";
 if (typeof window === "undefined") { startBillingCron(); }
 
+import { startPlatformStatsCron } from "@/lib/platformStatsCron";
+if (typeof window === "undefined") { startPlatformStatsCron(); }
+
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {

@@ -172,6 +172,21 @@ model PlatformSettings {
   updatedAt          DateTime @updatedAt
 }
 
+model PlatformStats {
+  id                  String   @id @default("singleton")
+  activeBots          Int      @default(0)
+  inactiveBots        Int      @default(0)
+  activeBotsAllocInr  Float    @default(0)
+  inactiveBotsAllocInr Float   @default(0)
+  totalRealizedPnl    Float    @default(0)
+  totalNetPnl         Float    @default(0)
+  monthlyRealizedPnl  Float    @default(0)
+  monthlyNetPnl       Float    @default(0)
+  totalDeltaCharge    Float    @default(0)
+  monthlyDeltaCharge  Float    @default(0)
+  updatedAt           DateTime @updatedAt
+}
+
 model Strategy {
   id              String        @id @default(cuid())
   name            String
