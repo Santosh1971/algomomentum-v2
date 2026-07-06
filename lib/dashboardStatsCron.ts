@@ -131,7 +131,7 @@ export async function refreshDashboardStats() {
   // --- Upsert UserDashboardStats: one row per (user, symbol) + one (user, ALL) row ---
   for (const [key, trades] of userTradesByUserSymbol) {
     const [userId, symbol] = key.split("::");
-    const s = summarize(trades, monthStart);
+    const { totalDeltaCharge, monthlyDeltaCharge, ...s } = summarize(trades, monthStart);
     await prisma.userDashboardStats.upsert({
       where: { userId_symbol: { userId, symbol } },
       create: { userId, symbol, ...s },
@@ -139,7 +139,7 @@ export async function refreshDashboardStats() {
     });
   }
   for (const [userId, trades] of userTradesByUserAll) {
-    const s = summarize(trades, monthStart);
+    const { totalDeltaCharge, monthlyDeltaCharge, ...s } = summarize(trades, monthStart);
     await prisma.userDashboardStats.upsert({
       where: { userId_symbol: { userId, symbol: ALL } },
       create: { userId, symbol: ALL, ...s },
