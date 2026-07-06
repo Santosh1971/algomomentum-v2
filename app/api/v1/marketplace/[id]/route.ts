@@ -119,12 +119,18 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const grossLoss = Math.abs(liveLosses.reduce((s, t) => s + t.pnlPct, 0))
   const liveProfitFactor = grossLoss > 0 ? Math.round((grossProfit / grossLoss) * 100) / 100 : null
 
+  // Backtest-only trades, paired independently (for the Backtest tab's trades table)
+  const backtestTrades = allTrades.filter(t => t.source === 'backtest')
+  const backtestPaired = pairTrades(backtestTrades)
+
   return NextResponse.json({
     strategy,
     isSubscribed,
     userHasAccount,
     allPaired,
     periodPaired,
+    backtestPaired,
+    liveTrades: periodLivePaired,
     liveEquity,
     stats: {
       total:      periodLivePaired.length,

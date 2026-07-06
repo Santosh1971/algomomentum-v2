@@ -145,6 +145,12 @@ export default function StrategyDetailPage() {
                 )}
               </div>
             </div>
+            <div className="border border-border/40 rounded-xl overflow-hidden">
+              <div className="p-4 border-b border-border/40">
+                <div className="text-sm font-medium">Backtested Trades</div>
+              </div>
+              <TradesTable trades={data.backtestPaired} emptyText="No backtest trades recorded for this strategy." />
+            </div>
           </div>
         )}
 
@@ -179,45 +185,9 @@ export default function StrategyDetailPage() {
             )}
             <div className="border border-border/40 rounded-xl overflow-hidden">
               <div className="p-4 border-b border-border/40">
-                <div className="text-sm font-medium">Historical Trades (Backtest + Live)</div>
+                <div className="text-sm font-medium">Live Trades</div>
               </div>
-              {data.periodPaired?.length > 0 ? (
-                <table className="w-full text-xs">
-                  <thead className="bg-muted/30">
-                    <tr>
-                      <th className="text-left px-3 py-2 text-muted-foreground font-medium">Trade#</th>
-                      <th className="text-left px-3 py-2 text-muted-foreground font-medium">Symbol</th>
-                      <th className="text-left px-3 py-2 text-muted-foreground font-medium">Signal</th>
-                      <th className="text-left px-3 py-2 text-muted-foreground font-medium">Entry Date</th>
-                      <th className="text-left px-3 py-2 text-muted-foreground font-medium">Entry Price</th>
-                      <th className="text-left px-3 py-2 text-muted-foreground font-medium">Exit Date</th>
-                      <th className="text-left px-3 py-2 text-muted-foreground font-medium">Exit Price</th>
-                      <th className="text-right px-3 py-2 text-muted-foreground font-medium">PnL (ROI%)</th>
-                      <th className="text-right px-3 py-2 text-muted-foreground font-medium">Agg. PnL%</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.periodPaired.map((t: any) => (
-                      <tr key={t.tradeNum} className="border-t border-border/20 hover:bg-muted/20">
-                        <td className="px-3 py-2">{t.tradeNum}</td>
-                        <td className="px-3 py-2 font-medium">{t.symbol}</td>
-                        <td className={`px-3 py-2 font-medium ${t.entrySide === 'buy' ? 'text-green-500' : 'text-red-400'}`}>{t.entrySide?.toUpperCase()}</td>
-                        <td className="px-3 py-2 text-muted-foreground">{new Date(t.entryDate).toLocaleDateString('en-IN')}</td>
-                        <td className="px-3 py-2">${t.entryPrice?.toFixed(4)}</td>
-                        <td className="px-3 py-2 text-muted-foreground">{new Date(t.exitDate).toLocaleDateString('en-IN')}</td>
-                        <td className="px-3 py-2">${t.exitPrice?.toFixed(4)}</td>
-                        <td className={`px-3 py-2 text-right font-medium ${t.pnlPct >= 0 ? 'text-green-500' : 'text-red-400'}`}>{t.pnlPct >= 0 ? '+' : ''}{t.pnlPct.toFixed(2)}%</td>
-                        <td className={`px-3 py-2 text-right font-medium ${t.aggPnlPct >= 0 ? 'text-green-500' : 'text-red-400'}`}>{t.aggPnlPct >= 0 ? '+' : ''}{t.aggPnlPct.toFixed(2)}%</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              ) : (
-                <div className="p-8 text-center text-muted-foreground text-sm">
-                  No trades in this period yet.<br/>
-                  <span className="text-xs">Trades will appear here once TradingView signals start firing.</span>
-                </div>
-              )}
+              <TradesTable trades={data.liveTrades} emptyText="No trades in this period yet." emptyHint="Trades will appear here once TradingView signals start firing." />
             </div>
           </div>
         )}
@@ -253,6 +223,51 @@ function Row({ label, value, color }: { label: string; value: any; color?: strin
     <div className="flex justify-between text-sm border-b border-border/20 pb-1.5">
       <span className="text-muted-foreground">{label}</span>
       <span className={`font-medium ${cls}`}>{value}</span>
+    </div>
+  )
+}
+
+function TradesTable({ trades, emptyText, emptyHint }: { trades: any[]; emptyText: string; emptyHint?: string }) {
+  if (!trades || trades.length === 0) {
+    return (
+      <div className="p-8 text-center text-muted-foreground text-sm">
+        {emptyText}
+        {emptyHint && <><br /><span className="text-xs">{emptyHint}</span></>}
+      </div>
+    )
+  }
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-xs min-w-[720px]">
+        <thead className="bg-muted/30">
+          <tr>
+            <th className="text-left px-3 py-2 text-muted-foreground font-medium">Trade#</th>
+            <th className="text-left px-3 py-2 text-muted-foreground font-medium">Symbol</th>
+            <th className="text-left px-3 py-2 text-muted-foreground font-medium">Signal</th>
+            <th className="text-left px-3 py-2 text-muted-foreground font-medium">Entry Date</th>
+            <th className="text-left px-3 py-2 text-muted-foreground font-medium">Entry Price</th>
+            <th className="text-left px-3 py-2 text-muted-foreground font-medium">Exit Date</th>
+            <th className="text-left px-3 py-2 text-muted-foreground font-medium">Exit Price</th>
+            <th className="text-right px-3 py-2 text-muted-foreground font-medium">PnL (ROI%)</th>
+            <th className="text-right px-3 py-2 text-muted-foreground font-medium">Agg. PnL%</th>
+          </tr>
+        </thead>
+        <tbody>
+          {trades.map((t: any) => (
+            <tr key={t.tradeNum} className="border-t border-border/20 hover:bg-muted/20">
+              <td className="px-3 py-2">{t.tradeNum}</td>
+              <td className="px-3 py-2 font-medium">{t.symbol}</td>
+              <td className={`px-3 py-2 font-medium ${t.entrySide === 'buy' ? 'text-green-500' : 'text-red-400'}`}>{t.entrySide?.toUpperCase()}</td>
+              <td className="px-3 py-2 text-muted-foreground">{new Date(t.entryDate).toLocaleDateString('en-IN')}</td>
+              <td className="px-3 py-2">${t.entryPrice?.toFixed(4)}</td>
+              <td className="px-3 py-2 text-muted-foreground">{new Date(t.exitDate).toLocaleDateString('en-IN')}</td>
+              <td className="px-3 py-2">${t.exitPrice?.toFixed(4)}</td>
+              <td className={`px-3 py-2 text-right font-medium ${t.pnlPct >= 0 ? 'text-green-500' : 'text-red-400'}`}>{t.pnlPct >= 0 ? '+' : ''}{t.pnlPct.toFixed(2)}%</td>
+              <td className={`px-3 py-2 text-right font-medium ${t.aggPnlPct >= 0 ? 'text-green-500' : 'text-red-400'}`}>{t.aggPnlPct >= 0 ? '+' : ''}{t.aggPnlPct.toFixed(2)}%</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   )
 }
