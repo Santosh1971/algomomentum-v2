@@ -216,11 +216,11 @@ function extractStats(rows, initialCapital = 1000) {
     const tradeNum = parseInt(row[colMap.date ? Object.keys(rows[0]).find(h => h.toLowerCase().replace(/[\s_()%]/g,'') === 'tradenumber') ?? '' : ''] || '0')
     const typeVal = Object.keys(rows[0]).find(h => h.toLowerCase() === 'type') ?? ''
     const signalCol = Object.keys(rows[0]).find(h => h.toLowerCase().replace(/[\s_()%]/g,'') === 'signal') ?? ''
-    const priceCol = Object.keys(rows[0]).find(h => h.toLowerCase().replace(/[\s_()%]/g,'') === 'priceusd') ?? ''
+    const priceCol = Object.keys(rows[0]).find(h => !h.includes('%') && h.toLowerCase().replace(/[\s_()%]/g,'').startsWith('price')) ?? ''
     const sizeCol = Object.keys(rows[0]).find(h => h.toLowerCase().replace(/[\s_()%]/g,'') === 'sizeqty') ?? ''
-    const netPnlCol = Object.keys(rows[0]).find(h => h.toLowerCase().replace(/[\s_()%]/g,'') === 'netpnlusd') ?? ''
+    const netPnlCol = Object.keys(rows[0]).find(h => !h.includes('%') && h.toLowerCase().replace(/[\s_()%]/g,'').startsWith('netpnl')) ?? ''
     const netPnlPctCol = Object.keys(rows[0]).find(h => h.toLowerCase().replace(/[\s_()']/g,'').replace('%','pct') === 'netpnlpct') ?? ''
-    const cumPnlCol = Object.keys(rows[0]).find(h => h.toLowerCase().replace(/[\s_()%]/g,'') === 'cumulativepnlusd') ?? ''
+    const cumPnlCol = Object.keys(rows[0]).find(h => !h.includes('%') && h.toLowerCase().replace(/[\s_()%]/g,'').startsWith('cumulativepnl')) ?? ''
     const dateVal = row[colMap.date] || row[colMap.closeTime] || ''
     if (!dateVal || !typeVal || !row[typeVal]) continue
     const typeStr = String(row[typeVal]).toLowerCase()
@@ -258,7 +258,13 @@ function extractStats(rows, initialCapital = 1000) {
 // Fuzzy column matching for TradingView's various export formats
 function findColumns(headers) {
   const lower = h => h.toLowerCase().replace(/[\s_()%]/g, '')
-  const find = (...keys) => headers.find(h => keys.includes(lower(h))) || ''
+  const find = (...keys) => {
+    const exact = headers.find(h => keys.includes(lower(h)))
+    if (exact) return exact
+    // Fallback: prefix match on non-percentage columns, so "Price USDT"/"Net PnL USDT"/etc.
+    // are found even when only a "...usd" (no T) alternative was hardcoded above.
+    return headers.find(h => !h.includes('%') && keys.some(k => lower(h).startsWith(k))) || ''
+  }
 
   return {
     date:         find('dateandtime', 'date', 'datetime', 'time', 'tradedate', 'closetime'),
