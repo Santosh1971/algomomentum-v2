@@ -72,7 +72,7 @@ export default function StrategyDetailPage() {
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold">{s.name}</h1>
-            <div className="text-sm text-muted-foreground mt-1">{s.symbol} · {s.timeframe} · {s._count.subscribers} subscribers{s.minCapital ? ` · Min ₹${s.minCapital.toLocaleString('en-IN')}` : ''}</div>
+            <div className="text-sm text-muted-foreground mt-1">{s.symbol} · {s.timeframe}{s.showSubscriberCount !== false ? ` · ${s._count.subscribers} subscribers` : ''}{s.minCapital ? ` · Min ₹${s.minCapital.toLocaleString('en-IN')}` : ''}</div>
             {s.description && <p className="text-sm text-muted-foreground mt-2">{s.description}</p>}
           </div>
           <div className="flex flex-col items-end gap-2 shrink-0">
@@ -138,7 +138,7 @@ export default function StrategyDetailPage() {
                 <div className="text-sm font-medium mb-2">Key Metrics</div>
                 <Row label="Symbol" value={s.symbol} />
                 <Row label="Timeframe" value={s.timeframe} />
-                <Row label="Subscribers" value={s._count.subscribers} />
+                {s.showSubscriberCount !== false && <Row label="Subscribers" value={s._count.subscribers} />}
                 <Row label="Launch Date" value={new Date(s.createdAt).toLocaleDateString('en-IN')} />
                 {(s as any).properties?.['Trading range'] && (
                   <Row label="Backtest Range" value={(s as any).properties['Trading range']} />

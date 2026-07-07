@@ -117,6 +117,7 @@ export default function AdminStrategiesPage() {
               <div className="flex gap-3 flex-wrap">
                 <Toggle label="Featured" value={s.isFeatured} onChange={() => handleToggle(s, 'isFeatured')} />
                 <Toggle label="Active"   value={s.isActive}   onChange={() => handleToggle(s, 'isActive')} />
+                <Toggle label="Show Subscribers" value={s.showSubscriberCount ?? true} onChange={() => handleToggle(s, 'showSubscriberCount')} />
               </div>
               <div className="flex gap-2 flex-wrap">
                 <button onClick={() => { setEditing(s); setShowForm(true) }} className="text-xs px-3 py-1.5 rounded border border-border/40 hover:bg-muted/30">Edit</button>

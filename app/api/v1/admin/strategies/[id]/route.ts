@@ -22,7 +22,7 @@ export async function PATCH(req, { params }: { params: Promise<{ id: string }> }
   const data = {}
   for (const [key, val] of formData.entries()) {
     if (key === 'backtestFile') continue
-    if (key === 'isFeatured' || key === 'isActive') { data[key] = val === 'true'; continue }
+    if (key === 'isFeatured' || key === 'isActive' || key === 'showSubscriberCount') { data[key] = val === 'true'; continue }
     if (key === 'minCapital') { data[key] = parseFloat(val); continue }
     if (key === 'defaultLeverage') { data[key] = parseInt(val); continue }
     if (val !== '') data[key] = val

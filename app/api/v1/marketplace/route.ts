@@ -23,6 +23,7 @@ export async function GET() {
       profitFactor: true,
       totalTrades: true,
       createdAt: true,
+      showSubscriberCount: true,
       _count: { select: { subscribers: true } },
     },
   })

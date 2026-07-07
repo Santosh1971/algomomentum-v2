@@ -238,7 +238,7 @@ function StrategyCard({ strategy: s, isSubscribed, onDetail, onSubscribe, onUnsu
         className="px-4 py-2.5 border-t border-border/30 flex items-center justify-between"
         onClick={e => e.stopPropagation()}
       >
-        <span className="text-xs text-muted-foreground">{s._count.subscribers} subscribers</span>
+        {s.showSubscriberCount !== false && <span className="text-xs text-muted-foreground">{s._count.subscribers} subscribers</span>}
           {s.minCapital && <span className="text-xs text-muted-foreground">Min: ₹{s.minCapital.toLocaleString('en-IN')}</span>}
         {isSubscribed
           ? <button onClick={onUnsubscribe} className="text-xs px-3 py-1 rounded-md border border-border/40 text-green-500 hover:bg-muted/40 transition-colors">Subscribed ✓</button>
