@@ -4,6 +4,16 @@ import { prisma } from '@/lib/prisma'
 
 const INR_TO_USD = 85
 
+function computeQuantity(orderSizeType: string, amount: number, marketPrice: number, lot: number, equityUSD = 0) {
+  if (orderSizeType === 'lot') {
+    return Math.max(1, Math.floor(amount))
+  }
+  if (orderSizeType === 'equity_pct') {
+    return Math.max(1, Math.floor((equityUSD * amount / 100) / marketPrice / (lot || 1)))
+  }
+  return Math.max(1, Math.floor((amount / INR_TO_USD) / marketPrice / (lot || 1)))
+}
+
 export async function POST(req: NextRequest) {
   const secret = req.nextUrl.searchParams.get('secret')
   if (secret !== process.env.BROADCAST_SECRET) {
@@ -42,6 +52,7 @@ export async function POST(req: NextRequest) {
   if (!script) return NextResponse.json({ error: `Unknown symbol: ${symbol}` }, { status: 400 })
 
   const strategy = await prisma.strategy.findFirst({ where: { symbol: symbol?.toUpperCase(), isActive: true } })
+  const orderSizeType = strategy?.orderSizeType || 'currency'
   if (strategy) {
     await prisma.strategyTrade.create({
       data: {
@@ -57,7 +68,7 @@ export async function POST(req: NextRequest) {
 
   const results = await Promise.allSettled(
     configs.map((config: any) => isEntry
-      ? handleEntry({ config, side, script, overrideAmount, overrideLeverage })
+      ? handleEntry({ config, side, script, overrideAmount, overrideLeverage, orderSizeType })
       : handleExit({ config, side, script }))
   )
 
@@ -68,38 +79,40 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true, test: true, targets: targetEmails, fired: success, total: configs.length, errors })
 }
 
-async function handleEntry({ config, side, script, overrideAmount, overrideLeverage }: any) {
+async function handleEntry({ config, side, script, overrideAmount, overrideLeverage, orderSizeType }: any) {
   const amount   = overrideAmount   ?? config.amount
   const leverage = overrideLeverage ?? config.leverage
 
   const marketPrice = await getTicker(script.exchange_symbol)
   if (!marketPrice) throw new Error(`No price for ${script.exchange_symbol}`)
-  const quantity = Math.max(1, Math.floor((amount / INR_TO_USD) / marketPrice / (script.lot || 1)))
 
-  // Pre-trade margin check (identical to strategy webhook)
-  try {
-    const isOAuth = config.account.is_oauth && config.account.oauth_access_token
-    const balData = isOAuth
-      ? await getBalancesOAuth(config.account.oauth_access_token!)
-      : await getBalances(config.account.api_key_enc, config.account.api_secret_enc)
+  const isOAuth = config.account.is_oauth && config.account.oauth_access_token
+  const balData = isOAuth
+    ? await getBalancesOAuth(config.account.oauth_access_token!)
+    : await getBalances(config.account.api_key_enc, config.account.api_secret_enc)
+  const balances = balData?.result ?? []
+  const wallet = balances.find((b: any) => b.asset_symbol === "USD") ?? balances[0]
+  const totalBalanceUSD = parseFloat(wallet?.balance ?? "0")
 
-    const balances = balData?.result ?? []
-    const wallet = balances.find((b: any) => b.asset_symbol === "USD") ?? balances[0]
-    const totalBalanceUSD = parseFloat(wallet?.balance ?? "0")
+  const quantity = computeQuantity(orderSizeType, amount, marketPrice, script.lot, totalBalanceUSD)
 
-    const allBots = await prisma.tradeConfig.findMany({
-      where: { accountId: config.accountId, isActive: true, userActive: true },
-      select: { amount: true },
-    })
-    const totalAllocatedUSD = allBots.reduce((sum: number, b: any) => sum + b.amount / INR_TO_USD, 0)
-      - (config.amount / INR_TO_USD) + (amount / INR_TO_USD) // swap real allocation for the test amount
+  // Pre-trade margin check — only meaningful for 'currency' mode (see production webhook route)
+  if (orderSizeType === 'currency') {
+    try {
+      const allBots = await prisma.tradeConfig.findMany({
+        where: { accountId: config.accountId, isActive: true, userActive: true },
+        select: { amount: true },
+      })
+      const totalAllocatedUSD = allBots.reduce((sum: number, b: any) => sum + b.amount / INR_TO_USD, 0)
+        - (config.amount / INR_TO_USD) + (amount / INR_TO_USD) // swap real allocation for the test amount
 
-    if (totalAllocatedUSD > totalBalanceUSD) {
-      throw new Error(`Insufficient balance: Total balance $${totalBalanceUSD.toFixed(2)}, Total allocated across all bots $${totalAllocatedUSD.toFixed(2)} for ₹${amount} test allocation`)
+      if (totalAllocatedUSD > totalBalanceUSD) {
+        throw new Error(`Insufficient balance: Total balance $${totalBalanceUSD.toFixed(2)}, Total allocated across all bots $${totalAllocatedUSD.toFixed(2)} for ₹${amount} test allocation`)
+      }
+    } catch (e: any) {
+      if (e.message?.includes('Insufficient')) throw e
+      console.warn('Margin check failed, proceeding:', e.message)
     }
-  } catch (e: any) {
-    if (e.message?.includes('Insufficient')) throw e
-    console.warn('Margin check failed, proceeding:', e.message)
   }
 
   if (config.account.is_oauth && config.account.oauth_access_token) {

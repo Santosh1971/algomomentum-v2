@@ -231,6 +231,7 @@ model Strategy {
   defaultLeverage Int      @default(1)
   showSubscriberCount Boolean @default(true)
   minLiveLot      Float?
+  orderSizeType   String   @default("currency") // 'lot' | 'currency' | 'equity_pct'
   subscribers     TradeConfig[]
 }
 

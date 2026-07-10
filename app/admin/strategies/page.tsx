@@ -183,6 +183,7 @@ function StrategyFormModal({ initial, onClose, onSaved }) {
   const [defaultLeverage, setDefaultLeverage] = useState(initial?.defaultLeverage ?? 1)
   const [minCapital,  setMinCapital]  = useState(initial?.minCapital || 1000)
   const [minLiveLot,  setMinLiveLot]  = useState(initial?.minLiveLot ?? '')
+  const [orderSizeType, setOrderSizeType] = useState(initial?.orderSizeType || 'currency')
   const [loading,     setLoading]     = useState(false)
   const [error,       setError]       = useState(null)
   const fileRef = useRef()
@@ -200,6 +201,7 @@ function StrategyFormModal({ initial, onClose, onSaved }) {
       fd.append('defaultLeverage', String(defaultLeverage))
       fd.append('minCapital', String(minCapital))
       fd.append('minLiveLot', String(minLiveLot))
+      fd.append('orderSizeType', orderSizeType)
       const file = fileRef.current?.files?.[0]
       if (file) fd.append('backtestFile', file)
 
@@ -221,12 +223,17 @@ function StrategyFormModal({ initial, onClose, onSaved }) {
       <div className="bg-background border border-border/50 rounded-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
         <div className="text-base font-medium mb-4">{initial ? 'Edit strategy' : 'New strategy'}</div>
         <div className="space-y-3">
-          <Field label="Name">
-            <input value={name} onChange={e => setName(e.target.value)} className="form-input" placeholder="XRP Directional" />
-          </Field>
-          <Field label="Symbol">
-            <input value={symbol} onChange={e => setSymbol(e.target.value)} className="form-input" placeholder="XRPUSDT" />
-          </Field>
+          <div className="grid grid-cols-3 gap-2">
+            <Field label="Name">
+              <input value={name} onChange={e => setName(e.target.value)} className="form-input" placeholder="XRP Directional" />
+            </Field>
+            <Field label="Symbol">
+              <input value={symbol} onChange={e => setSymbol(e.target.value)} className="form-input" placeholder="XRPUSDT" />
+            </Field>
+            <Field label="Min Amount (₹)">
+              <input type="number" value={minCapital} onChange={e => setMinCapital(Number(e.target.value))} className="form-input" placeholder="1000" min="100" />
+            </Field>
+          </div>
           <Field label="Timeframe">
             <select value={timeframe} onChange={e => setTimeframe(e.target.value)} className="form-input">
               {['1m','5m','15m','30m','1h','2h','4h','8h','1D'].map(t => <option key={t}>{t}</option>)}
@@ -235,16 +242,22 @@ function StrategyFormModal({ initial, onClose, onSaved }) {
           <Field label="Description">
             <textarea value={description} onChange={e => setDescription(e.target.value)} className="form-input" rows={2} />
           </Field>
-          <Field label="Min Capital (₹)">
-            <input type="number" value={minCapital} onChange={e => setMinCapital(Number(e.target.value))} className="form-input" placeholder="1000" min="100" />
-          </Field>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Leverage">
+              <select value={defaultLeverage} onChange={e => setDefaultLeverage(Number(e.target.value))} className="form-input">
+                {[1,2,3,5,10,25,50,100,200].map(l => <option key={l} value={l}>{l}x</option>)}
+              </select>
+            </Field>
+            <Field label="Order Size Type">
+              <select value={orderSizeType} onChange={e => setOrderSizeType(e.target.value)} className="form-input">
+                <option value="currency">₹ (Currency)</option>
+                <option value="lot">Lot / Quantity</option>
+                <option value="equity_pct">% of Equity</option>
+              </select>
+            </Field>
+          </div>
           <Field label="Hide test trades below (lot) — blank = show all">
             <input type="number" value={minLiveLot} onChange={e => setMinLiveLot(e.target.value)} className="form-input" placeholder="e.g. 2" min="0" step="any" />
-          </Field>
-          <Field label="Default Leverage">
-            <select value={defaultLeverage} onChange={e => setDefaultLeverage(Number(e.target.value))} className="form-input">
-              {[1,2,3,5,10,25,50,100,200].map(l => <option key={l} value={l}>{l}x</option>)}
-            </select>
           </Field>
           <Field label="Backtest CSV / XLSX">
             {initial?.backtestFileName && (

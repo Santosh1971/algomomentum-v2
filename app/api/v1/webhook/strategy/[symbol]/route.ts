@@ -5,6 +5,19 @@ import { prisma } from '@/lib/prisma'
 
 const INR_TO_USD = 85
 
+// Shared sizing logic — must match exactly between the reference-quantity capture
+// below and the real order placement in handleEntry, so the two never drift apart.
+function computeQuantity(orderSizeType: string, amount: number, marketPrice: number, lot: number, equityUSD = 0) {
+  if (orderSizeType === 'lot') {
+    return Math.max(1, Math.floor(amount))
+  }
+  if (orderSizeType === 'equity_pct') {
+    return Math.max(1, Math.floor((equityUSD * amount / 100) / marketPrice / (lot || 1)))
+  }
+  // 'currency' (default) — amount is a ₹ figure
+  return Math.max(1, Math.floor((amount / INR_TO_USD) / marketPrice / (lot || 1)))
+}
+
 export async function POST(req: NextRequest, context: { params: Promise<{ symbol: string }> }) {
   const { symbol } = await context.params
   const secret = req.nextUrl.searchParams.get('secret')
@@ -37,6 +50,8 @@ export async function POST(req: NextRequest, context: { params: Promise<{ symbol
   const script = cache.getScript(strategy.symbol)
   if (!script) return NextResponse.json({ error: `Unknown symbol: ${strategy.symbol}` }, { status: 400 })
 
+  const orderSizeType = strategy.orderSizeType || 'currency'
+
   // Best-effort: record the admin's own reference quantity on this fire, purely for
   // the "hide test trades below X lot" filter on the marketplace — never blocks trading.
   let refQuantity: number | null = null
@@ -46,7 +61,17 @@ export async function POST(req: NextRequest, context: { params: Promise<{ symbol
       if (adminSub) {
         const marketPrice = await getTicker(script.exchange_symbol)
         if (marketPrice) {
-          refQuantity = Math.max(1, Math.floor((adminSub.amount / INR_TO_USD) / marketPrice / (script.lot || 1)))
+          let equityUSD = 0
+          if (orderSizeType === 'equity_pct') {
+            const isOAuth = adminSub.account.is_oauth && adminSub.account.oauth_access_token
+            const balData = isOAuth
+              ? await getBalancesOAuth(adminSub.account.oauth_access_token)
+              : await getBalances(adminSub.account.api_key_enc, adminSub.account.api_secret_enc)
+            const balList = balData?.result ?? []
+            const walletEntry = balList.find((b: any) => b.asset_symbol === "USD") ?? balList[0]
+            equityUSD = parseFloat(walletEntry?.balance ?? "0")
+          }
+          refQuantity = computeQuantity(orderSizeType, adminSub.amount, marketPrice, script.lot, equityUSD)
         }
       }
     } catch (e) {
@@ -67,7 +92,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ symbol
   })
 
   const results = await Promise.allSettled(
-    strategy.subscribers.map((tc: any) => isEntry ? handleEntry({ tc, side, script }) : handleExit({ tc, side, script }))
+    strategy.subscribers.map((tc: any) => isEntry ? handleEntry({ tc, side, script, orderSizeType }) : handleExit({ tc, side, script }))
   )
 
   const success = results.filter(r => r.status === 'fulfilled').length
@@ -77,34 +102,42 @@ export async function POST(req: NextRequest, context: { params: Promise<{ symbol
   return NextResponse.json({ ok: true, fired: success, total: results.length, errors })
 }
 
-async function handleEntry({ tc, side, script }: any) {
+async function handleEntry({ tc, side, script, orderSizeType }: any) {
   const marketPrice = await getTicker(script.exchange_symbol)
   if (!marketPrice) throw new Error(`No price for ${script.exchange_symbol}`)
-  const quantity = Math.max(1, Math.floor((tc.amount / INR_TO_USD) / marketPrice / (script.lot || 1)))
 
-  // Pre-trade check: total allocated across all bots <= total account balance
-  try {
-    const isOAuth = tc.account.is_oauth && tc.account.oauth_access_token
-    const balData = isOAuth
-      ? await getBalancesOAuth(tc.account.oauth_access_token)
-      : await getBalances(tc.account.api_key_enc, tc.account.api_secret_enc)
+  // Balance is needed both for '% of equity' sizing and the pre-trade allocation
+  // check below, so fetch it once up front regardless of mode.
+  const isOAuth = tc.account.is_oauth && tc.account.oauth_access_token
+  const balData = isOAuth
+    ? await getBalancesOAuth(tc.account.oauth_access_token)
+    : await getBalances(tc.account.api_key_enc, tc.account.api_secret_enc)
+  const balList = balData?.result ?? []
+  const walletEntry = balList.find((b: any) => b.asset_symbol === "USD") ?? balList[0]
+  const totalBalanceUSD = parseFloat(walletEntry?.balance ?? "0")
 
-    const balList = balData?.result ?? []
-    const walletEntry = balList.find((b: any) => b.asset_symbol === "USD") ?? balList[0]
-    const totalBalanceUSD = parseFloat(walletEntry?.balance ?? "0")
+  const quantity = computeQuantity(orderSizeType, tc.amount, marketPrice, script.lot, totalBalanceUSD)
 
-    const allBots = await prisma.tradeConfig.findMany({
-      where: { accountId: tc.accountId, isActive: true, userActive: true },
-      select: { amount: true },
-    })
-    const totalAllocatedUSD = allBots.reduce((sum: number, b: any) => sum + b.amount / INR_TO_USD, 0)
+  // Pre-trade check: total allocated across all bots <= total account balance.
+  // Only meaningful for 'currency' mode, where amount is a real ₹ allocation —
+  // 'lot' and '% of equity' modes don't map onto a comparable allocated-₹ figure,
+  // so this check is skipped for those (Delta's own margin check still applies
+  // at order time either way).
+  if (orderSizeType === 'currency') {
+    try {
+      const allBots = await prisma.tradeConfig.findMany({
+        where: { accountId: tc.accountId, isActive: true, userActive: true },
+        select: { amount: true },
+      })
+      const totalAllocatedUSD = allBots.reduce((sum: number, b: any) => sum + b.amount / INR_TO_USD, 0)
 
-    if (totalAllocatedUSD > totalBalanceUSD) {
-      throw new Error(`Insufficient balance: Total balance $${totalBalanceUSD.toFixed(2)}, Total allocated across all bots $${totalAllocatedUSD.toFixed(2)} for ₹${tc.amount} allocation`)
+      if (totalAllocatedUSD > totalBalanceUSD) {
+        throw new Error(`Insufficient balance: Total balance $${totalBalanceUSD.toFixed(2)}, Total allocated across all bots $${totalAllocatedUSD.toFixed(2)} for ₹${tc.amount} allocation`)
+      }
+    } catch (e: any) {
+      if (e.message?.includes('Insufficient balance')) throw e
+      console.warn('Balance check failed, proceeding:', e.message)
     }
-  } catch (e: any) {
-    if (e.message?.includes('Insufficient balance')) throw e
-    console.warn('Balance check failed, proceeding:', e.message)
   }
 
   if (tc.account.is_oauth && tc.account.oauth_access_token) {
