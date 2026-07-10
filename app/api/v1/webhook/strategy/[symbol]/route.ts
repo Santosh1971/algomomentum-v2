@@ -23,7 +23,10 @@ export async function POST(req: NextRequest, context: { params: Promise<{ symbol
     include: {
       subscribers: {
         where: { isActive: true, userActive: true },
-        include: { account: { select: { api_key_enc: true, api_secret_enc: true, delta_account_name: true, is_oauth: true, oauth_access_token: true } } },
+        include: {
+          account: { select: { api_key_enc: true, api_secret_enc: true, delta_account_name: true, is_oauth: true, oauth_access_token: true } },
+          user: { select: { role: true } },
+        },
       },
     },
   })
@@ -34,12 +37,30 @@ export async function POST(req: NextRequest, context: { params: Promise<{ symbol
   const script = cache.getScript(strategy.symbol)
   if (!script) return NextResponse.json({ error: `Unknown symbol: ${strategy.symbol}` }, { status: 400 })
 
+  // Best-effort: record the admin's own reference quantity on this fire, purely for
+  // the "hide test trades below X lot" filter on the marketplace — never blocks trading.
+  let refQuantity: number | null = null
+  if (isEntry) {
+    try {
+      const adminSub = strategy.subscribers.find((tc: any) => tc.user?.role === 'admin')
+      if (adminSub) {
+        const marketPrice = await getTicker(script.exchange_symbol)
+        if (marketPrice) {
+          refQuantity = Math.max(1, Math.floor((adminSub.amount / INR_TO_USD) / marketPrice / (script.lot || 1)))
+        }
+      }
+    } catch (e) {
+      console.warn('Could not compute reference lot size for test-trade filter:', e)
+    }
+  }
+
   await prisma.strategyTrade.create({
     data: {
       strategyId: strategy.id,
       side,
       trade,
       price:      price ? parseFloat(price) : null,
+      size:       refQuantity,
       symbol:     strategy.symbol,
       totalFired: strategy.subscribers.length,
     },

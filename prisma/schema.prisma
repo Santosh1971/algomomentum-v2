@@ -230,6 +230,7 @@ model Strategy {
   updatedAt       DateTime      @updatedAt
   defaultLeverage Int      @default(1)
   showSubscriberCount Boolean @default(true)
+  minLiveLot      Float?
   subscribers     TradeConfig[]
 }
 

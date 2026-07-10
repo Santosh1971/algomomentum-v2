@@ -182,6 +182,7 @@ function StrategyFormModal({ initial, onClose, onSaved }) {
   const [isFeatured,  setIsFeatured]  = useState(initial?.isFeatured ?? false)
   const [defaultLeverage, setDefaultLeverage] = useState(initial?.defaultLeverage ?? 1)
   const [minCapital,  setMinCapital]  = useState(initial?.minCapital || 1000)
+  const [minLiveLot,  setMinLiveLot]  = useState(initial?.minLiveLot ?? '')
   const [loading,     setLoading]     = useState(false)
   const [error,       setError]       = useState(null)
   const fileRef = useRef()
@@ -198,6 +199,7 @@ function StrategyFormModal({ initial, onClose, onSaved }) {
       fd.append('isFeatured', String(isFeatured))
       fd.append('defaultLeverage', String(defaultLeverage))
       fd.append('minCapital', String(minCapital))
+      fd.append('minLiveLot', String(minLiveLot))
       const file = fileRef.current?.files?.[0]
       if (file) fd.append('backtestFile', file)
 
@@ -235,6 +237,9 @@ function StrategyFormModal({ initial, onClose, onSaved }) {
           </Field>
           <Field label="Min Capital (₹)">
             <input type="number" value={minCapital} onChange={e => setMinCapital(Number(e.target.value))} className="form-input" placeholder="1000" min="100" />
+          </Field>
+          <Field label="Hide test trades below (lot) — blank = show all">
+            <input type="number" value={minLiveLot} onChange={e => setMinLiveLot(e.target.value)} className="form-input" placeholder="e.g. 2" min="0" step="any" />
           </Field>
           <Field label="Default Leverage">
             <select value={defaultLeverage} onChange={e => setDefaultLeverage(Number(e.target.value))} className="form-input">

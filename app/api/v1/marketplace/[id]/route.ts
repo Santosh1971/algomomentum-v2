@@ -73,6 +73,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
           entrySide:       pendingEntry.side,
           entryDate:       pendingEntry.firedAt,
           entryPrice:      pendingEntry.price,
+          entrySize:       pendingEntry.size,
           entrySignal:     pendingEntry.signal ?? pendingEntry.trade,
           exitDate:        t.firedAt,
           exitPrice:       t.price,
@@ -100,7 +101,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     daysAgo.setDate(daysAgo.getDate() - parseInt(period))
     return new Date(t.firedAt) >= daysAgo
   })
-  const periodLivePaired = pairTrades(periodLiveTrades)
+  let periodLivePaired = pairTrades(periodLiveTrades)
+  if (strategy.minLiveLot != null) {
+    periodLivePaired = periodLivePaired.filter((t: any) => t.entrySize == null || t.entrySize >= strategy.minLiveLot!)
+  }
 
   const liveEquity = periodLivePaired.slice().reverse().map((t) => ({
     date:   t.exitDate,
