@@ -4,6 +4,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Link from "next/link";
+import { toast } from "sonner";
 
 interface BotConfig {
   id: string;
@@ -31,11 +32,22 @@ export default function BotStatusPage() {
     if (status === "authenticated" && session.user.role !== "admin") router.push("/user/dashboard");
   }, [status, session, router]);
 
-  useEffect(() => {
+  function load() {
     fetch("/api/v1/admin/bot-status")
       .then(r => r.json())
       .then(d => { setBots(d); setLoading(false); });
-  }, []);
+  }
+
+  useEffect(() => { load(); }, []);
+
+  async function toggleActive(tcId: string, value: boolean) {
+    const res = await fetch("/api/v1/tradeconfig", {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: tcId, isActive: value }),
+    });
+    if (res.ok) { toast.success(value ? "Activated" : "Deactivated"); load(); }
+    else toast.error("Failed to update");
+  }
 
   const uniqueSymbols = Array.from(new Set(bots.map(b => b.script))).sort();
 
@@ -130,10 +142,16 @@ export default function BotStatusPage() {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <Link href={`/admin/users/${b.user.id}`}
-                            className="text-xs bg-foreground text-background px-3 py-1.5 rounded-lg hover:opacity-80 transition-opacity">
-                            Manage
-                          </Link>
+                          <div className="flex items-center gap-1.5">
+                            <button onClick={() => toggleActive(b.id, !b.isActive)}
+                              className={`text-xs px-3 py-1.5 rounded-lg font-medium transition ${b.isActive ? "bg-red-50 text-red-600 hover:bg-red-100" : "bg-green-50 text-green-600 hover:bg-green-100"}`}>
+                              {b.isActive ? "Deactivate" : "Activate"}
+                            </button>
+                            <Link href={`/admin/users/${b.user.id}`}
+                              className="text-xs bg-foreground text-background px-3 py-1.5 rounded-lg hover:opacity-80 transition-opacity">
+                              Manage
+                            </Link>
+                          </div>
                         </td>
                       </tr>
                     );

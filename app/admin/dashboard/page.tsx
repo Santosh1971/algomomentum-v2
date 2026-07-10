@@ -131,7 +131,12 @@ export default function AdminDashboard() {
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis dataKey="date" tick={{ fontSize: 10 }} minTickGap={30} />
                       <YAxis tick={{ fontSize: 10 }} width={50} />
-                      <Tooltip formatter={(v: any) => [`$${Number(v).toFixed(2)}`, "Cumulative PnL"]} />
+                      <Tooltip
+                        formatter={(v: any) => [`$${Number(v).toFixed(2)}`, "Cumulative PnL"]}
+                        contentStyle={{ backgroundColor: "var(--background)", color: "var(--foreground)", border: "1px solid var(--border)", borderRadius: 8 }}
+                        labelStyle={{ color: "var(--foreground)" }}
+                        itemStyle={{ color: "var(--foreground)" }}
+                      />
                       <Area type="monotone" dataKey="cumPnl" stroke="url(#platformEquityStroke)" strokeWidth={2} fill="url(#platformEquityFill)" />
                     </AreaChart>
                   </ResponsiveContainer>

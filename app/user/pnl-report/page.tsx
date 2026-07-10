@@ -251,6 +251,7 @@ export default function PnlReportPage() {
                         <th className="text-right py-2 pr-3">Exit ₹</th>
                         <th className="text-center py-2 pr-3">Side</th>
                         <th className="text-right py-2 pr-3">Lot</th>
+                        <th className="text-right py-2 pr-3">Position Size</th>
                         <th className="text-right py-2 pr-3">Gross PnL</th>
                         <th className="text-right py-2 pr-3">Delta fee</th>
                         <th className="text-right py-2 pr-3">Net PnL</th>
@@ -272,6 +273,7 @@ export default function PnlReportPage() {
                             </span>
                           </td>
                           <td className="py-2 pr-3 text-right text-gray-600">{t.size}</td>
+                          <td className="py-2 pr-3 text-right text-gray-600 font-mono">{fmtP(t.size * (t.contractSize ?? 1) * t.entryPrice)}</td>
                           <td className={`py-2 pr-3 text-right font-medium ${pnlColor(t.grossPnl)}`}>{fmtP(t.grossPnl)}</td>
                           <td className="py-2 pr-3 text-right text-orange-500">{fmtP(t.commission)}</td>
                           <td className={`py-2 pr-3 text-right font-bold ${pnlColor(t.netPnl)}`}>{fmtP(t.netPnl)}</td>
