@@ -39,6 +39,8 @@ export default function AdminDashboard() {
   const [bySymbol, setBySymbol] = useState<Record<string, SymbolStats>>({});
   const [selected, setSelected] = useState("ALL");
   const [statsPending, setStatsPending] = useState(false);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/Signup");
@@ -107,17 +109,43 @@ export default function AdminDashboard() {
             </div>
 
             {p.equityCurve.length > 1 && (() => {
-              const values = p.equityCurve.map(d => d.cumPnl);
+              const filteredCurve = p.equityCurve.filter(d =>
+                (!dateFrom || d.date >= dateFrom) && (!dateTo || d.date <= dateTo)
+              );
+              if (filteredCurve.length < 2) {
+                return (
+                  <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border">
+                    <p className="font-semibold text-gray-700 mb-3 text-sm sm:text-base">
+                      Equity Curve — {selected === "ALL" ? "All Strategies" : selected}
+                    </p>
+                    <p className="text-sm text-gray-400 text-center py-8">No data in this date range.</p>
+                  </div>
+                );
+              }
+              const values = filteredCurve.map(d => d.cumPnl);
               const dataMax = Math.max(...values);
               const dataMin = Math.min(...values);
               const gradientOffset = dataMax <= 0 ? 0 : dataMin >= 0 ? 1 : dataMax / (dataMax - dataMin);
               return (
                 <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-sm border">
-                  <p className="font-semibold text-gray-700 mb-3 text-sm sm:text-base">
-                    Equity Curve — {selected === "ALL" ? "All Strategies" : selected}
-                  </p>
+                  <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+                    <p className="font-semibold text-gray-700 text-sm sm:text-base">
+                      Equity Curve — {selected === "ALL" ? "All Strategies" : selected}
+                    </p>
+                    <div className="flex items-center gap-2 text-xs">
+                      <label className="text-gray-500">From</label>
+                      <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+                        className="border rounded-lg px-2 py-1 bg-white text-gray-700" />
+                      <label className="text-gray-500">To</label>
+                      <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+                        className="border rounded-lg px-2 py-1 bg-white text-gray-700" />
+                      {(dateFrom || dateTo) && (
+                        <button onClick={() => { setDateFrom(""); setDateTo(""); }} className="text-blue-600 hover:underline">Clear</button>
+                      )}
+                    </div>
+                  </div>
                   <ResponsiveContainer width="100%" height={220}>
-                    <AreaChart data={p.equityCurve}>
+                    <AreaChart data={filteredCurve}>
                       <defs>
                         <linearGradient id="platformEquityFill" x1="0" y1="0" x2="0" y2="1">
                           <stop offset={gradientOffset} stopColor="#3b82f6" stopOpacity={0.4} />
