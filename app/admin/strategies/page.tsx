@@ -183,6 +183,7 @@ function StrategyFormModal({ initial, onClose, onSaved }) {
   const [minCapital,  setMinCapital]  = useState(initial?.minCapital || 1000)
   const [minLiveLot,  setMinLiveLot]  = useState(initial?.minLiveLot ?? '')
   const [orderSizeType, setOrderSizeType] = useState(initial?.orderSizeType || 'currency')
+  const [defaultOrderSizeValue, setDefaultOrderSizeValue] = useState(initial?.defaultOrderSizeValue ?? '')
   const [loading,     setLoading]     = useState(false)
   const [error,       setError]       = useState(null)
   const fileRef = useRef()
@@ -200,6 +201,7 @@ function StrategyFormModal({ initial, onClose, onSaved }) {
       fd.append('minCapital', String(minCapital))
       fd.append('minLiveLot', String(minLiveLot))
       fd.append('orderSizeType', orderSizeType)
+      fd.append('defaultOrderSizeValue', orderSizeType === 'equity_pct' ? String(defaultOrderSizeValue) : '')
       const file = fileRef.current?.files?.[0]
       if (file) fd.append('backtestFile', file)
 
@@ -248,6 +250,11 @@ function StrategyFormModal({ initial, onClose, onSaved }) {
               </select>
             </Field>
           </div>
+          {orderSizeType === 'equity_pct' && (
+            <Field label="% of Equity (applies to ALL subscribers — they don't set this themselves)">
+              <input type="number" value={defaultOrderSizeValue} onChange={e => setDefaultOrderSizeValue(e.target.value)} className="form-input" placeholder="e.g. 20" min="0" step="any" />
+            </Field>
+          )}
           <Field label="Hide test trades below (lot) — blank = show all">
             <input type="number" value={minLiveLot} onChange={e => setMinLiveLot(e.target.value)} className="form-input" placeholder="e.g. 2" min="0" step="any" />
           </Field>

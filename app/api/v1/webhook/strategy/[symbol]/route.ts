@@ -71,7 +71,8 @@ export async function POST(req: NextRequest, context: { params: Promise<{ symbol
             const walletEntry = balList.find((b: any) => b.asset_symbol === "USD") ?? balList[0]
             equityUSD = parseFloat(walletEntry?.balance ?? "0")
           }
-          refQuantity = computeQuantity(orderSizeType, adminSub.amount, marketPrice, script.lot, equityUSD)
+          const refSizeValue = orderSizeType === 'equity_pct' ? (strategy.defaultOrderSizeValue ?? 0) : adminSub.amount
+          refQuantity = computeQuantity(orderSizeType, refSizeValue, marketPrice, script.lot, equityUSD)
         }
       }
     } catch (e) {
@@ -92,7 +93,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ symbol
   })
 
   const results = await Promise.allSettled(
-    strategy.subscribers.map((tc: any) => isEntry ? handleEntry({ tc, side, script, orderSizeType }) : handleExit({ tc, side, script }))
+    strategy.subscribers.map((tc: any) => isEntry ? handleEntry({ tc, side, script, orderSizeType, defaultOrderSizeValue: strategy.defaultOrderSizeValue }) : handleExit({ tc, side, script }))
   )
 
   const success = results.filter(r => r.status === 'fulfilled').length
@@ -102,7 +103,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ symbol
   return NextResponse.json({ ok: true, fired: success, total: results.length, errors })
 }
 
-async function handleEntry({ tc, side, script, orderSizeType }: any) {
+async function handleEntry({ tc, side, script, orderSizeType, defaultOrderSizeValue }: any) {
   const marketPrice = await getTicker(script.exchange_symbol)
   if (!marketPrice) throw new Error(`No price for ${script.exchange_symbol}`)
 
@@ -116,7 +117,10 @@ async function handleEntry({ tc, side, script, orderSizeType }: any) {
   const walletEntry = balList.find((b: any) => b.asset_symbol === "USD") ?? balList[0]
   const totalBalanceUSD = parseFloat(walletEntry?.balance ?? "0")
 
-  const quantity = computeQuantity(orderSizeType, tc.amount, marketPrice, script.lot, totalBalanceUSD)
+  // 'equity_pct' mode uses the strategy's admin-set % for EVERY subscriber — not
+  // each subscriber's own amount. 'currency' mode still uses each subscriber's own ₹.
+  const sizeValue = orderSizeType === 'equity_pct' ? (defaultOrderSizeValue ?? 0) : tc.amount
+  const quantity = computeQuantity(orderSizeType, sizeValue, marketPrice, script.lot, totalBalanceUSD)
 
   // Pre-trade check: total allocated across all bots <= total account balance.
   // Only meaningful for 'currency' mode, where amount is a real ₹ allocation —

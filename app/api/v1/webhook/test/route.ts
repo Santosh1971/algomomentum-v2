@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
 
   const results = await Promise.allSettled(
     configs.map((config: any) => isEntry
-      ? handleEntry({ config, side, script, overrideAmount, overrideLeverage, orderSizeType })
+      ? handleEntry({ config, side, script, overrideAmount, overrideLeverage, orderSizeType, defaultOrderSizeValue: strategy?.defaultOrderSizeValue })
       : handleExit({ config, side, script }))
   )
 
@@ -79,8 +79,8 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true, test: true, targets: targetEmails, fired: success, total: configs.length, errors })
 }
 
-async function handleEntry({ config, side, script, overrideAmount, overrideLeverage, orderSizeType }: any) {
-  const amount   = overrideAmount   ?? config.amount
+async function handleEntry({ config, side, script, overrideAmount, overrideLeverage, orderSizeType, defaultOrderSizeValue }: any) {
+  const amount   = overrideAmount ?? (orderSizeType === 'equity_pct' ? (defaultOrderSizeValue ?? 0) : config.amount)
   const leverage = overrideLeverage ?? config.leverage
 
   const marketPrice = await getTicker(script.exchange_symbol)

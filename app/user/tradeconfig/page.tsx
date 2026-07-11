@@ -9,7 +9,7 @@ import ConnectDeltaModal from "@/components/ConnectDeltaModal";
 const INR_PER_USD = 85;
 
 interface TradeConfig {
-  id: string; script: string; amount: number; initial_amount: number | null; strategyRef?: { minCapital: number | null; orderSizeType?: string } | null;
+  id: string; script: string; amount: number; initial_amount: number | null; strategyRef?: { minCapital: number | null; orderSizeType?: string; defaultOrderSizeValue?: number | null } | null;
   isActive: boolean; userActive: boolean; mode: string; strategy: string | null; isSubscription: boolean;
   leverage: number; compoundMode: string; platformFeePercent: number;
   webhookToken: string; createdAt: string;
@@ -176,8 +176,9 @@ export default function TradeConfigPage() {
 
   async function updateSymbol() {
     if (!activeConfig) return;
+    const isEquityPct = activeConfig.strategyRef?.orderSizeType === "equity_pct";
     const minCap = activeConfig.strategyRef?.minCapital;
-    if (minCap && parseFloat(symbolForm.amount) < minCap) {
+    if (!isEquityPct && minCap && parseFloat(symbolForm.amount) < minCap) {
       toast.error(`Minimum capital for this strategy is ₹${minCap.toLocaleString('en-IN')}`);
       return;
     }
@@ -185,7 +186,7 @@ export default function TradeConfigPage() {
       method: "PUT", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         id: activeConfig.id,
-        amount: parseFloat(symbolForm.amount) || activeConfig.amount,
+        amount: isEquityPct ? activeConfig.amount : (parseFloat(symbolForm.amount) || activeConfig.amount),
         leverage: parseInt(symbolForm.leverage) || activeConfig.leverage,
         compoundMode: symbolForm.compoundMode,
       }),
@@ -523,20 +524,32 @@ export default function TradeConfigPage() {
               <div>
                 {(() => {
                   const t = activeConfig.strategyRef?.orderSizeType;
-                  const label = t === "equity_pct" ? "% of Equity" : "Allocated Amount (₹)";
-                  const hint = t === "equity_pct" ? "Percentage of your live account balance, recalculated fresh on every trade (compounds automatically)."
-                    : "Fixed ₹ amount, used the same on every trade (no compounding).";
+                  if (t === "equity_pct") {
+                    return (
+                      <>
+                        <label className="text-sm font-medium text-gray-700">% of Equity (set by admin)</label>
+                        <div className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-600">
+                          {activeConfig.strategyRef?.defaultOrderSizeValue ?? "—"}%
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1">
+                          This strategy uses a shared percentage set by the admin for all subscribers — your bot automatically uses this % of your live account balance on every trade, and it isn't something you set yourself.
+                        </p>
+                      </>
+                    );
+                  }
+                  const label = "Allocated Amount (₹)";
+                  const hint = "Fixed ₹ amount, used the same on every trade (no compounding).";
                   return (
                     <>
                       <label className="text-sm font-medium text-gray-700">
                         {label}
-                        {t !== "equity_pct" && t !== "lot" && activeConfig.strategyRef?.minCapital ? <span className="text-xs text-gray-400 ml-2">Min: ₹{activeConfig.strategyRef.minCapital.toLocaleString('en-IN')}</span> : null}
+                        {activeConfig.strategyRef?.minCapital ? <span className="text-xs text-gray-400 ml-2">Min: ₹{activeConfig.strategyRef.minCapital.toLocaleString('en-IN')}</span> : null}
                       </label>
                       <input type="number" value={symbolForm.amount} onChange={e => setSymbolForm({ ...symbolForm, amount: e.target.value })}
-                        min={t === "currency" || !t ? (activeConfig.strategyRef?.minCapital ?? 100) : 0}
+                        min={activeConfig.strategyRef?.minCapital ?? 100}
                         className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#161B22]" />
                       <p className="text-xs text-gray-400 mt-1">{hint}</p>
-                      {(t === "currency" || !t) && activeConfig.strategyRef?.minCapital && parseFloat(symbolForm.amount) < activeConfig.strategyRef.minCapital && (
+                      {activeConfig.strategyRef?.minCapital && parseFloat(symbolForm.amount) < activeConfig.strategyRef.minCapital && (
                         <p className="text-xs text-red-400 mt-1">⚠️ Amount cannot be less than ₹{activeConfig.strategyRef.minCapital.toLocaleString('en-IN')}</p>
                       )}
                     </>

@@ -232,6 +232,7 @@ model Strategy {
   showSubscriberCount Boolean @default(true)
   minLiveLot      Float?
   orderSizeType   String   @default("currency") // 'lot' | 'currency' | 'equity_pct'
+  defaultOrderSizeValue Float? // for 'equity_pct' mode: the admin-set % applied to ALL subscribers
   subscribers     TradeConfig[]
 }
 

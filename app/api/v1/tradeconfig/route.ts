@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
           delta_user_id: true,
         },
       },
-      strategyRef: { select: { name: true, minCapital: true, orderSizeType: true } },
+      strategyRef: { select: { name: true, minCapital: true, orderSizeType: true, defaultOrderSizeValue: true } },
     },
   });
   return NextResponse.json(configs);
