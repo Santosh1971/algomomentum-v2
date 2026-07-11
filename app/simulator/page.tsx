@@ -48,13 +48,17 @@ export default function SimulatorPage() {
   const [dragMode, setDragMode] = useState(false);
   const [activeDrag, setActiveDrag] = useState<"entry"|"sl"|"tp"|null>(null);
 
-  interface Subscriber { userId: string; name: string; email: string; amount: number; leverage: number; }
+  interface Subscriber { userId: string; name: string; email: string; amount: number; leverage: number; tradeConfigId: string; }
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [selectAll, setSelectAll] = useState(true);
   const [testAmount, setTestAmount] = useState("2000");
   const [testLeverage, setTestLeverage] = useState("1");
   const [testOrderSizeType, setTestOrderSizeType] = useState("currency");
+  const [previewBalanceOverride, setPreviewBalanceOverride] = useState("");
+  const [previewResult, setPreviewResult] = useState<{ balanceUSD: number; marketPrice: number; quantity: number; positionValueUSD: number } | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState("");
   const [showWebhooks, setShowWebhooks] = useState(false);
 
   const chartRef = useRef<HTMLDivElement>(null);
@@ -275,6 +279,37 @@ export default function SimulatorPage() {
 
   const activeSymbol = customSymbol.trim() || symbol;
 
+  const singleTarget = !selectAll && selectedUserIds.length === 1
+    ? subscribers.find(s => s.userId === selectedUserIds[0])
+    : null;
+
+  async function fetchPreview() {
+    if (!singleTarget) return;
+    setPreviewLoading(true);
+    setPreviewError("");
+    try {
+      const res = await fetch("/api/v1/admin/preview-quantity", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tradeConfigId: singleTarget.tradeConfigId,
+          symbol: activeSymbol,
+          orderSizeType: testOrderSizeType,
+          amount: testAmount,
+          balanceOverride: previewBalanceOverride || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setPreviewError(data.error || "Preview failed"); setPreviewResult(null); return; }
+      setPreviewResult(data);
+      if (!previewBalanceOverride) setPreviewBalanceOverride(String(data.balanceUSD));
+    } catch (e: any) {
+      setPreviewError(e.message || "Preview failed");
+    } finally {
+      setPreviewLoading(false);
+    }
+  }
+
   useEffect(() => {
     if (!activeSymbol) return;
     fetch(`/api/v1/admin/strategy-subscribers?symbol=${encodeURIComponent(activeSymbol)}`)
@@ -448,6 +483,32 @@ export default function SimulatorPage() {
                   <input type="number" value={testLeverage} onChange={e => setTestLeverage(e.target.value)} className={inp} />
                 </div>
               </div>
+
+              {singleTarget ? (
+                <div className="border rounded-xl p-3 bg-gray-50 space-y-2">
+                  <p className="text-xs font-semibold text-gray-600">Preview for {singleTarget.name}</p>
+                  <div>
+                    <label className="text-xs text-gray-500 block mb-1">Balance override (optional — blank uses live balance)</label>
+                    <input type="number" value={previewBalanceOverride} onChange={e => setPreviewBalanceOverride(e.target.value)}
+                      placeholder="Live balance will populate here" className={inp} />
+                  </div>
+                  <button onClick={fetchPreview} disabled={previewLoading}
+                    className="w-full py-1.5 rounded-lg border border-blue-300 text-blue-600 text-xs font-medium hover:bg-blue-50 disabled:opacity-50">
+                    {previewLoading ? "Calculating…" : "🔍 Preview Quantity"}
+                  </button>
+                  {previewError && <p className="text-xs text-red-500">{previewError}</p>}
+                  {previewResult && !previewError && (
+                    <div className="text-xs text-gray-700 space-y-0.5 pt-1 border-t">
+                      <div>Balance used: <span className="font-semibold">${previewResult.balanceUSD}</span></div>
+                      <div>Market price: <span className="font-semibold">${previewResult.marketPrice}</span></div>
+                      <div>Computed quantity: <span className="font-semibold text-blue-700">{previewResult.quantity}</span></div>
+                      <div>Position value: <span className="font-semibold">${previewResult.positionValueUSD}</span></div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <p className="text-[11px] text-gray-400">Select exactly one subscriber below to preview the computed quantity before firing.</p>
+              )}
               <div>
                 <label className="flex items-center gap-2 text-xs font-semibold text-gray-600 mb-1">
                   <input type="checkbox" checked={selectAll} onChange={e => { setSelectAll(e.target.checked); if (e.target.checked) setSelectedUserIds([]); }} />
