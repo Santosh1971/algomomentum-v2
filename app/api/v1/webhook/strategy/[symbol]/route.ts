@@ -5,6 +5,19 @@ import { prisma } from '@/lib/prisma'
 
 const INR_TO_USD = 85
 
+// placeOrder/placeOrderOAuth catch Delta-level rejections (e.g. insufficient margin)
+// internally and RETURN {success:false, ...} rather than throwing — so a rejected
+// order would otherwise be silently counted as "fired successfully". This makes a
+// Delta-level rejection surface as a real thrown error, correctly excluded from the
+// success count and shown in the errors array.
+function assertOrderSuccess(result: any) {
+  if (result?.success === false) {
+    const msg = result.error?.error?.message || result.error?.error?.code || JSON.stringify(result.error) || 'Order rejected by Delta'
+    throw new Error(msg)
+  }
+  return result
+}
+
 // Shared sizing logic — must match exactly between the reference-quantity capture
 // below and the real order placement in handleEntry, so the two never drift apart.
 function computeQuantity(orderSizeType: string, amount: number, marketPrice: number, lot: number, equityUSD = 0) {
@@ -146,19 +159,19 @@ async function handleEntry({ tc, side, script, orderSizeType, defaultOrderSizeVa
 
   if (tc.account.is_oauth && tc.account.oauth_access_token) {
     await setLeverageOAuth(tc.account.oauth_access_token, script.productId, tc.leverage)
-    return placeOrderOAuth(tc.account.oauth_access_token, {
+    return assertOrderSuccess(await placeOrderOAuth(tc.account.oauth_access_token, {
       product_id: script.productId, product_symbol: script.exchange_symbol,
       size: quantity, side, order_type: 'market_order', time_in_force: 'ioc',
       client_order_id: `am-${tc.id.slice(-6)}-${Date.now()}`,
-    })
+    }))
   }
 
   await setLeverage(tc.account.api_key_enc, tc.account.api_secret_enc, script.productId, tc.leverage)
-  return placeOrder(tc.account.api_key_enc, tc.account.api_secret_enc, {
+  return assertOrderSuccess(await placeOrder(tc.account.api_key_enc, tc.account.api_secret_enc, {
     product_id: script.productId, product_symbol: script.exchange_symbol,
     size: quantity, side, order_type: 'market_order', time_in_force: 'ioc',
     client_order_id: `am-${tc.id.slice(-6)}-${Date.now()}`,
-  })
+  }))
 }
 
 async function handleExit({ tc, side, script }: any) {
@@ -168,19 +181,19 @@ async function handleExit({ tc, side, script }: any) {
     const posData = await getPositionsOAuth(tc.account.oauth_access_token)
     openPos = (posData?.result ?? []).find((p: any) => p.product_symbol === script.exchange_symbol && Math.abs(p.size) > 0)
     if (!openPos) return { message: 'No open position' }
-    return placeOrderOAuth(tc.account.oauth_access_token, {
+    return assertOrderSuccess(await placeOrderOAuth(tc.account.oauth_access_token, {
       product_id: script.productId, product_symbol: script.exchange_symbol,
       size: Math.abs(openPos.size), side, order_type: 'market_order', time_in_force: 'ioc',
       client_order_id: `am-${tc.id.slice(-6)}-${Date.now()}`,
-    })
+    }))
   }
 
   const posData = await getPositions(tc.account.api_key_enc, tc.account.api_secret_enc)
   openPos = (posData?.result ?? []).find((p: any) => p.product_symbol === script.exchange_symbol && Math.abs(p.size) > 0)
   if (!openPos) return { message: 'No open position' }
-  return placeOrder(tc.account.api_key_enc, tc.account.api_secret_enc, {
+  return assertOrderSuccess(await placeOrder(tc.account.api_key_enc, tc.account.api_secret_enc, {
     product_id: script.productId, product_symbol: script.exchange_symbol,
     size: Math.abs(openPos.size), side, order_type: 'market_order', time_in_force: 'ioc',
     client_order_id: `am-${tc.id.slice(-6)}-${Date.now()}`,
-  })
+  }))
 }

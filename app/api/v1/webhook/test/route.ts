@@ -14,6 +14,19 @@ function computeQuantity(orderSizeType: string, amount: number, marketPrice: num
   return Math.max(1, Math.floor((amount / INR_TO_USD) / marketPrice / (lot || 1)))
 }
 
+// placeOrder/placeOrderOAuth catch Delta-level rejections (e.g. insufficient margin)
+// internally and RETURN {success:false, ...} rather than throwing — so a rejected
+// order would otherwise be silently counted as "fired successfully". This makes a
+// Delta-level rejection surface as a real thrown error, correctly excluded from the
+// success count and shown in the errors array.
+function assertOrderSuccess(result: any) {
+  if (result?.success === false) {
+    const msg = result.error?.error?.message || result.error?.error?.code || JSON.stringify(result.error) || 'Order rejected by Delta'
+    throw new Error(msg)
+  }
+  return result
+}
+
 export async function POST(req: NextRequest) {
   const secret = req.nextUrl.searchParams.get('secret')
   if (secret !== process.env.BROADCAST_SECRET) {
@@ -117,18 +130,18 @@ async function handleEntry({ config, side, script, overrideAmount, overrideLever
 
   if (config.account.is_oauth && config.account.oauth_access_token) {
     await setLeverageOAuth(config.account.oauth_access_token, script.productId, leverage)
-    return placeOrderOAuth(config.account.oauth_access_token, {
+    return assertOrderSuccess(await placeOrderOAuth(config.account.oauth_access_token, {
       product_id: script.productId, product_symbol: script.exchange_symbol,
       size: quantity, side, order_type: 'market_order', time_in_force: 'ioc',
       client_order_id: `am-test-${config.id.slice(-6)}-${Date.now()}`,
-    })
+    }))
   }
   await setLeverage(config.account.api_key_enc, config.account.api_secret_enc, script.productId, leverage)
-  return placeOrder(config.account.api_key_enc, config.account.api_secret_enc, {
+  return assertOrderSuccess(await placeOrder(config.account.api_key_enc, config.account.api_secret_enc, {
     product_id: script.productId, product_symbol: script.exchange_symbol,
     size: quantity, side, order_type: 'market_order', time_in_force: 'ioc',
     client_order_id: `am-test-${config.id.slice(-6)}-${Date.now()}`,
-  })
+  }))
 }
 
 async function handleExit({ config, side, script }: any) {
@@ -136,18 +149,18 @@ async function handleExit({ config, side, script }: any) {
     const posData = await getPositionsOAuth(config.account.oauth_access_token)
     const openPos = (posData?.result ?? []).find((p: any) => p.product_symbol === script.exchange_symbol && Math.abs(p.size) > 0)
     if (!openPos) return { message: 'No open position to exit' }
-    return placeOrderOAuth(config.account.oauth_access_token, {
+    return assertOrderSuccess(await placeOrderOAuth(config.account.oauth_access_token, {
       product_id: script.productId, product_symbol: script.exchange_symbol,
       size: Math.abs(openPos.size), side, order_type: 'market_order', time_in_force: 'ioc',
       client_order_id: `am-test-${config.id.slice(-6)}-${Date.now()}`,
-    })
+    }))
   }
   const posData = await getPositions(config.account.api_key_enc, config.account.api_secret_enc)
   const openPos = (posData?.result ?? []).find((p: any) => p.product_symbol === script.exchange_symbol && Math.abs(p.size) > 0)
   if (!openPos) return { message: 'No open position to exit' }
-  return placeOrder(config.account.api_key_enc, config.account.api_secret_enc, {
+  return assertOrderSuccess(await placeOrder(config.account.api_key_enc, config.account.api_secret_enc, {
     product_id: script.productId, product_symbol: script.exchange_symbol,
     size: Math.abs(openPos.size), side, order_type: 'market_order', time_in_force: 'ioc',
     client_order_id: `am-test-${config.id.slice(-6)}-${Date.now()}`,
-  })
+  }))
 }

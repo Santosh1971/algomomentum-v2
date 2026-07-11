@@ -17,6 +17,19 @@ function computeQuantity(orderSizeType: string, amount: number, marketPrice: num
   return Math.max(1, Math.floor((amount / INR_TO_USD) / marketPrice / (lot || 1)))
 }
 
+// placeOrder/placeOrderOAuth catch Delta-level rejections (e.g. insufficient margin)
+// internally and RETURN {success:false, ...} rather than throwing — so a rejected
+// order would otherwise be silently counted as "fired successfully". This makes a
+// Delta-level rejection surface as a real thrown error, correctly excluded from the
+// success count and shown in the errors array.
+function assertOrderSuccess(result: any) {
+  if (result?.success === false) {
+    const msg = result.error?.error?.message || result.error?.error?.code || JSON.stringify(result.error) || 'Order rejected by Delta'
+    throw new Error(msg)
+  }
+  return result
+}
+
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (session?.user?.role !== 'admin') {
@@ -73,7 +86,7 @@ export async function POST(req: NextRequest) {
 
   const results = await Promise.allSettled(
     targets.map((tc: any) => isEntry
-      ? handleEntry({ tc, side, script, overrideAmount, overrideLeverage, orderSizeType })
+      ? handleEntry({ tc, side, script, overrideAmount, overrideLeverage, orderSizeType, defaultOrderSizeValue: strategy.defaultOrderSizeValue })
       : handleExit({ tc, side, script }))
   )
 
@@ -84,8 +97,11 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true, fired: success, total: results.length, errors })
 }
 
-async function handleEntry({ tc, side, script, overrideAmount, overrideLeverage, orderSizeType }: any) {
-  const amount   = overrideAmount   ?? tc.amount
+async function handleEntry({ tc, side, script, overrideAmount, overrideLeverage, orderSizeType, defaultOrderSizeValue }: any) {
+  // 'equity_pct' mode uses the strategy's admin-set % for EVERY subscriber, unless
+  // the Simulator explicitly overrides it for testing — same rule as the production
+  // and test webhook routes.
+  const amount   = overrideAmount ?? (orderSizeType === 'equity_pct' ? (defaultOrderSizeValue ?? 0) : tc.amount)
   const leverage = overrideLeverage ?? tc.leverage
 
   const marketPrice = await getTicker(script.exchange_symbol)
@@ -122,19 +138,19 @@ async function handleEntry({ tc, side, script, overrideAmount, overrideLeverage,
 
   if (tc.account.is_oauth && tc.account.oauth_access_token) {
     await setLeverageOAuth(tc.account.oauth_access_token, script.productId, leverage)
-    return placeOrderOAuth(tc.account.oauth_access_token, {
+    return assertOrderSuccess(await placeOrderOAuth(tc.account.oauth_access_token, {
       product_id: script.productId, product_symbol: script.exchange_symbol,
       size: quantity, side, order_type: 'market_order', time_in_force: 'ioc',
       client_order_id: `am-test-${tc.id.slice(-6)}-${Date.now()}`,
-    })
+    }))
   }
 
   await setLeverage(tc.account.api_key_enc, tc.account.api_secret_enc, script.productId, leverage)
-  return placeOrder(tc.account.api_key_enc, tc.account.api_secret_enc, {
+  return assertOrderSuccess(await placeOrder(tc.account.api_key_enc, tc.account.api_secret_enc, {
     product_id: script.productId, product_symbol: script.exchange_symbol,
     size: quantity, side, order_type: 'market_order', time_in_force: 'ioc',
     client_order_id: `am-test-${tc.id.slice(-6)}-${Date.now()}`,
-  })
+  }))
 }
 
 async function handleExit({ tc, side, script }: any) {
@@ -144,19 +160,19 @@ async function handleExit({ tc, side, script }: any) {
     const posData = await getPositionsOAuth(tc.account.oauth_access_token)
     openPos = (posData?.result ?? []).find((p: any) => p.product_symbol === script.exchange_symbol && Math.abs(p.size) > 0)
     if (!openPos) return { message: 'No open position' }
-    return placeOrderOAuth(tc.account.oauth_access_token, {
+    return assertOrderSuccess(await placeOrderOAuth(tc.account.oauth_access_token, {
       product_id: script.productId, product_symbol: script.exchange_symbol,
       size: Math.abs(openPos.size), side, order_type: 'market_order', time_in_force: 'ioc',
       client_order_id: `am-test-${tc.id.slice(-6)}-${Date.now()}`,
-    })
+    }))
   }
 
   const posData = await getPositions(tc.account.api_key_enc, tc.account.api_secret_enc)
   openPos = (posData?.result ?? []).find((p: any) => p.product_symbol === script.exchange_symbol && Math.abs(p.size) > 0)
   if (!openPos) return { message: 'No open position' }
-  return placeOrder(tc.account.api_key_enc, tc.account.api_secret_enc, {
+  return assertOrderSuccess(await placeOrder(tc.account.api_key_enc, tc.account.api_secret_enc, {
     product_id: script.productId, product_symbol: script.exchange_symbol,
     size: Math.abs(openPos.size), side, order_type: 'market_order', time_in_force: 'ioc',
     client_order_id: `am-test-${tc.id.slice(-6)}-${Date.now()}`,
-  })
+  }))
 }
