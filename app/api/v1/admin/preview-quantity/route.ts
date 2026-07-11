@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const { tradeConfigId, symbol, orderSizeType, amount, balanceOverride } = await req.json()
+  const { tradeConfigId, symbol, orderSizeType, amount, leverage, balanceOverride } = await req.json()
   if (!tradeConfigId || !symbol || !orderSizeType || amount == null) {
     return NextResponse.json({ error: 'tradeConfigId, symbol, orderSizeType, amount are required' }, { status: 400 })
   }
@@ -55,11 +55,15 @@ export async function POST(req: NextRequest) {
 
   const quantity = computeQuantity(orderSizeType, parseFloat(amount), marketPrice, script.lot, balanceUSD)
   const positionValueUSD = Math.round(quantity * (script.lot || 1) * marketPrice * 100) / 100
+  const lev = leverage ? parseFloat(leverage) : 1
+  const marginUsedUSD = Math.round((positionValueUSD / (lev || 1)) * 100) / 100
 
   return NextResponse.json({
     balanceUSD: Math.round(balanceUSD * 100) / 100,
     marketPrice,
     quantity,
     positionValueUSD,
+    marginUsedUSD,
+    exceedsBalance: marginUsedUSD > balanceUSD,
   })
 }

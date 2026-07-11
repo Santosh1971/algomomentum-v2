@@ -56,7 +56,7 @@ export default function SimulatorPage() {
   const [testLeverage, setTestLeverage] = useState("1");
   const [testOrderSizeType, setTestOrderSizeType] = useState("currency");
   const [previewBalanceOverride, setPreviewBalanceOverride] = useState("");
-  const [previewResult, setPreviewResult] = useState<{ balanceUSD: number; marketPrice: number; quantity: number; positionValueUSD: number } | null>(null);
+  const [previewResult, setPreviewResult] = useState<{ balanceUSD: number; marketPrice: number; quantity: number; positionValueUSD: number; marginUsedUSD: number; exceedsBalance: boolean } | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState("");
   const [showWebhooks, setShowWebhooks] = useState(false);
@@ -296,6 +296,7 @@ export default function SimulatorPage() {
           symbol: activeSymbol,
           orderSizeType: testOrderSizeType,
           amount: testAmount,
+          leverage: testLeverage,
           balanceOverride: previewBalanceOverride || undefined,
         }),
       });
@@ -503,6 +504,10 @@ export default function SimulatorPage() {
                       <div>Market price: <span className="font-semibold">${previewResult.marketPrice}</span></div>
                       <div>Computed quantity: <span className="font-semibold text-blue-700">{previewResult.quantity}</span></div>
                       <div>Position value: <span className="font-semibold">${previewResult.positionValueUSD}</span></div>
+                      <div>Margin used ({testLeverage}x): <span className={`font-semibold ${previewResult.exceedsBalance ? "text-red-600" : "text-green-700"}`}>${previewResult.marginUsedUSD}</span></div>
+                      {previewResult.exceedsBalance && (
+                        <p className="text-red-500 font-medium pt-1">⚠️ Margin required exceeds available balance — this order would fail.</p>
+                      )}
                     </div>
                   )}
                 </div>
