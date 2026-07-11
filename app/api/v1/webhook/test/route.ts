@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
   if (!script) return NextResponse.json({ error: `Unknown symbol: ${symbol}` }, { status: 400 })
 
   const strategy = await prisma.strategy.findFirst({ where: { symbol: symbol?.toUpperCase(), isActive: true } })
-  const orderSizeType = strategy?.orderSizeType || 'currency'
+  const orderSizeType = req.nextUrl.searchParams.get('orderSizeType') || strategy?.orderSizeType || 'currency'
   if (strategy) {
     await prisma.strategyTrade.create({
       data: {

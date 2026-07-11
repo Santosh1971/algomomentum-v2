@@ -7,13 +7,23 @@ import { prisma } from '@/lib/prisma'
 
 const INR_TO_USD = 85
 
+function computeQuantity(orderSizeType: string, amount: number, marketPrice: number, lot: number, equityUSD = 0) {
+  if (orderSizeType === 'lot') {
+    return Math.max(1, Math.floor(amount))
+  }
+  if (orderSizeType === 'equity_pct') {
+    return Math.max(1, Math.floor((equityUSD * amount / 100) / marketPrice / (lot || 1)))
+  }
+  return Math.max(1, Math.floor((amount / INR_TO_USD) / marketPrice / (lot || 1)))
+}
+
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
   if (session?.user?.role !== 'admin') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const { symbol, side, trade, price, userIds, amount, leverage } = await req.json()
+  const { symbol, side, trade, price, userIds, amount, leverage, orderSizeType: overrideOrderSizeType } = await req.json()
   if (!symbol || !side || !trade) {
     return NextResponse.json({ error: 'symbol, side, trade are required' }, { status: 400 })
   }
@@ -42,6 +52,10 @@ export async function POST(req: NextRequest) {
   const script = cache.getScript(strategy.symbol)
   if (!script) return NextResponse.json({ error: `Unknown symbol: ${strategy.symbol}` }, { status: 400 })
 
+  // Simulator can override the sizing mode for testing purposes, independent of
+  // the strategy's saved default — this never touches the strategy record itself.
+  const orderSizeType = overrideOrderSizeType || strategy.orderSizeType || 'currency'
+
   await prisma.strategyTrade.create({
     data: {
       strategyId: strategy.id,
@@ -59,49 +73,51 @@ export async function POST(req: NextRequest) {
 
   const results = await Promise.allSettled(
     targets.map((tc: any) => isEntry
-      ? handleEntry({ tc, side, script, overrideAmount, overrideLeverage })
+      ? handleEntry({ tc, side, script, overrideAmount, overrideLeverage, orderSizeType })
       : handleExit({ tc, side, script }))
   )
 
   const success = results.filter(r => r.status === 'fulfilled').length
   const errors  = results.map((r, i) => r.status === 'rejected' ? { userId: targets[i].userId, error: (r as any).reason?.message } : null).filter(Boolean)
 
-  console.log(`🧪 TEST fire "${strategy.name}" (${symbol}) → ${success}/${results.length} target(s)`)
+  console.log(`🧪 TEST fire "${strategy.name}" (${symbol}) [${orderSizeType}] → ${success}/${results.length} target(s)`)
   return NextResponse.json({ ok: true, fired: success, total: results.length, errors })
 }
 
-async function handleEntry({ tc, side, script, overrideAmount, overrideLeverage }: any) {
+async function handleEntry({ tc, side, script, overrideAmount, overrideLeverage, orderSizeType }: any) {
   const amount   = overrideAmount   ?? tc.amount
   const leverage = overrideLeverage ?? tc.leverage
 
   const marketPrice = await getTicker(script.exchange_symbol)
   if (!marketPrice) throw new Error(`No price for ${script.exchange_symbol}`)
-  const quantity = Math.max(1, Math.floor((amount / INR_TO_USD) / marketPrice / (script.lot || 1)))
 
-  // Pre-trade check: total allocated across all bots <= total account balance
-  try {
-    const isOAuth = tc.account.is_oauth && tc.account.oauth_access_token
-    const balData = isOAuth
-      ? await getBalancesOAuth(tc.account.oauth_access_token)
-      : await getBalances(tc.account.api_key_enc, tc.account.api_secret_enc)
+  const isOAuth = tc.account.is_oauth && tc.account.oauth_access_token
+  const balData = isOAuth
+    ? await getBalancesOAuth(tc.account.oauth_access_token)
+    : await getBalances(tc.account.api_key_enc, tc.account.api_secret_enc)
+  const balList = balData?.result ?? []
+  const walletEntry = balList.find((b: any) => b.asset_symbol === "USD") ?? balList[0]
+  const totalBalanceUSD = parseFloat(walletEntry?.balance ?? "0")
 
-    const balList = balData?.result ?? []
-    const walletEntry = balList.find((b: any) => b.asset_symbol === "USD") ?? balList[0]
-    const totalBalanceUSD = parseFloat(walletEntry?.balance ?? "0")
+  const quantity = computeQuantity(orderSizeType, amount, marketPrice, script.lot, totalBalanceUSD)
 
-    const allBots = await prisma.tradeConfig.findMany({
-      where: { accountId: tc.accountId, isActive: true, userActive: true },
-      select: { amount: true },
-    })
-    const totalAllocatedUSD = allBots.reduce((sum: number, b: any) => sum + b.amount / INR_TO_USD, 0)
-      - (tc.amount / INR_TO_USD) + (amount / INR_TO_USD) // swap this bot's real allocation for the test amount
+  // Pre-trade allocation check — only meaningful for 'currency' mode
+  if (orderSizeType === 'currency') {
+    try {
+      const allBots = await prisma.tradeConfig.findMany({
+        where: { accountId: tc.accountId, isActive: true, userActive: true },
+        select: { amount: true },
+      })
+      const totalAllocatedUSD = allBots.reduce((sum: number, b: any) => sum + b.amount / INR_TO_USD, 0)
+        - (tc.amount / INR_TO_USD) + (amount / INR_TO_USD) // swap this bot's real allocation for the test amount
 
-    if (totalAllocatedUSD > totalBalanceUSD) {
-      throw new Error(`Insufficient balance: Total balance $${totalBalanceUSD.toFixed(2)}, Total allocated across all bots $${totalAllocatedUSD.toFixed(2)} for ₹${amount} test allocation`)
+      if (totalAllocatedUSD > totalBalanceUSD) {
+        throw new Error(`Insufficient balance: Total balance $${totalBalanceUSD.toFixed(2)}, Total allocated across all bots $${totalAllocatedUSD.toFixed(2)} for ₹${amount} test allocation`)
+      }
+    } catch (e: any) {
+      if (e.message?.includes('Insufficient balance')) throw e
+      console.warn('Balance check failed, proceeding:', e.message)
     }
-  } catch (e: any) {
-    if (e.message?.includes('Insufficient balance')) throw e
-    console.warn('Balance check failed, proceeding:', e.message)
   }
 
   if (tc.account.is_oauth && tc.account.oauth_access_token) {

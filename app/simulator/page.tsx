@@ -54,6 +54,7 @@ export default function SimulatorPage() {
   const [selectAll, setSelectAll] = useState(true);
   const [testAmount, setTestAmount] = useState("2000");
   const [testLeverage, setTestLeverage] = useState("1");
+  const [testOrderSizeType, setTestOrderSizeType] = useState("currency");
   const [showWebhooks, setShowWebhooks] = useState(false);
 
   const chartRef = useRef<HTMLDivElement>(null);
@@ -307,7 +308,7 @@ export default function SimulatorPage() {
         body: JSON.stringify({
           symbol: activeSymbol, side: tradeSide, trade, price: entry || livePrice,
           userIds: selectAll ? 'all' : selectedUserIds,
-          amount: testAmount, leverage: testLeverage,
+          amount: testAmount, leverage: testLeverage, orderSizeType: testOrderSizeType,
         }),
       });
       const data = await res.json();
@@ -427,9 +428,19 @@ export default function SimulatorPage() {
 
             <div className="bg-white rounded-2xl p-4 shadow-sm border space-y-3">
               <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">Test Fire — Target &amp; Size</p>
+              <div>
+                <label className="text-xs text-gray-500 font-semibold block mb-1">Order Size Type (test override)</label>
+                <select value={testOrderSizeType} onChange={e => setTestOrderSizeType(e.target.value)} className={inp}>
+                  <option value="currency">₹ (Currency)</option>
+                  <option value="lot">Lot / Quantity</option>
+                  <option value="equity_pct">% of Equity</option>
+                </select>
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-xs text-gray-500 font-semibold block mb-1">Amount (₹)</label>
+                  <label className="text-xs text-gray-500 font-semibold block mb-1">
+                    {testOrderSizeType === "lot" ? "Lot / Quantity" : testOrderSizeType === "equity_pct" ? "% of Equity" : "Amount (₹)"}
+                  </label>
                   <input type="number" value={testAmount} onChange={e => setTestAmount(e.target.value)} className={inp} />
                 </div>
                 <div>
@@ -462,7 +473,7 @@ export default function SimulatorPage() {
                   ? subscribers.map(s => s.email)
                   : subscribers.filter(s => selectedUserIds.includes(s.userId)).map(s => s.email);
                 if (!targetEmails.length) return null;
-                const webhookUrl = `https://app.algomomentum.in/api/v1/webhook/test?secret=algobc2026$&email=${encodeURIComponent(targetEmails.join(','))}&amount=${testAmount}&leverage=${testLeverage}`;
+                const webhookUrl = `https://app.algomomentum.in/api/v1/webhook/test?secret=algobc2026$&email=${encodeURIComponent(targetEmails.join(','))}&amount=${testAmount}&leverage=${testLeverage}&orderSizeType=${testOrderSizeType}`;
                 return (
                   <div>
                     <label className="text-xs text-gray-500 font-semibold block mb-1">Webhook URL — for selected user(s) above</label>
