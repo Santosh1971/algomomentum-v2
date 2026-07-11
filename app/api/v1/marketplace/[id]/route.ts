@@ -103,7 +103,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   })
   let periodLivePaired = pairTrades(periodLiveTrades)
   if (strategy.minLiveLot != null) {
-    periodLivePaired = periodLivePaired.filter((t: any) => t.entrySize == null || t.entrySize >= strategy.minLiveLot!)
+    periodLivePaired = periodLivePaired.filter((t: any) => t.entrySize != null && t.entrySize >= strategy.minLiveLot!)
   }
 
   const liveEquity = periodLivePaired.slice().reverse().map((t) => ({

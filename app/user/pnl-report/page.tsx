@@ -81,11 +81,12 @@ export default function PnlReportPage() {
     ? `$${usd.toFixed(2)}`
     : `₹${(usd * INR).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 
-  // Price: keep significant decimals, strip trailing zeros, max 8dp
+  // Price: keep significant decimals, strip trailing zeros, max 8dp — now currency-aware
   const fmtPrice = (p: number) => {
-    if (p === 0) return "0";
-    const s = p.toFixed(8).replace(/\.?0+$/, "");
-    return s;
+    if (p === 0) return currency === "USD" ? "$0" : "₹0";
+    const converted = currency === "USD" ? p : p * INR;
+    const s = converted.toFixed(currency === "USD" ? 8 : 4).replace(/\.?0+$/, "");
+    return currency === "USD" ? `$${s}` : `₹${s}`;
   };
 
   function pnlColor(val: number) { return val >= 0 ? "text-green-600" : "text-red-600"; }
@@ -247,8 +248,8 @@ export default function PnlReportPage() {
                         <th className="text-right py-2 pr-3">#</th>
                         <th className="text-left py-2 pr-3">Entry time</th>
                         <th className="text-left py-2 pr-3">Exit time</th>
-                        <th className="text-right py-2 pr-3">Entry ₹</th>
-                        <th className="text-right py-2 pr-3">Exit ₹</th>
+                        <th className="text-right py-2 pr-3">Entry {currency === "USD" ? "$" : "₹"}</th>
+                        <th className="text-right py-2 pr-3">Exit {currency === "USD" ? "$" : "₹"}</th>
                         <th className="text-center py-2 pr-3">Side</th>
                         <th className="text-right py-2 pr-3">Lot</th>
                         <th className="text-right py-2 pr-3">Position Size</th>
