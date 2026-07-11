@@ -177,7 +177,6 @@ export default function AdminStrategiesPage() {
 function StrategyFormModal({ initial, onClose, onSaved }) {
   const [name,        setName]        = useState(initial?.name || '')
   const [symbol,      setSymbol]      = useState(initial?.symbol || '')
-  const [timeframe,   setTimeframe]   = useState(initial?.timeframe || '1h')
   const [description, setDescription] = useState(initial?.description || '')
   const [isFeatured,  setIsFeatured]  = useState(initial?.isFeatured ?? false)
   const [defaultLeverage, setDefaultLeverage] = useState(initial?.defaultLeverage ?? 1)
@@ -195,8 +194,7 @@ function StrategyFormModal({ initial, onClose, onSaved }) {
       const fd = new FormData()
       fd.append('name', name)
       fd.append('symbol', symbol.toUpperCase())
-      fd.append('timeframe', timeframe)
-      fd.append('description', description)
+            fd.append('description', description)
       fd.append('isFeatured', String(isFeatured))
       fd.append('defaultLeverage', String(defaultLeverage))
       fd.append('minCapital', String(minCapital))
@@ -234,13 +232,8 @@ function StrategyFormModal({ initial, onClose, onSaved }) {
               <input type="number" value={minCapital} onChange={e => setMinCapital(Number(e.target.value))} className="form-input" placeholder="1000" min="100" />
             </Field>
           </div>
-          <Field label="Timeframe">
-            <select value={timeframe} onChange={e => setTimeframe(e.target.value)} className="form-input">
-              {['1m','5m','15m','30m','1h','2h','4h','8h','1D'].map(t => <option key={t}>{t}</option>)}
-            </select>
-          </Field>
           <Field label="Description">
-            <textarea value={description} onChange={e => setDescription(e.target.value)} className="form-input" rows={2} />
+            <textarea value={description} onChange={e => setDescription(e.target.value)} className="form-input w-full" rows={2} />
           </Field>
           <div className="grid grid-cols-2 gap-2">
             <Field label="Leverage">
@@ -250,8 +243,7 @@ function StrategyFormModal({ initial, onClose, onSaved }) {
             </Field>
             <Field label="Order Size Type">
               <select value={orderSizeType} onChange={e => setOrderSizeType(e.target.value)} className="form-input">
-                <option value="currency">₹ (Currency)</option>
-                <option value="lot">Lot / Quantity</option>
+                <option value="currency">Amount (₹)</option>
                 <option value="equity_pct">% of Equity</option>
               </select>
             </Field>

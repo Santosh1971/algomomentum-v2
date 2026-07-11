@@ -523,9 +523,8 @@ export default function TradeConfigPage() {
               <div>
                 {(() => {
                   const t = activeConfig.strategyRef?.orderSizeType;
-                  const label = t === "lot" ? "Lot / Quantity" : t === "equity_pct" ? "% of Equity" : "Allocated Amount (₹)";
-                  const hint = t === "lot" ? "Fixed lot size, used the same on every trade (no compounding)."
-                    : t === "equity_pct" ? "Percentage of your live account balance, recalculated fresh on every trade (compounds automatically)."
+                  const label = t === "equity_pct" ? "% of Equity" : "Allocated Amount (₹)";
+                  const hint = t === "equity_pct" ? "Percentage of your live account balance, recalculated fresh on every trade (compounds automatically)."
                     : "Fixed ₹ amount, used the same on every trade (no compounding).";
                   return (
                     <>
