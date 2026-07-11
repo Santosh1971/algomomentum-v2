@@ -247,6 +247,7 @@ function TradesTable({ trades, emptyText, emptyHint }: { trades: any[]; emptyTex
             <th className="text-left px-3 py-2 text-muted-foreground font-medium">Entry Date</th>
             <th className="text-left px-3 py-2 text-muted-foreground font-medium">Entry Price</th>
             <th className="text-right px-3 py-2 text-muted-foreground font-medium">Lot</th>
+            <th className="text-right px-3 py-2 text-muted-foreground font-medium">Position Size</th>
             <th className="text-left px-3 py-2 text-muted-foreground font-medium">Exit Date</th>
             <th className="text-left px-3 py-2 text-muted-foreground font-medium">Exit Price</th>
             <th className="text-right px-3 py-2 text-muted-foreground font-medium">PnL (ROI%)</th>
@@ -262,6 +263,7 @@ function TradesTable({ trades, emptyText, emptyHint }: { trades: any[]; emptyTex
               <td className="px-3 py-2 text-muted-foreground">{new Date(t.entryDate).toLocaleDateString('en-IN')}</td>
               <td className="px-3 py-2">${t.entryPrice?.toFixed(4)}</td>
               <td className="px-3 py-2 text-right">{t.entrySize ?? "—"}</td>
+              <td className="px-3 py-2 text-right">{t.entrySize != null ? `$${(t.entryPrice * t.entrySize).toFixed(2)}` : "—"}</td>
               <td className="px-3 py-2 text-muted-foreground">{new Date(t.exitDate).toLocaleDateString('en-IN')}</td>
               <td className="px-3 py-2">${t.exitPrice?.toFixed(4)}</td>
               <td className={`px-3 py-2 text-right font-medium ${t.pnlPct >= 0 ? 'text-green-500' : 'text-red-400'}`}>{t.pnlPct >= 0 ? '+' : ''}{t.pnlPct.toFixed(2)}%</td>
