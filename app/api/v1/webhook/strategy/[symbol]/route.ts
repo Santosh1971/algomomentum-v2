@@ -137,7 +137,7 @@ async function handleEntry({ tc, side, script, orderSizeType, defaultOrderSizeVa
   // Delta account balance, which may be shared across multiple bots on one account.
   // 'currency' mode still uses each subscriber's own fixed ₹ amount, no compounding.
   const sizeValue = orderSizeType === 'equity_pct' ? (defaultOrderSizeValue ?? 0) : tc.amount
-  const equityBasis = tc.equityBalance ?? tc.amount
+  const equityBasis = (tc.equityBalance ?? tc.amount) / INR_TO_USD
   const quantity = computeQuantity(orderSizeType, sizeValue, marketPrice, script.lot, orderSizeType === 'equity_pct' ? equityBasis : totalBalanceUSD)
 
   // Pre-trade check: total allocated across all bots <= total account balance.
@@ -213,7 +213,7 @@ async function handleExit({ tc, side, script, orderSizeType }: any) {
         const basis = tc.equityBalance ?? tc.amount
         await prisma.tradeConfig.update({
           where: { id: tc.id },
-          data: { equityBalance: basis + realizedPnl },
+          data: { equityBalance: basis + (realizedPnl * INR_TO_USD) },
         })
       }
     } catch (e) {

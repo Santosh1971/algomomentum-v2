@@ -117,7 +117,7 @@ async function handleEntry({ tc, side, script, overrideAmount, overrideLeverage,
 
   // equity_pct mode: apply the % to THIS bot's own tracked running balance
   // (compounds from its own realized P&L), not the whole Delta account balance.
-  const equityBasis = tc.equityBalance ?? tc.amount
+  const equityBasis = (tc.equityBalance ?? tc.amount) / INR_TO_USD
   const quantity = computeQuantity(orderSizeType, amount, marketPrice, script.lot, orderSizeType === 'equity_pct' ? equityBasis : totalBalanceUSD)
 
   // Pre-trade allocation check — only meaningful for 'currency' mode
@@ -190,7 +190,7 @@ async function handleExit({ tc, side, script, orderSizeType }: any) {
         const basis = tc.equityBalance ?? tc.amount
         await prisma.tradeConfig.update({
           where: { id: tc.id },
-          data: { equityBalance: basis + realizedPnl },
+          data: { equityBalance: basis + (realizedPnl * INR_TO_USD) },
         })
       }
     } catch (e) {
