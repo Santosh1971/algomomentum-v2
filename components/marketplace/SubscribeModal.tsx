@@ -29,7 +29,6 @@ export default function SubscribeModal({ strategy, onClose, onSuccess }) {
   }, [])
 
   async function handleSubscribe() {
-    const isEquityPct = strategy.orderSizeType === 'equity_pct'
     const INR_TO_USD = 85
     const requiredUsd = (strategy.minCapital || amount) / INR_TO_USD
     if (balance && balance.available < requiredUsd) {
@@ -38,9 +37,7 @@ export default function SubscribeModal({ strategy, onClose, onSuccess }) {
     }
     const capDisplay = showUSD ? `$${(amount/INR_TO_USD).toFixed(2)}` : `₹${amount}`
     const balDisplay = showUSD ? `$${balance?.available?.toFixed(2) ?? "—"}` : `₹${balance ? (balance.available * INR_TO_USD).toFixed(0) : "—"}`
-    const confirm = isEquityPct
-      ? window.confirm(`Subscribe to ${strategy.name}?\n\nCapital: ${capDisplay}\nAvailable Balance: ${balDisplay}\n\nYour bot will use ${strategy.defaultOrderSizeValue ?? '—'}% (set by the admin) of this bot's own running balance per trade, compounding from this bot's own realized profit/loss.\n\nConfirm subscription?`)
-      : window.confirm(`Subscribe to ${strategy.name}?\n\nCapital: ${capDisplay}\nAvailable Balance: ${balDisplay}\n\nConfirm subscription?`)
+    const confirm = window.confirm(`Subscribe to ${strategy.name}?\n\nCapital: ${capDisplay}\nAvailable Balance: ${balDisplay}\n\nConfirm subscription?`)
     if (!confirm) return
     setLoading(true)
     setError(null)
@@ -118,17 +115,7 @@ export default function SubscribeModal({ strategy, onClose, onSuccess }) {
               onChange={e => setAmount(showUSD ? Math.round(Number(e.target.value) * INR_TO_USD) : Number(e.target.value))}
               className="w-full bg-muted/30 border border-border/40 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
             />
-            {strategy.orderSizeType === 'equity_pct' ? (
-              <div className="mt-2 flex items-center justify-between bg-muted/30 rounded-lg px-3 py-2">
-                <span className="text-xs text-muted-foreground">% of Equity (set by admin)</span>
-                <span className="text-sm font-medium">{strategy.defaultOrderSizeValue ?? '—'}%</span>
-              </div>
-            ) : (
-              <div className="text-xs text-muted-foreground mt-1">Amount used per trade signal in {showUSD ? "USD" : "₹"} · {showUSD ? `₹${amount}` : `$${(amount/INR_TO_USD).toFixed(2)}`}</div>
-            )}
-            {strategy.orderSizeType === 'equity_pct' && (
-              <div className="text-xs text-muted-foreground mt-1">Your bot uses {strategy.defaultOrderSizeValue ?? '—'}% of this bot's own running balance on every trade — this compounds from this bot's own realized profit/loss, starting at the Capital above.</div>
-            )}
+            <div className="text-xs text-muted-foreground mt-1">Amount used per trade signal in {showUSD ? "USD" : "₹"} · {showUSD ? `₹${amount}` : `$${(amount/INR_TO_USD).toFixed(2)}`}</div>
           </div>
         </div>
 
