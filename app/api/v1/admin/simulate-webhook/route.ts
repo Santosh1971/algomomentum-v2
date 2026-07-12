@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
   const results = await Promise.allSettled(
     targets.map((tc: any) => isEntry
       ? handleEntry({ tc, side, script, overrideAmount, overrideLeverage, orderSizeType, defaultOrderSizeValue: strategy.defaultOrderSizeValue })
-      : handleExit({ tc, side, script }))
+      : handleExit({ tc, side, script, orderSizeType }))
   )
 
   const success = results.filter(r => r.status === 'fulfilled').length
@@ -115,7 +115,10 @@ async function handleEntry({ tc, side, script, overrideAmount, overrideLeverage,
   const walletEntry = balList.find((b: any) => b.asset_symbol === "USD") ?? balList[0]
   const totalBalanceUSD = parseFloat(walletEntry?.balance ?? "0")
 
-  const quantity = computeQuantity(orderSizeType, amount, marketPrice, script.lot, totalBalanceUSD)
+  // equity_pct mode: apply the % to THIS bot's own tracked running balance
+  // (compounds from its own realized P&L), not the whole Delta account balance.
+  const equityBasis = tc.equityBalance ?? tc.amount
+  const quantity = computeQuantity(orderSizeType, amount, marketPrice, script.lot, orderSizeType === 'equity_pct' ? equityBasis : totalBalanceUSD)
 
   // Pre-trade allocation check — only meaningful for 'currency' mode
   if (orderSizeType === 'currency') {
@@ -153,26 +156,47 @@ async function handleEntry({ tc, side, script, overrideAmount, overrideLeverage,
   }))
 }
 
-async function handleExit({ tc, side, script }: any) {
+async function handleExit({ tc, side, script, orderSizeType }: any) {
   let openPos: any
+  let orderResult: any
 
   if (tc.account.is_oauth && tc.account.oauth_access_token) {
     const posData = await getPositionsOAuth(tc.account.oauth_access_token)
     openPos = (posData?.result ?? []).find((p: any) => p.product_symbol === script.exchange_symbol && Math.abs(p.size) > 0)
     if (!openPos) return { message: 'No open position' }
-    return assertOrderSuccess(await placeOrderOAuth(tc.account.oauth_access_token, {
+    orderResult = assertOrderSuccess(await placeOrderOAuth(tc.account.oauth_access_token, {
+      product_id: script.productId, product_symbol: script.exchange_symbol,
+      size: Math.abs(openPos.size), side, order_type: 'market_order', time_in_force: 'ioc',
+      client_order_id: `am-test-${tc.id.slice(-6)}-${Date.now()}`,
+    }))
+  } else {
+    const posData = await getPositions(tc.account.api_key_enc, tc.account.api_secret_enc)
+    openPos = (posData?.result ?? []).find((p: any) => p.product_symbol === script.exchange_symbol && Math.abs(p.size) > 0)
+    if (!openPos) return { message: 'No open position' }
+    orderResult = assertOrderSuccess(await placeOrder(tc.account.api_key_enc, tc.account.api_secret_enc, {
       product_id: script.productId, product_symbol: script.exchange_symbol,
       size: Math.abs(openPos.size), side, order_type: 'market_order', time_in_force: 'ioc',
       client_order_id: `am-test-${tc.id.slice(-6)}-${Date.now()}`,
     }))
   }
 
-  const posData = await getPositions(tc.account.api_key_enc, tc.account.api_secret_enc)
-  openPos = (posData?.result ?? []).find((p: any) => p.product_symbol === script.exchange_symbol && Math.abs(p.size) > 0)
-  if (!openPos) return { message: 'No open position' }
-  return assertOrderSuccess(await placeOrder(tc.account.api_key_enc, tc.account.api_secret_enc, {
-    product_id: script.productId, product_symbol: script.exchange_symbol,
-    size: Math.abs(openPos.size), side, order_type: 'market_order', time_in_force: 'ioc',
-    client_order_id: `am-test-${tc.id.slice(-6)}-${Date.now()}`,
-  }))
+  // equity_pct mode: fold this exit's realized P&L into the bot's own tracked
+  // running balance, so the NEXT entry's % is applied to a compounded figure
+  // scoped to just this bot — never touches the whole Delta account balance.
+  if (orderSizeType === 'equity_pct') {
+    try {
+      const realizedPnl = parseFloat(orderResult?.result?.meta_data?.pnl ?? '0')
+      if (!isNaN(realizedPnl) && realizedPnl !== 0) {
+        const basis = tc.equityBalance ?? tc.amount
+        await prisma.tradeConfig.update({
+          where: { id: tc.id },
+          data: { equityBalance: basis + realizedPnl },
+        })
+      }
+    } catch (e) {
+      console.warn(`Could not update equityBalance for tc ${tc.id}:`, e)
+    }
+  }
+
+  return orderResult
 }

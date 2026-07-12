@@ -54,6 +54,7 @@ model TradeConfig {
   accountId      String
   script         String
   amount         Float
+  equityBalance  Float?   // per-bot running balance for 'equity_pct' mode strategies — starts at `amount`, updated by realized P&L after each exit, keeps compounding scoped to this bot's own capital rather than the whole Delta account balance
   initial_amount Float?
   isActive       Boolean  @default(false)
   userActive     Boolean  @default(true)

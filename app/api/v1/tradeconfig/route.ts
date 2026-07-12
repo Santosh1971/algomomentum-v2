@@ -171,28 +171,22 @@ export async function PUT(req: NextRequest) {
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
   // Validate minCapital if amount is being updated
+  let existingConfig: any = null
   if (rest.amount !== undefined) {
-    const existing = await prisma.tradeConfig.findUnique({
+    existingConfig = await prisma.tradeConfig.findUnique({
       where: { id },
-      select: { strategyId: true, strategyRef: { select: { minCapital: true } } }
+      select: { strategyId: true, strategyRef: { select: { minCapital: true, orderSizeType: true } } }
     })
-    if (existing?.strategyRef?.minCapital && rest.amount < existing.strategyRef.minCapital) {
-      return NextResponse.json({ error: `Minimum capital for this strategy is ₹${existing.strategyRef.minCapital.toLocaleString('en-IN')}` }, { status: 400 })
+    if (existingConfig?.strategyRef?.minCapital && rest.amount < existingConfig.strategyRef.minCapital) {
+      return NextResponse.json({ error: `Minimum capital for this strategy is ₹${existingConfig.strategyRef.minCapital.toLocaleString('en-IN')}` }, { status: 400 })
     }
   }
 
-  // Validate minCapital if amount is being updated
-  if (rest.amount !== undefined) {
-    const existing = await prisma.tradeConfig.findUnique({
-      where: { id },
-      select: { strategyId: true, strategyRef: { select: { minCapital: true } } }
-    })
-    if (existing?.strategyRef?.minCapital && rest.amount < existing.strategyRef.minCapital) {
-      return NextResponse.json({ error: `Minimum capital for this strategy is ₹${existing.strategyRef.minCapital.toLocaleString('en-IN')}` }, { status: 400 })
-    }
-  }
-
-  const updateData: any = { ...rest, lastEditAt: new Date(), ...(rest.amount !== undefined && { initial_amount: rest.amount }) };
+  const updateData: any = {
+    ...rest,
+    lastEditAt: new Date(),
+    ...(rest.amount !== undefined && { initial_amount: rest.amount, equityBalance: rest.amount }),
+  };
 
   const updated = await prisma.tradeConfig.update({
     where: { id },

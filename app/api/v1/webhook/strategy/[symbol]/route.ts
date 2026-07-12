@@ -106,7 +106,9 @@ export async function POST(req: NextRequest, context: { params: Promise<{ symbol
   })
 
   const results = await Promise.allSettled(
-    strategy.subscribers.map((tc: any) => isEntry ? handleEntry({ tc, side, script, orderSizeType, defaultOrderSizeValue: strategy.defaultOrderSizeValue }) : handleExit({ tc, side, script }))
+    strategy.subscribers.map((tc: any) => isEntry
+      ? handleEntry({ tc, side, script, orderSizeType, defaultOrderSizeValue: strategy.defaultOrderSizeValue })
+      : handleExit({ tc, side, script, orderSizeType }))
   )
 
   const success = results.filter(r => r.status === 'fulfilled').length
@@ -130,10 +132,13 @@ async function handleEntry({ tc, side, script, orderSizeType, defaultOrderSizeVa
   const walletEntry = balList.find((b: any) => b.asset_symbol === "USD") ?? balList[0]
   const totalBalanceUSD = parseFloat(walletEntry?.balance ?? "0")
 
-  // 'equity_pct' mode uses the strategy's admin-set % for EVERY subscriber — not
-  // each subscriber's own amount. 'currency' mode still uses each subscriber's own ₹.
+  // 'equity_pct' mode uses the strategy's admin-set % applied to THIS bot's own
+  // tracked running balance (compounds from its own realized P&L) — not the whole
+  // Delta account balance, which may be shared across multiple bots on one account.
+  // 'currency' mode still uses each subscriber's own fixed ₹ amount, no compounding.
   const sizeValue = orderSizeType === 'equity_pct' ? (defaultOrderSizeValue ?? 0) : tc.amount
-  const quantity = computeQuantity(orderSizeType, sizeValue, marketPrice, script.lot, totalBalanceUSD)
+  const equityBasis = tc.equityBalance ?? tc.amount
+  const quantity = computeQuantity(orderSizeType, sizeValue, marketPrice, script.lot, orderSizeType === 'equity_pct' ? equityBasis : totalBalanceUSD)
 
   // Pre-trade check: total allocated across all bots <= total account balance.
   // Only meaningful for 'currency' mode, where amount is a real ₹ allocation —
@@ -174,26 +179,47 @@ async function handleEntry({ tc, side, script, orderSizeType, defaultOrderSizeVa
   }))
 }
 
-async function handleExit({ tc, side, script }: any) {
+async function handleExit({ tc, side, script, orderSizeType }: any) {
   let openPos: any
+  let orderResult: any
 
   if (tc.account.is_oauth && tc.account.oauth_access_token) {
     const posData = await getPositionsOAuth(tc.account.oauth_access_token)
     openPos = (posData?.result ?? []).find((p: any) => p.product_symbol === script.exchange_symbol && Math.abs(p.size) > 0)
     if (!openPos) return { message: 'No open position' }
-    return assertOrderSuccess(await placeOrderOAuth(tc.account.oauth_access_token, {
+    orderResult = assertOrderSuccess(await placeOrderOAuth(tc.account.oauth_access_token, {
+      product_id: script.productId, product_symbol: script.exchange_symbol,
+      size: Math.abs(openPos.size), side, order_type: 'market_order', time_in_force: 'ioc',
+      client_order_id: `am-${tc.id.slice(-6)}-${Date.now()}`,
+    }))
+  } else {
+    const posData = await getPositions(tc.account.api_key_enc, tc.account.api_secret_enc)
+    openPos = (posData?.result ?? []).find((p: any) => p.product_symbol === script.exchange_symbol && Math.abs(p.size) > 0)
+    if (!openPos) return { message: 'No open position' }
+    orderResult = assertOrderSuccess(await placeOrder(tc.account.api_key_enc, tc.account.api_secret_enc, {
       product_id: script.productId, product_symbol: script.exchange_symbol,
       size: Math.abs(openPos.size), side, order_type: 'market_order', time_in_force: 'ioc',
       client_order_id: `am-${tc.id.slice(-6)}-${Date.now()}`,
     }))
   }
 
-  const posData = await getPositions(tc.account.api_key_enc, tc.account.api_secret_enc)
-  openPos = (posData?.result ?? []).find((p: any) => p.product_symbol === script.exchange_symbol && Math.abs(p.size) > 0)
-  if (!openPos) return { message: 'No open position' }
-  return assertOrderSuccess(await placeOrder(tc.account.api_key_enc, tc.account.api_secret_enc, {
-    product_id: script.productId, product_symbol: script.exchange_symbol,
-    size: Math.abs(openPos.size), side, order_type: 'market_order', time_in_force: 'ioc',
-    client_order_id: `am-${tc.id.slice(-6)}-${Date.now()}`,
-  }))
+  // equity_pct mode: fold this exit's realized P&L into the bot's own tracked
+  // running balance, so the NEXT entry's % is applied to a compounded figure
+  // scoped to just this bot — never touches the whole Delta account balance.
+  if (orderSizeType === 'equity_pct') {
+    try {
+      const realizedPnl = parseFloat(orderResult?.result?.meta_data?.pnl ?? '0')
+      if (!isNaN(realizedPnl) && realizedPnl !== 0) {
+        const basis = tc.equityBalance ?? tc.amount
+        await prisma.tradeConfig.update({
+          where: { id: tc.id },
+          data: { equityBalance: basis + realizedPnl },
+        })
+      }
+    } catch (e) {
+      console.warn(`Could not update equityBalance for tc ${tc.id}:`, e)
+    }
+  }
+
+  return orderResult
 }

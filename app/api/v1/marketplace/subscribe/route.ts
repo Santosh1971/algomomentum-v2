@@ -19,9 +19,9 @@ export async function POST(req: NextRequest) {
   const strategy = await prisma.strategy.findUnique({ where: { id: strategyId, isActive: true } })
   if (!strategy) return NextResponse.json({ error: 'Strategy not found or inactive' }, { status: 404 })
 
-  // Validate minimum capital — only meaningful for 'currency' mode
+  // Validate minimum capital
   const orderSizeType = strategy.orderSizeType || 'currency'
-  if (orderSizeType === 'currency' && strategy.minCapital && amount && amount < strategy.minCapital) {
+  if (strategy.minCapital && amount && amount < strategy.minCapital) {
     return NextResponse.json({ error: `Minimum capital for this strategy is ₹${strategy.minCapital.toLocaleString('en-IN')}` }, { status: 400 })
   }
 
@@ -42,8 +42,6 @@ export async function POST(req: NextRequest) {
   if (scriptExists) return NextResponse.json({ error: `You already have a bot for ${strategy.symbol} on this account.` }, { status: 409 })
 
   // Check available balance vs total allocated across all active bots + new subscription
-  // — only meaningful for 'currency' mode, where amount is a real ₹ figure
-  if (orderSizeType === 'currency') {
   try {
     const INR_TO_USD = 85
     const balData = account.is_oauth && account.oauth_access_token
@@ -71,7 +69,6 @@ export async function POST(req: NextRequest) {
     if (e.message?.includes('Insufficient balance')) throw e
     console.warn('Balance check failed, proceeding:', e.message)
   }
-  }
 
   const tradeConfig = await prisma.tradeConfig.create({
     data: {
@@ -81,6 +78,7 @@ export async function POST(req: NextRequest) {
       isSubscription: true,
       script:         strategy.symbol,
       amount:         amount ?? 1000,
+      equityBalance:  amount ?? 1000,
       isActive:       false,
       mode:           'bridge',
       strategy:       strategy.name,

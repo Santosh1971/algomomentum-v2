@@ -176,9 +176,8 @@ export default function TradeConfigPage() {
 
   async function updateSymbol() {
     if (!activeConfig) return;
-    const isEquityPct = activeConfig.strategyRef?.orderSizeType === "equity_pct";
     const minCap = activeConfig.strategyRef?.minCapital;
-    if (!isEquityPct && minCap && parseFloat(symbolForm.amount) < minCap) {
+    if (minCap && parseFloat(symbolForm.amount) < minCap) {
       toast.error(`Minimum capital for this strategy is ₹${minCap.toLocaleString('en-IN')}`);
       return;
     }
@@ -186,7 +185,7 @@ export default function TradeConfigPage() {
       method: "PUT", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         id: activeConfig.id,
-        amount: isEquityPct ? activeConfig.amount : (parseFloat(symbolForm.amount) || activeConfig.amount),
+        amount: parseFloat(symbolForm.amount) || activeConfig.amount,
         leverage: parseInt(symbolForm.leverage) || activeConfig.leverage,
         compoundMode: symbolForm.compoundMode,
       }),
@@ -521,41 +520,33 @@ export default function TradeConfigPage() {
             <h2 className="text-lg font-bold text-gray-800 mb-1">Edit {activeConfig.script}</h2>
 
             <div className="space-y-3">
-              <div>
-                {(() => {
-                  const t = activeConfig.strategyRef?.orderSizeType;
-                  if (t === "equity_pct") {
-                    return (
-                      <>
-                        <label className="text-sm font-medium text-gray-700">% of Equity (set by admin)</label>
-                        <div className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-600">
-                          {activeConfig.strategyRef?.defaultOrderSizeValue ?? "—"}%
-                        </div>
-                        <p className="text-xs text-gray-400 mt-1">
-                          This strategy uses a shared percentage set by the admin for all subscribers — your bot automatically uses this % of your live account balance on every trade, and it isn't something you set yourself.
-                        </p>
-                      </>
-                    );
-                  }
-                  const label = "Allocated Amount (₹)";
-                  const hint = "Fixed ₹ amount, used the same on every trade (no compounding).";
-                  return (
-                    <>
-                      <label className="text-sm font-medium text-gray-700">
-                        {label}
-                        {activeConfig.strategyRef?.minCapital ? <span className="text-xs text-gray-400 ml-2">Min: ₹{activeConfig.strategyRef.minCapital.toLocaleString('en-IN')}</span> : null}
-                      </label>
-                      <input type="number" value={symbolForm.amount} onChange={e => setSymbolForm({ ...symbolForm, amount: e.target.value })}
-                        min={activeConfig.strategyRef?.minCapital ?? 100}
-                        className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#161B22]" />
-                      <p className="text-xs text-gray-400 mt-1">{hint}</p>
-                      {activeConfig.strategyRef?.minCapital && parseFloat(symbolForm.amount) < activeConfig.strategyRef.minCapital && (
-                        <p className="text-xs text-red-400 mt-1">⚠️ Amount cannot be less than ₹{activeConfig.strategyRef.minCapital.toLocaleString('en-IN')}</p>
-                      )}
-                    </>
-                  );
-                })()}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">
+                    Allocated Amount (₹)
+                    {activeConfig.strategyRef?.minCapital ? <span className="text-xs text-gray-400 ml-2">Min: ₹{activeConfig.strategyRef.minCapital.toLocaleString('en-IN')}</span> : null}
+                  </label>
+                  <input type="number" value={symbolForm.amount} onChange={e => setSymbolForm({ ...symbolForm, amount: e.target.value })}
+                    min={activeConfig.strategyRef?.minCapital ?? 100}
+                    className="mt-1 w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#161B22]" />
+                  {activeConfig.strategyRef?.minCapital && parseFloat(symbolForm.amount) < activeConfig.strategyRef.minCapital && (
+                    <p className="text-xs text-red-400 mt-1">⚠️ Amount cannot be less than ₹{activeConfig.strategyRef.minCapital.toLocaleString('en-IN')}</p>
+                  )}
+                </div>
+                {activeConfig.strategyRef?.orderSizeType === "equity_pct" && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500 text-xs">% of Equity (set by admin)</label>
+                    <div className="mt-1 w-full border rounded-lg px-3 py-2 text-sm bg-gray-50 text-gray-400">{activeConfig.strategyRef?.defaultOrderSizeValue ?? "—"}%</div>
+                  </div>
+                )}
               </div>
+              {activeConfig.strategyRef?.orderSizeType === "equity_pct" ? (
+                <p className="text-xs text-gray-400 mt-1">
+                  Your bot uses {activeConfig.strategyRef?.defaultOrderSizeValue ?? "—"}% (set by admin) of this bot's own running balance on every trade — this compounds from this bot's own realized profit/loss, and starts at the Allocated Amount above.
+                </p>
+              ) : (
+                <p className="text-xs text-gray-400 mt-1">Fixed ₹ amount, used the same on every trade (no compounding).</p>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-sm font-medium text-gray-500 text-xs">Leverage (set by admin)</label>

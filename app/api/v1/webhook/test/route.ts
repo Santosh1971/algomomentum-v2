@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
   const results = await Promise.allSettled(
     configs.map((config: any) => isEntry
       ? handleEntry({ config, side, script, overrideAmount, overrideLeverage, orderSizeType, defaultOrderSizeValue: strategy?.defaultOrderSizeValue })
-      : handleExit({ config, side, script }))
+      : handleExit({ config, side, script, orderSizeType }))
   )
 
   const success = results.filter(r => r.status === 'fulfilled').length
@@ -107,7 +107,10 @@ async function handleEntry({ config, side, script, overrideAmount, overrideLever
   const wallet = balances.find((b: any) => b.asset_symbol === "USD") ?? balances[0]
   const totalBalanceUSD = parseFloat(wallet?.balance ?? "0")
 
-  const quantity = computeQuantity(orderSizeType, amount, marketPrice, script.lot, totalBalanceUSD)
+  // equity_pct mode: apply the % to THIS bot's own tracked running balance
+  // (compounds from its own realized P&L), not the whole Delta account balance.
+  const equityBasis = config.equityBalance ?? config.amount
+  const quantity = computeQuantity(orderSizeType, amount, marketPrice, script.lot, orderSizeType === 'equity_pct' ? equityBasis : totalBalanceUSD)
 
   // Pre-trade margin check — only meaningful for 'currency' mode (see production webhook route)
   if (orderSizeType === 'currency') {
@@ -144,23 +147,47 @@ async function handleEntry({ config, side, script, overrideAmount, overrideLever
   }))
 }
 
-async function handleExit({ config, side, script }: any) {
+async function handleExit({ config, side, script, orderSizeType }: any) {
+  let openPos: any
+  let orderResult: any
+
   if (config.account.is_oauth && config.account.oauth_access_token) {
     const posData = await getPositionsOAuth(config.account.oauth_access_token)
-    const openPos = (posData?.result ?? []).find((p: any) => p.product_symbol === script.exchange_symbol && Math.abs(p.size) > 0)
+    openPos = (posData?.result ?? []).find((p: any) => p.product_symbol === script.exchange_symbol && Math.abs(p.size) > 0)
     if (!openPos) return { message: 'No open position to exit' }
-    return assertOrderSuccess(await placeOrderOAuth(config.account.oauth_access_token, {
+    orderResult = assertOrderSuccess(await placeOrderOAuth(config.account.oauth_access_token, {
+      product_id: script.productId, product_symbol: script.exchange_symbol,
+      size: Math.abs(openPos.size), side, order_type: 'market_order', time_in_force: 'ioc',
+      client_order_id: `am-test-${config.id.slice(-6)}-${Date.now()}`,
+    }))
+  } else {
+    const posData = await getPositions(config.account.api_key_enc, config.account.api_secret_enc)
+    openPos = (posData?.result ?? []).find((p: any) => p.product_symbol === script.exchange_symbol && Math.abs(p.size) > 0)
+    if (!openPos) return { message: 'No open position to exit' }
+    orderResult = assertOrderSuccess(await placeOrder(config.account.api_key_enc, config.account.api_secret_enc, {
       product_id: script.productId, product_symbol: script.exchange_symbol,
       size: Math.abs(openPos.size), side, order_type: 'market_order', time_in_force: 'ioc',
       client_order_id: `am-test-${config.id.slice(-6)}-${Date.now()}`,
     }))
   }
-  const posData = await getPositions(config.account.api_key_enc, config.account.api_secret_enc)
-  const openPos = (posData?.result ?? []).find((p: any) => p.product_symbol === script.exchange_symbol && Math.abs(p.size) > 0)
-  if (!openPos) return { message: 'No open position to exit' }
-  return assertOrderSuccess(await placeOrder(config.account.api_key_enc, config.account.api_secret_enc, {
-    product_id: script.productId, product_symbol: script.exchange_symbol,
-    size: Math.abs(openPos.size), side, order_type: 'market_order', time_in_force: 'ioc',
-    client_order_id: `am-test-${config.id.slice(-6)}-${Date.now()}`,
-  }))
+
+  // equity_pct mode: fold this exit's realized P&L into the bot's own tracked
+  // running balance, so the NEXT entry's % is applied to a compounded figure
+  // scoped to just this bot — never touches the whole Delta account balance.
+  if (orderSizeType === 'equity_pct') {
+    try {
+      const realizedPnl = parseFloat(orderResult?.result?.meta_data?.pnl ?? '0')
+      if (!isNaN(realizedPnl) && realizedPnl !== 0) {
+        const basis = config.equityBalance ?? config.amount
+        await prisma.tradeConfig.update({
+          where: { id: config.id },
+          data: { equityBalance: basis + realizedPnl },
+        })
+      }
+    } catch (e) {
+      console.warn(`Could not update equityBalance for config ${config.id}:`, e)
+    }
+  }
+
+  return orderResult
 }
