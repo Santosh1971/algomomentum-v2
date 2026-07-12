@@ -24,6 +24,8 @@ export async function GET() {
       totalTrades: true,
       createdAt: true,
       showSubscriberCount: true,
+      orderSizeType: true,
+      defaultOrderSizeValue: true,
       _count: { select: { subscribers: true } },
     },
   })
