@@ -22,11 +22,11 @@ export async function GET(req: NextRequest) {
       tradeConfigs: {
         orderBy: { createdAt: "asc" },
         select: {
-          id: true, script: true, amount: true, initial_amount: true,
+          id: true, script: true, amount: true, initial_amount: true, equityBalance: true,
           isActive: true, userActive: true, mode: true, strategy: true,
-          leverage: true, compoundMode: true, platformFeePercent: true, isSubscription: true, strategy: true,
+          leverage: true, compoundMode: true, platformFeePercent: true, isSubscription: true,
           webhookToken: true, createdAt: true, lastToggledAt: true, strategyId: true,
-          strategyRef: { select: { minCapital: true } },
+          strategyRef: { select: { minCapital: true, orderSizeType: true, defaultOrderSizeValue: true } },
         },
       },
     },
