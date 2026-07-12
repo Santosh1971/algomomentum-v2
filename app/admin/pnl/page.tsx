@@ -29,7 +29,7 @@ function AdminPnlInner() {
   const [to, setTo] = useState(() => new Date().toISOString().slice(0, 10));
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(false);
-  const [currency, setCurrency] = useState<"USD" | "INR">("USD");
+  const [currency, setCurrency] = useState<"USD" | "INR">("INR");
   const [symbol, setSymbol] = useState("");
   const [quickRange, setQuickRange] = useState("custom");
 

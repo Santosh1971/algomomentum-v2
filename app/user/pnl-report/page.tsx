@@ -58,7 +58,7 @@ export default function PnlReportPage() {
   const [to, setTo] = useState(() => new Date().toISOString().slice(0, 10));
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(false);
-  const [currency, setCurrency] = useState<"USD" | "INR">("USD");
+  const [currency, setCurrency] = useState<"USD" | "INR">("INR");
   const [quickRange, setQuickRange] = useState("custom");
 
   useEffect(() => { if (status === "unauthenticated") router.push("/Signup"); }, [status, router]);

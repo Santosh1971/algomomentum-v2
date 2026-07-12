@@ -47,7 +47,7 @@ export default function TradeConfigPage() {
   const [balances, setBalances] = useState<Record<string, Balance>>({});
   const [positions, setPositions] = useState<Record<string, PositionsData>>({});
   const [loading, setLoading] = useState(true);
-  const [currency, setCurrency] = useState<CurrencyMode>("USD");
+  const [currency, setCurrency] = useState<CurrencyMode>("INR");
   const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(new Set());
   const [modal, setModal] = useState<ModalType>(null);
   const [scripts, setScripts] = useState<Script[]>([]);
@@ -420,6 +420,7 @@ export default function TradeConfigPage() {
                                     </div>
                                     <div className="flex items-center gap-3 text-xs text-gray-500 mt-0.5 sm:text-sm sm:mt-0 sm:contents">
                                       <span className="capitalize">{p.side} {p.size} @ {p.entryPrice}</span>
+                                      <span className="text-gray-500 font-medium">{fmt(p.positionValueUSD)}</span>
                                       <span className="text-gray-400">Mark: {p.markPrice}</span>
                                       <span className="text-gray-400">Liq: {p.liquidationPrice}</span>
                                     </div>

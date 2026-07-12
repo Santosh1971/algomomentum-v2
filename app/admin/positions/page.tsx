@@ -24,7 +24,7 @@ export default function AdminPositionsPage() {
   const router = useRouter();
   const [data, setData] = useState<AccountData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currency, setCurrency] = useState<"USD" | "INR">("USD");
+  const [currency, setCurrency] = useState<"USD" | "INR">("INR");
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/Signup");

@@ -6,6 +6,7 @@ import { getServerSession } from "next-auth";
 import { NEXT_AUTH } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getPositions, getPositionsOAuth } from "@/lib/deltaClient";
+import cache from "@/lib/cache";
 
 const INR_PER_USD = 85;
 
@@ -32,11 +33,17 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
 
     const enriched = positions.map((p: any) => {
       const upnlUSD = parseFloat(p.unrealized_pnl ?? "0");
+      const entryPrice = parseFloat(p.entry_price ?? "0")
+      const size = Math.abs(p.size)
+      const script = cache.getScript(p.product_symbol)
+      const positionValueUSD = size * (script?.lot ?? 1) * entryPrice
       return {
         symbol: p.product_symbol,
         side: p.size > 0 ? "buy" : "sell",
-        size: Math.abs(p.size),
-        entryPrice: parseFloat(p.entry_price ?? "0"),
+        size,
+        entryPrice,
+        positionValueUSD,
+        positionValueINR: positionValueUSD * INR_PER_USD,
         markPrice: parseFloat(p.mark_price ?? "0"),
         upnlUSD,
         upnlINR: upnlUSD * INR_PER_USD,
