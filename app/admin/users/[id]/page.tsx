@@ -459,11 +459,13 @@ export default function AdminUserDetailPage() {
               <div>
                 <label className="text-sm font-medium text-gray-700">Delta API Key</label>
                 <input type="text" value={newApiKey} onChange={e => setNewApiKey(e.target.value)}
+                  autoComplete="off" name="delta-api-key-field" data-lpignore="true" data-1p-ignore
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm font-mono" />
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-700">Delta API Secret</label>
                 <input type="password" value={newApiSecret} onChange={e => setNewApiSecret(e.target.value)}
+                  autoComplete="new-password" name="delta-api-secret-field" data-lpignore="true" data-1p-ignore
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm font-mono" />
               </div>
               <p className="text-xs text-gray-400">Keys are verified against Delta and encrypted before storage — same as a user connecting their own account.</p>
