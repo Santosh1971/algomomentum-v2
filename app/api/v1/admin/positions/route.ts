@@ -33,7 +33,11 @@ export async function GET() {
           ]);
 
       const positions = posData.status === "fulfilled"
-        ? (posData.value?.result ?? []).map((p: any) => ({
+        ? (posData.value?.result ?? []).map((p: any) => {
+            if (p.product_symbol === "XRPUSD" || p.symbol === "XRPUSD") {
+              console.log(`RAW XRP position for ${account.user?.email}:`, JSON.stringify(p));
+            }
+            return {
             symbol: p.product_symbol ?? p.symbol,
             side: p.entry_price > 0 ? (p.size > 0 ? "buy" : "sell") : "—",
             size: Math.abs(parseFloat(p.size ?? "0")),
@@ -42,7 +46,7 @@ export async function GET() {
             upnlUSD: parseFloat(p.unrealized_pnl ?? p.upnl ?? "0"),
             leverage: parseFloat(p.leverage ?? "1"),
             liquidationPrice: parseFloat(p.liquidation_price ?? "0"),
-          })).filter((p: any) => p.size > 0)
+          }}).filter((p: any) => p.size > 0)
         : [];
 
       const balances = balData.status === "fulfilled" ? balData.value?.result ?? [] : [];
