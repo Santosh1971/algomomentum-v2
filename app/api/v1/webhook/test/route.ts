@@ -132,7 +132,8 @@ async function handleEntry({ config, side, script, overrideAmount, overrideLever
   }
 
   if (config.account.is_oauth && config.account.oauth_access_token) {
-    await setLeverageOAuth(config.account.oauth_access_token, script.productId, leverage)
+    const levResult = await setLeverageOAuth(config.account.oauth_access_token, script.productId, leverage)
+    console.log(`setLeverageOAuth(productId=${script.productId}, requested=${leverage}) →`, JSON.stringify(levResult))
     return assertOrderSuccess(await placeOrderOAuth(config.account.oauth_access_token, {
       product_id: script.productId, product_symbol: script.exchange_symbol,
       size: quantity, side, order_type: 'market_order', time_in_force: 'ioc',
