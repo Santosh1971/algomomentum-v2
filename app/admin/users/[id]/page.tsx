@@ -40,6 +40,18 @@ export default function AdminUserDetailPage() {
   const [user, setUser] = useState<UserDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [currency, setCurrency] = useState<"USD" | "INR">("INR");
+  const [strategies, setStrategies] = useState<any[]>([]);
+  const [addBotFor, setAddBotFor] = useState<string | null>(null); // accountId or null
+  const [addBotStrategyId, setAddBotStrategyId] = useState("");
+  const [addBotAmount, setAddBotAmount] = useState("");
+  const [addBotSide, setAddBotSide] = useState<"buy" | "sell" | "">("");
+  const [addBotSaving, setAddBotSaving] = useState(false);
+  const [showAddAccount, setShowAddAccount] = useState(false);
+  const [newAccountName, setNewAccountName] = useState("");
+  const [newAccountType, setNewAccountType] = useState("main");
+  const [newApiKey, setNewApiKey] = useState("");
+  const [newApiSecret, setNewApiSecret] = useState("");
+  const [addAccountSaving, setAddAccountSaving] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/Signup");
@@ -53,6 +65,87 @@ export default function AdminUserDetailPage() {
   }
 
   useEffect(() => { if (userId) load(); }, [userId]);
+
+  useEffect(() => {
+    fetch("/api/v1/admin/strategies")
+      .then(r => r.json())
+      .then(d => setStrategies(d.strategies ?? []));
+  }, []);
+
+  function openAddBot(accountId: string) {
+    setAddBotFor(accountId);
+    setAddBotStrategyId("");
+    setAddBotAmount("");
+    setAddBotSide("");
+  }
+
+  async function submitAddBot() {
+    if (!addBotFor || !addBotStrategyId) return;
+    setAddBotSaving(true);
+    try {
+      const res = await fetch("/api/v1/admin/create-bot", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId, accountId: addBotFor, strategyId: addBotStrategyId,
+          amount: addBotAmount ? parseFloat(addBotAmount) : undefined,
+          activate: true,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error || "Failed to add bot"); setAddBotSaving(false); return; }
+      toast.success("Bot added");
+
+      if (addBotSide) {
+        const fireRes = await fetch("/api/v1/admin/manual-signal", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ strategyId: addBotStrategyId, side: addBotSide, trade: "ENTRY", userId }),
+        });
+        const fireData = await fireRes.json();
+        if (fireData.fired > 0) toast.success("Trade initiated");
+        else toast.error(fireData.error || fireData.errors?.[0]?.error || "Bot added, but trade did not fire — check manually");
+      }
+      setAddBotFor(null);
+      load();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to add bot");
+    }
+    setAddBotSaving(false);
+  }
+
+  function openAddAccount() {
+    setNewAccountName("");
+    setNewAccountType("main");
+    setNewApiKey("");
+    setNewApiSecret("");
+    setShowAddAccount(true);
+  }
+
+  async function submitAddAccount() {
+    if (!newAccountName || !newApiKey || !newApiSecret) return;
+    setAddAccountSaving(true);
+    try {
+      const createRes = await fetch("/api/v1/admin/create-account", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, accountName: newAccountName, accountType: newAccountType }),
+      });
+      const createData = await createRes.json();
+      if (!createRes.ok) { toast.error(createData.error || "Failed to create account"); setAddAccountSaving(false); return; }
+
+      const verifyRes = await fetch("/api/v1/tradeconfig/verify-keys", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ api_key: newApiKey, api_secret: newApiSecret, accountId: createData.account.id }),
+      });
+      const verifyData = await verifyRes.json();
+      if (!verifyRes.ok) { toast.error(verifyData.error || "Account created, but key verification failed — check the API key/secret"); setAddAccountSaving(false); return; }
+
+      toast.success("Account added and connected");
+      setShowAddAccount(false);
+      load();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to add account");
+    }
+    setAddAccountSaving(false);
+  }
 
   const fmt = (inr: number) =>
     currency === "INR"
@@ -137,14 +230,16 @@ export default function AdminUserDetailPage() {
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="flex bg-white border rounded-lg overflow-hidden text-sm">
+            <div className="flex bg-background border border-border rounded-lg overflow-hidden text-sm">
               {(["INR", "USD"] as const).map(c => (
                 <button key={c} onClick={() => setCurrency(c)}
-                  className={`px-3 py-1.5 font-medium transition ${currency === c ? "bg-[#161B22] text-white" : "text-gray-600 hover:bg-gray-50"}`}>
+                  className={`px-3 py-1.5 font-medium transition ${currency === c ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted"}`}>
                   {c}
                 </button>
               ))}
             </div>
+            <button onClick={openAddAccount}
+              className="text-sm px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 font-medium">+ Add Account</button>
           </div>
         </div>
 
@@ -188,7 +283,11 @@ export default function AdminUserDetailPage() {
                       : <span className="text-xs text-orange-500">⚠️ Not connected</span>
                     }
                   </div>
-                  <span className="text-xs text-gray-400">{account.tradeConfigs.length} bots</span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-gray-400">{account.tradeConfigs.length} bots</span>
+                    <button onClick={() => openAddBot(account.id)}
+                      className="text-xs px-2 py-1 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 font-medium">+ Add Bot</button>
+                  </div>
                 </div>
 
                 {/* Bots table */}
@@ -295,6 +394,90 @@ export default function AdminUserDetailPage() {
           </div>
         )}
       </div>
+
+      {addBotFor && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl">
+            <h2 className="text-lg font-bold text-gray-800 mb-4">Add Bot for {user?.name ?? user?.email}</h2>
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm font-medium text-gray-700">Strategy</label>
+                <select value={addBotStrategyId} onChange={e => setAddBotStrategyId(e.target.value)}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm">
+                  <option value="">Select a strategy…</option>
+                  {strategies.map((s: any) => <option key={s.id} value={s.id}>{s.name} ({s.symbol})</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700">Allocated Amount (₹) — optional, defaults to the strategy minimum</label>
+                <input type="number" value={addBotAmount} onChange={e => setAddBotAmount(e.target.value)}
+                  placeholder="e.g. 2000" className="mt-1 w-full border rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700">Initiate a trade now?</label>
+                <select value={addBotSide} onChange={e => setAddBotSide(e.target.value as any)}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm">
+                  <option value="">No — just add the bot, wait for the next signal</option>
+                  <option value="buy">Yes — enter LONG right now</option>
+                  <option value="sell">Yes — enter SHORT right now</option>
+                </select>
+                <p className="text-xs text-gray-400 mt-1">This fires a real trade for this user only — not a test, and not sent to any other subscriber.</p>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-5">
+              <button onClick={() => setAddBotFor(null)} className="flex-1 border rounded-lg py-2 text-sm text-gray-600">Cancel</button>
+              <button onClick={submitAddBot} disabled={!addBotStrategyId || addBotSaving}
+                className="flex-1 bg-[#161B22] text-white rounded-lg py-2 text-sm font-medium disabled:opacity-50">
+                {addBotSaving ? "Saving…" : "Add Bot"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAddAccount && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl">
+            <h2 className="text-lg font-bold text-gray-800 mb-4">Add Delta Account for {user?.name ?? user?.email}</h2>
+            <div className="space-y-3">
+              <div>
+                <label className="text-sm font-medium text-gray-700">Account Name</label>
+                <input type="text" value={newAccountName} onChange={e => setNewAccountName(e.target.value)}
+                  placeholder="e.g. Main Account" className="mt-1 w-full border rounded-lg px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700">Account Type</label>
+                <select value={newAccountType} onChange={e => setNewAccountType(e.target.value)}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm">
+                  <option value="main">Main</option>
+                  <option value="sub1">Sub1</option>
+                  <option value="sub2">Sub2</option>
+                  <option value="sub3">Sub3</option>
+                  <option value="sub4">Sub4</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700">Delta API Key</label>
+                <input type="text" value={newApiKey} onChange={e => setNewApiKey(e.target.value)}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm font-mono" />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-700">Delta API Secret</label>
+                <input type="password" value={newApiSecret} onChange={e => setNewApiSecret(e.target.value)}
+                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm font-mono" />
+              </div>
+              <p className="text-xs text-gray-400">Keys are verified against Delta and encrypted before storage — same as a user connecting their own account.</p>
+            </div>
+            <div className="flex gap-3 mt-5">
+              <button onClick={() => setShowAddAccount(false)} className="flex-1 border rounded-lg py-2 text-sm text-gray-600">Cancel</button>
+              <button onClick={submitAddAccount} disabled={!newAccountName || !newApiKey || !newApiSecret || addAccountSaving}
+                className="flex-1 bg-[#161B22] text-white rounded-lg py-2 text-sm font-medium disabled:opacity-50">
+                {addAccountSaving ? "Connecting…" : "Add & Verify Account"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

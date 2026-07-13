@@ -39,7 +39,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ symbol
     return NextResponse.json({ error: 'Invalid secret' }, { status: 401 })
   }
 
-  const { side, trade, price } = await req.json()
+  const { side, trade, price, targetUserId } = await req.json()
   const isEntry = /ENTRY/i.test(trade)
   const isExit  = /EXIT/i.test(trade)
   if (!isEntry && !isExit) return NextResponse.json({ error: 'Invalid trade type' }, { status: 400 })
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ symbol
     where: { symbol: symbol.toUpperCase(), isActive: true },
     include: {
       subscribers: {
-        where: { isActive: true, userActive: true },
+        where: { isActive: true, userActive: true, ...(targetUserId ? { userId: targetUserId } : {}) },
         include: {
           account: { select: { api_key_enc: true, api_secret_enc: true, delta_account_name: true, is_oauth: true, oauth_access_token: true } },
           user: { select: { role: true } },
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ symbol
   })
 
   if (!strategy) return NextResponse.json({ error: `No active strategy for ${symbol}` }, { status: 404 })
-  if (!strategy.subscribers.length) return NextResponse.json({ ok: true, fired: 0, message: 'No active subscribers' })
+  if (!strategy.subscribers.length) return NextResponse.json({ ok: true, fired: 0, message: targetUserId ? 'No active bot for that user on this strategy' : 'No active subscribers' })
 
   const script = cache.getScript(strategy.symbol)
   if (!script) return NextResponse.json({ error: `Unknown symbol: ${strategy.symbol}` }, { status: 400 })
