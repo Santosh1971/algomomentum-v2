@@ -37,6 +37,10 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
       const size = Math.abs(p.size)
       const script = cache.getScript(p.product_symbol)
       const positionValueUSD = size * (script?.lot ?? 1) * entryPrice
+      const margin = parseFloat(p.margin ?? "0")
+      // Delta's position payload doesn't include a direct "leverage" field —
+      // compute the actual applied leverage from notional value ÷ margin used.
+      const leverage = margin > 0 ? Math.round((positionValueUSD / margin) * 10) / 10 : 1
       return {
         symbol: p.product_symbol,
         side: p.size > 0 ? "buy" : "sell",
@@ -47,9 +51,9 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
         markPrice: parseFloat(p.mark_price ?? "0"),
         upnlUSD,
         upnlINR: upnlUSD * INR_PER_USD,
-        leverage: p.leverage ?? 1,
+        leverage,
         liquidationPrice: parseFloat(p.liquidation_price ?? "0"),
-        margin: parseFloat(p.initial_margin ?? "0"),
+        margin,
       };
     });
 

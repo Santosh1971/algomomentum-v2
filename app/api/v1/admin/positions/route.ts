@@ -34,19 +34,25 @@ export async function GET() {
 
       const positions = posData.status === "fulfilled"
         ? (posData.value?.result ?? []).map((p: any) => {
-            if (p.product_symbol === "XRPUSD" || p.symbol === "XRPUSD") {
-              console.log(`RAW XRP position for ${account.user?.email}:`, JSON.stringify(p));
-            }
+            const size = Math.abs(parseFloat(p.size ?? "0"));
+            const entryPrice = parseFloat(p.entry_price ?? "0");
+            const contractValue = parseFloat(p.product?.contract_value ?? "1");
+            const margin = parseFloat(p.margin ?? "0");
+            const notional = size * contractValue * entryPrice;
+            // Delta's position payload doesn't include a direct "leverage" field —
+            // compute the actual applied leverage from notional value ÷ margin used.
+            const leverage = margin > 0 ? Math.round((notional / margin) * 10) / 10 : 1;
             return {
-            symbol: p.product_symbol ?? p.symbol,
-            side: p.entry_price > 0 ? (p.size > 0 ? "buy" : "sell") : "—",
-            size: Math.abs(parseFloat(p.size ?? "0")),
-            entryPrice: parseFloat(p.entry_price ?? "0"),
-            markPrice: parseFloat(p.mark_price ?? "0"),
-            upnlUSD: parseFloat(p.unrealized_pnl ?? p.upnl ?? "0"),
-            leverage: parseFloat(p.leverage ?? "1"),
-            liquidationPrice: parseFloat(p.liquidation_price ?? "0"),
-          }}).filter((p: any) => p.size > 0)
+              symbol: p.product_symbol ?? p.symbol,
+              side: p.entry_price > 0 ? (p.size > 0 ? "buy" : "sell") : "—",
+              size,
+              entryPrice,
+              markPrice: parseFloat(p.mark_price ?? "0"),
+              upnlUSD: parseFloat(p.unrealized_pnl ?? p.upnl ?? "0"),
+              leverage,
+              liquidationPrice: parseFloat(p.liquidation_price ?? "0"),
+            };
+          }).filter((p: any) => p.size > 0)
         : [];
 
       const balances = balData.status === "fulfilled" ? balData.value?.result ?? [] : [];
