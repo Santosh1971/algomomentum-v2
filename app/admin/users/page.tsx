@@ -6,6 +6,16 @@ import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import Link from "next/link";
 
+// Builds a wa.me link from a stored phone number. Strips everything but digits,
+// and prepends the India country code (91) for bare 10-digit local numbers,
+// since that's this platform's user base — a number already carrying a country
+// code (11+ digits) is left as-is.
+function waLink(phone: string) {
+  const digits = phone.replace(/\D/g, "");
+  const withCountryCode = digits.length === 10 ? `91${digits}` : digits;
+  return `https://wa.me/${withCountryCode}`;
+}
+
 interface User {
   id: string;
   email: string;
@@ -44,6 +54,7 @@ export default function AdminUsersPage() {
   useEffect(() => { loadUsers(); }, []);
 
   async function approveUser(userId: string, approve: boolean) {
+    if (!window.confirm(approve ? "Approve this user's access?" : "Revoke this user's access?")) return;
     setApprovingId(userId);
     const res = await fetch("/api/v1/admin/users", {
       method: "PATCH",
@@ -136,15 +147,17 @@ export default function AdminUsersPage() {
                     <tr key={u.id} className="bg-yellow-500/10 border-l-4 border-yellow-400">
                       <td className="px-4 py-3 text-gray-400">{i + 1}</td>
                       <td className="px-4 py-3 font-medium text-gray-800 max-w-[160px]">
-                        <div className="flex items-center gap-2">
+                        <Link href={`/user/dashboard?userId=${u.id}`} className="flex items-center gap-2 hover:underline">
                           <div className="w-7 h-7 rounded-full bg-foreground text-background flex items-center justify-center text-xs font-bold flex-shrink-0">
                             {(u.name ?? u.email ?? "?")[0].toUpperCase()}
                           </div>
                           <span className="truncate">{u.name ?? "—"}</span>
-                        </div>
+                        </Link>
                       </td>
                       <td className="px-4 py-3 text-gray-600">{u.email}</td>
-                      <td className="px-4 py-3 text-green-600 whitespace-nowrap">{u.phone || "—"}</td>
+                      <td className="px-4 py-3 text-green-600 whitespace-nowrap">
+                        {u.phone ? <a href={waLink(u.phone)} target="_blank" rel="noopener noreferrer" className="hover:underline">{u.phone}</a> : "—"}
+                      </td>
                       <td className="px-4 py-3">{u.details?.age ?? "—"}</td>
                       <td className="px-4 py-3">{u.details?.gender ?? "—"}</td>
                       <td className="px-4 py-3">{u.details?.city ?? "—"}</td>
@@ -190,15 +203,17 @@ export default function AdminUsersPage() {
                   <tr key={u.id} className={!u.isApproved ? "bg-yellow-500/20 border-l-4 border-yellow-400" : i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
                     <td className="px-4 py-3 text-gray-400">{i + 1}</td>
                     <td className="px-4 py-3 font-medium text-gray-800 max-w-[160px]">
-                      <div className="flex items-center gap-2">
+                      <Link href={`/user/dashboard?userId=${u.id}`} className="flex items-center gap-2 hover:underline">
                         <div className="w-7 h-7 rounded-full bg-foreground text-background flex items-center justify-center text-xs font-bold flex-shrink-0">
                           {(u.name ?? u.email)[0].toUpperCase()}
                         </div>
                         {u.name ?? "—"}
-                      </div>
+                      </Link>
                     </td>
                     <td className="px-4 py-3 text-gray-600">{u.email}</td>
-                    <td className="px-4 py-3 text-green-600 whitespace-nowrap">{u.phone || "—"}</td>
+                    <td className="px-4 py-3 text-green-600 whitespace-nowrap">
+                      {u.phone ? <a href={waLink(u.phone)} target="_blank" rel="noopener noreferrer" className="hover:underline">{u.phone}</a> : "—"}
+                    </td>
                     <td className="px-4 py-3">{u.details?.age || "—"}</td>
                     <td className="px-4 py-3">{u.details?.gender || "—"}</td>
                     <td className="px-4 py-3 max-w-[120px]">{u.details?.city || "—"}</td>

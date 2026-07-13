@@ -196,7 +196,8 @@ export default function TradeConfigPage() {
 
   async function toggleSymbol(tc: TradeConfig) {
     const newActive = !tc.userActive;
-    if (!newActive && !confirm(`Deactivate ${tc.script}? Open trade will be closed immediately.`)) return;
+    const confirmMsg = newActive ? `Activate ${tc.script}?` : `Deactivate ${tc.script}? Open trade will be closed immediately.`;
+    if (!confirm(confirmMsg)) return;
     const res = await fetch("/api/v1/tradeconfig", {
       method: "PUT", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: tc.id, userActive: newActive }),

@@ -6,6 +6,12 @@ import Navbar from "@/components/Navbar";
 import { toast } from "sonner";
 import Link from "next/link";
 
+function waLink(phone: string) {
+  const digits = phone.replace(/\D/g, "");
+  const withCountryCode = digits.length === 10 ? `91${digits}` : digits;
+  return `https://wa.me/${withCountryCode}`;
+}
+
 const INR_PER_USD = 85;
 
 interface TradeConfig {
@@ -54,6 +60,7 @@ export default function AdminUserDetailPage() {
       : `$${(inr / INR_PER_USD).toFixed(2)}`;
 
   async function toggleActive(tcId: string, field: "isActive" | "userActive", value: boolean) {
+    if (!window.confirm(`${value ? "Activate" : "Deactivate"} this bot?`)) return;
     const res = await fetch("/api/v1/tradeconfig", {
       method: "PUT", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: tcId, [field]: value }),
@@ -126,7 +133,7 @@ export default function AdminUserDetailPage() {
             </Link>
             <div>
               <h1 className="text-xl font-bold text-[#161B22]">{user.name ?? user.email}</h1>
-              <p className="text-sm text-gray-500 break-all">{user.email} · {user.phone}</p>
+              <p className="text-sm text-gray-500 break-all">{user.email} · {user.phone && <a href={waLink(user.phone)} target="_blank" rel="noopener noreferrer" className="hover:underline text-green-600">{user.phone}</a>}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">

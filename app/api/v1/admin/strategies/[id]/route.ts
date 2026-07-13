@@ -7,6 +7,8 @@ import { getServerSession } from 'next-auth'
 import { NEXT_AUTH as authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { parseBacktestFile } from '@/lib/parseBacktest'
+import { setLeverage, setLeverageOAuth } from '@/lib/deltaClient'
+import cache from '@/lib/cache'
 
 // PATCH /api/admin/strategies/:id — update strategy
 export async function PATCH(req, { params }: { params: Promise<{ id: string }> }) {
@@ -79,12 +81,32 @@ export async function PATCH(req, { params }: { params: Promise<{ id: string }> }
     data,
   })
 
-  // If defaultLeverage changed, propagate to all subscriber TradeConfigs
+  // If defaultLeverage changed, propagate to all subscriber TradeConfigs — both our
+  // own DB record AND a live push to Delta, so the Admin Positions page (which reads
+  // leverage straight from Delta's live data) reflects the change immediately rather
+  // than waiting for each subscriber's next trade to naturally push a new leverage.
   if (data.defaultLeverage !== undefined) {
     await prisma.tradeConfig.updateMany({
       where: { strategyId: id, isSubscription: true },
       data: { leverage: data.defaultLeverage },
     })
+
+    try {
+      const script = cache.getScript(strategy.symbol)
+      if (script) {
+        const subscribers = await prisma.tradeConfig.findMany({
+          where: { strategyId: id, isSubscription: true, isActive: true, userActive: true },
+          include: { account: { select: { api_key_enc: true, api_secret_enc: true, is_oauth: true, oauth_access_token: true } } },
+        })
+        await Promise.allSettled(subscribers.map((tc: any) =>
+          tc.account.is_oauth && tc.account.oauth_access_token
+            ? setLeverageOAuth(tc.account.oauth_access_token, script.productId, data.defaultLeverage)
+            : setLeverage(tc.account.api_key_enc, tc.account.api_secret_enc, script.productId, data.defaultLeverage)
+        ))
+      }
+    } catch (e) {
+      console.warn('Could not push leverage change to Delta for all subscribers:', e)
+    }
   }
 
   return NextResponse.json({ strategy })

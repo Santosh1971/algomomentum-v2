@@ -1,6 +1,6 @@
 "use client";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
@@ -14,10 +14,8 @@ interface SymbolStats {
   updatedAt: string;
 }
 
-function fmtP(n: number) {
-  const sign = n >= 0 ? "+" : "";
-  return `${sign}$${n.toFixed(2)}`;
-}
+const INR_PER_USD = 85;
+
 function pnlColor(n: number) {
   return n >= 0 ? "text-green-600" : "text-red-600";
 }
@@ -31,10 +29,21 @@ function minutesAgo(iso: string) {
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const viewUserId = searchParams.get("userId");
   const [symbols, setSymbols] = useState<string[]>([]);
   const [bySymbol, setBySymbol] = useState<Record<string, SymbolStats>>({});
   const [selected, setSelected] = useState("ALL");
   const [statsPending, setStatsPending] = useState(false);
+  const [currency, setCurrency] = useState<"USD" | "INR">("INR");
+
+  function fmtP(n: number) {
+    const sign = n >= 0 ? "+" : "";
+    return currency === "USD" ? `${sign}$${n.toFixed(2)}` : `${sign}₹${(n * INR_PER_USD).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+  }
+  function fmt(n: number) {
+    return currency === "USD" ? `$${n.toFixed(2)}` : `₹${(n * INR_PER_USD).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+  }
 
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -43,7 +52,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (status !== "authenticated") return;
-    fetch("/api/v1/user/dashboard-stats")
+    const url = viewUserId ? `/api/v1/user/dashboard-stats?userId=${viewUserId}` : "/api/v1/user/dashboard-stats";
+    fetch(url)
       .then(r => r.json())
       .then(d => {
         if (d.pending) { setStatsPending(true); return; }
@@ -51,7 +61,7 @@ export default function DashboardPage() {
         setBySymbol(d.bySymbol ?? {});
       })
       .catch(() => setStatsPending(true));
-  }, [status]);
+  }, [status, viewUserId]);
 
   if (status === "loading") return null;
   const isAdmin = session?.user?.role === "admin";
@@ -65,7 +75,7 @@ export default function DashboardPage() {
     { label: "Total Trades", value: String(stats.totalTrades), color: "text-gray-800" },
     { label: "Win Rate", value: `${stats.winRate}%`, color: stats.winRate >= 50 ? "text-green-600" : "text-red-600" },
     { label: "Avg Profit/Loss", value: fmtP(stats.avgProfitLoss), color: pnlColor(stats.avgProfitLoss) },
-    { label: "Avg Trade Size", value: `$${stats.avgTradeSize.toFixed(2)}`, color: "text-gray-800" },
+    { label: "Avg Trade Size", value: fmt(stats.avgTradeSize), color: "text-gray-800" },
   ] : [];
 
   return (
@@ -75,15 +85,21 @@ export default function DashboardPage() {
         <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-[#161B22]">Welcome back, {session?.user?.name || session?.user?.email} 👋</h1>
-            <p className="text-gray-500 mt-1 text-sm">{isAdmin ? "Viewing as User — click Admin Panel to switch back" : "User Dashboard"}</p>
+            <p className="text-gray-500 mt-1 text-sm">{viewUserId ? "Viewing another user's dashboard (admin) — click Admin Panel to return" : isAdmin ? "Viewing as User — click Admin Panel to switch back" : "User Dashboard"}</p>
           </div>
-          {symbols.length > 0 && (
-            <select value={selected} onChange={e => setSelected(e.target.value)}
-              className="border rounded-lg px-3 py-2 text-sm bg-white">
-              <option value="ALL">All Strategies</option>
-              {symbols.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-          )}
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex bg-white border rounded-lg overflow-hidden text-sm">
+              <button onClick={() => setCurrency("USD")} className={`px-3 py-1.5 font-medium transition ${currency === "USD" ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted"}`}>USD</button>
+              <button onClick={() => setCurrency("INR")} className={`px-3 py-1.5 font-medium transition ${currency === "INR" ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted"}`}>INR</button>
+            </div>
+            {symbols.length > 0 && (
+              <select value={selected} onChange={e => setSelected(e.target.value)}
+                className="border rounded-lg px-3 py-2 text-sm bg-white">
+                <option value="ALL">All Strategies</option>
+                {symbols.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            )}
+          </div>
         </div>
 
         {/* PnL stats */}
@@ -107,8 +123,10 @@ export default function DashboardPage() {
 
             {/* Equity curve */}
             {stats.equityCurve.length > 1 && (() => {
+              const firstTradeDate = (stats.equityCurve[0]?.date ?? "").slice(0, 10);
+              const effectiveFrom = dateFrom || firstTradeDate;
               const filteredCurve = stats.equityCurve.filter(d =>
-                (!dateFrom || d.date >= dateFrom) && (!dateTo || d.date <= dateTo)
+                (!effectiveFrom || d.date >= effectiveFrom) && (!dateTo || d.date <= dateTo)
               );
               if (filteredCurve.length < 2) {
                 return (
@@ -132,13 +150,13 @@ export default function DashboardPage() {
                     </p>
                     <div className="flex items-center gap-2 text-xs">
                       <label className="text-gray-500">From</label>
-                      <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+                      <input type="date" value={effectiveFrom} min={firstTradeDate} onChange={e => setDateFrom(e.target.value)}
                         className="border rounded-lg px-2 py-1 bg-white text-gray-700" />
                       <label className="text-gray-500">To</label>
-                      <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+                      <input type="date" value={dateTo} min={firstTradeDate} onChange={e => setDateTo(e.target.value)}
                         className="border rounded-lg px-2 py-1 bg-white text-gray-700" />
                       {(dateFrom || dateTo) && (
-                        <button onClick={() => { setDateFrom(""); setDateTo(""); }} className="text-blue-600 hover:underline">Clear</button>
+                        <button onClick={() => { setDateFrom(""); setDateTo(""); }} className="text-blue-600 hover:underline">Reset</button>
                       )}
                     </div>
                   </div>
@@ -158,7 +176,7 @@ export default function DashboardPage() {
                       <XAxis dataKey="date" tick={{ fontSize: 10 }} minTickGap={30} />
                       <YAxis tick={{ fontSize: 10 }} width={50} />
                       <Tooltip
-                        formatter={(v: any) => [`$${Number(v).toFixed(2)}`, "Cumulative PnL"]}
+                        formatter={(v: any) => [fmt(Number(v)), "Cumulative PnL"]}
                         contentStyle={{ backgroundColor: "var(--background)", color: "var(--foreground)", border: "1px solid var(--border)", borderRadius: 8 }}
                         labelStyle={{ color: "var(--foreground)" }}
                         itemStyle={{ color: "var(--foreground)" }}

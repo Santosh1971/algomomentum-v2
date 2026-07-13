@@ -41,6 +41,7 @@ export default function BotStatusPage() {
   useEffect(() => { load(); }, []);
 
   async function toggleActive(tcId: string, value: boolean) {
+    if (!window.confirm(`${value ? "Activate" : "Deactivate"} this bot?`)) return;
     const res = await fetch("/api/v1/tradeconfig", {
       method: "PUT", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: tcId, isActive: value }),

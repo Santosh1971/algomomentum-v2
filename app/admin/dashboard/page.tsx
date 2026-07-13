@@ -15,13 +15,6 @@ interface SymbolStats {
   updatedAt: string;
 }
 
-function fmtInr(n: number) {
-  return `₹${n.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
-}
-function fmtUsd(n: number) {
-  const sign = n >= 0 ? "" : "-";
-  return `${sign}$${Math.abs(n).toFixed(2)}`;
-}
 function pnlColor(n: number) {
   return n >= 0 ? "text-green-600" : "text-red-600";
 }
@@ -39,6 +32,24 @@ export default function AdminDashboard() {
   const [bySymbol, setBySymbol] = useState<Record<string, SymbolStats>>({});
   const [selected, setSelected] = useState("ALL");
   const [statsPending, setStatsPending] = useState(false);
+  const [currency, setCurrency] = useState<"USD" | "INR">("INR");
+  const INR_PER_USD = 85;
+
+  // usd-native values (PnL figures) — show as-is in USD mode, converted in INR mode
+  function fmtUsd(n: number) {
+    if (currency === "USD") {
+      const sign = n >= 0 ? "" : "-";
+      return `${sign}$${Math.abs(n).toFixed(2)}`;
+    }
+    const sign = n >= 0 ? "" : "-";
+    return `${sign}₹${Math.abs(n * INR_PER_USD).toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
+  }
+  // inr-native values (bot capital allocation) — show as-is in INR mode, converted in USD mode
+  function fmtInr(n: number) {
+    return currency === "INR"
+      ? `₹${n.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`
+      : `$${(n / INR_PER_USD).toFixed(2)}`;
+  }
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
@@ -79,13 +90,19 @@ export default function AdminDashboard() {
             <h1 className="text-xl sm:text-2xl font-bold text-[#161B22]">Admin Dashboard</h1>
             <p className="text-gray-500 text-sm mt-1">AlgoMomentum Bridge v2 — Platform Overview</p>
           </div>
-          {symbols.length > 0 && (
-            <select value={selected} onChange={e => setSelected(e.target.value)}
-              className="border rounded-lg px-3 py-2 text-sm bg-white">
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex bg-white border rounded-lg overflow-hidden text-sm">
+              <button onClick={() => setCurrency("USD")} className={`px-3 py-1.5 font-medium transition ${currency === "USD" ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted"}`}>USD</button>
+              <button onClick={() => setCurrency("INR")} className={`px-3 py-1.5 font-medium transition ${currency === "INR" ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted"}`}>INR</button>
+            </div>
+            {symbols.length > 0 && (
+              <select value={selected} onChange={e => setSelected(e.target.value)}
+                className="border rounded-lg px-3 py-2 text-sm bg-white">
               <option value="ALL">All Strategies</option>
               {symbols.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           )}
+          </div>
         </div>
 
         {/* Platform-wide stats (cached, refreshed every 15 min) */}
@@ -109,8 +126,10 @@ export default function AdminDashboard() {
             </div>
 
             {p.equityCurve.length > 1 && (() => {
+              const firstTradeDate = (p.equityCurve[0]?.date ?? "").slice(0, 10);
+              const effectiveFrom = dateFrom || firstTradeDate;
               const filteredCurve = p.equityCurve.filter(d =>
-                (!dateFrom || d.date >= dateFrom) && (!dateTo || d.date <= dateTo)
+                (!effectiveFrom || d.date >= effectiveFrom) && (!dateTo || d.date <= dateTo)
               );
               if (filteredCurve.length < 2) {
                 return (
@@ -134,13 +153,13 @@ export default function AdminDashboard() {
                     </p>
                     <div className="flex items-center gap-2 text-xs">
                       <label className="text-gray-500">From</label>
-                      <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+                      <input type="date" value={effectiveFrom} min={firstTradeDate} onChange={e => setDateFrom(e.target.value)}
                         className="border rounded-lg px-2 py-1 bg-white text-gray-700" />
                       <label className="text-gray-500">To</label>
-                      <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+                      <input type="date" value={dateTo} min={firstTradeDate} onChange={e => setDateTo(e.target.value)}
                         className="border rounded-lg px-2 py-1 bg-white text-gray-700" />
                       {(dateFrom || dateTo) && (
-                        <button onClick={() => { setDateFrom(""); setDateTo(""); }} className="text-blue-600 hover:underline">Clear</button>
+                        <button onClick={() => { setDateFrom(""); setDateTo(""); }} className="text-blue-600 hover:underline">Reset</button>
                       )}
                     </div>
                   </div>
@@ -160,7 +179,7 @@ export default function AdminDashboard() {
                       <XAxis dataKey="date" tick={{ fontSize: 10 }} minTickGap={30} />
                       <YAxis tick={{ fontSize: 10 }} width={50} />
                       <Tooltip
-                        formatter={(v: any) => [`$${Number(v).toFixed(2)}`, "Cumulative PnL"]}
+                        formatter={(v: any) => [fmtUsd(Number(v)), "Cumulative PnL"]}
                         contentStyle={{ backgroundColor: "var(--background)", color: "var(--foreground)", border: "1px solid var(--border)", borderRadius: 8 }}
                         labelStyle={{ color: "var(--foreground)" }}
                         itemStyle={{ color: "var(--foreground)" }}
