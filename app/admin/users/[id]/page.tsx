@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import { toast } from "sonner";
 import Link from "next/link";
+import ConnectDeltaModal from "@/components/ConnectDeltaModal";
 
 function waLink(phone: string) {
   const digits = phone.replace(/\D/g, "");
@@ -49,9 +50,8 @@ export default function AdminUserDetailPage() {
   const [showAddAccount, setShowAddAccount] = useState(false);
   const [newAccountName, setNewAccountName] = useState("");
   const [newAccountType, setNewAccountType] = useState("main");
-  const [newApiKey, setNewApiKey] = useState("");
-  const [newApiSecret, setNewApiSecret] = useState("");
   const [addAccountSaving, setAddAccountSaving] = useState(false);
+  const [connectingAccount, setConnectingAccount] = useState<{ id: string; type: string } | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/Signup");
@@ -115,13 +115,11 @@ export default function AdminUserDetailPage() {
   function openAddAccount() {
     setNewAccountName("");
     setNewAccountType("main");
-    setNewApiKey("");
-    setNewApiSecret("");
     setShowAddAccount(true);
   }
 
-  async function submitAddAccount() {
-    if (!newAccountName || !newApiKey || !newApiSecret) return;
+  async function submitCreateAccountShell() {
+    if (!newAccountName) return;
     setAddAccountSaving(true);
     try {
       const createRes = await fetch("/api/v1/admin/create-account", {
@@ -131,16 +129,8 @@ export default function AdminUserDetailPage() {
       const createData = await createRes.json();
       if (!createRes.ok) { toast.error(createData.error || "Failed to create account"); setAddAccountSaving(false); return; }
 
-      const verifyRes = await fetch("/api/v1/tradeconfig/verify-keys", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ api_key: newApiKey, api_secret: newApiSecret, accountId: createData.account.id }),
-      });
-      const verifyData = await verifyRes.json();
-      if (!verifyRes.ok) { toast.error(verifyData.error || "Account created, but key verification failed — check the API key/secret"); setAddAccountSaving(false); return; }
-
-      toast.success("Account added and connected");
       setShowAddAccount(false);
-      load();
+      setConnectingAccount({ id: createData.account.id, type: newAccountType });
     } catch (e: any) {
       toast.error(e.message || "Failed to add account");
     }
@@ -456,29 +446,27 @@ export default function AdminUserDetailPage() {
                   <option value="sub4">Sub4</option>
                 </select>
               </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">Delta API Key</label>
-                <input type="text" value={newApiKey} onChange={e => setNewApiKey(e.target.value)}
-                  autoComplete="off" name="delta-api-key-field" data-lpignore="true" data-1p-ignore
-                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm font-mono" />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-700">Delta API Secret</label>
-                <input type="password" value={newApiSecret} onChange={e => setNewApiSecret(e.target.value)}
-                  autoComplete="new-password" name="delta-api-secret-field" data-lpignore="true" data-1p-ignore
-                  className="mt-1 w-full border rounded-lg px-3 py-2 text-sm font-mono" />
-              </div>
-              <p className="text-xs text-gray-400">Keys are verified against Delta and encrypted before storage — same as a user connecting their own account.</p>
+              <p className="text-xs text-gray-400">Next, you'll enter this user's Delta API key and secret to connect it — same verification a user goes through themselves.</p>
             </div>
             <div className="flex gap-3 mt-5">
               <button onClick={() => setShowAddAccount(false)} className="flex-1 border rounded-lg py-2 text-sm text-gray-600">Cancel</button>
-              <button onClick={submitAddAccount} disabled={!newAccountName || !newApiKey || !newApiSecret || addAccountSaving}
+              <button onClick={submitCreateAccountShell} disabled={!newAccountName || addAccountSaving}
                 className="flex-1 bg-[#161B22] text-white rounded-lg py-2 text-sm font-medium disabled:opacity-50">
-                {addAccountSaving ? "Connecting…" : "Add & Verify Account"}
+                {addAccountSaving ? "Creating…" : "Continue"}
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {connectingAccount && (
+        <ConnectDeltaModal
+          accountId={connectingAccount.id}
+          accountType={connectingAccount.type}
+          isAdmin
+          onSuccess={() => { toast.success("Account connected"); setConnectingAccount(null); load(); }}
+          onClose={() => { setConnectingAccount(null); load(); }}
+        />
       )}
     </div>
   );
