@@ -28,6 +28,8 @@ export default function StrategyDetailPage() {
   const [subscribing, setSubscribing] = useState(false)
   const [subMsg, setSubMsg] = useState('')
   const [showSubModal, setShowSubModal] = useState(false)
+  const [currency, setCurrency] = useState<'USD' | 'INR'>('INR')
+  const INR_TO_USD = 85
 
   useEffect(() => {
     fetch(`/api/v1/marketplace/${id}?period=${period}`)
@@ -76,6 +78,12 @@ export default function StrategyDetailPage() {
             {s.description && <p className="text-sm text-muted-foreground mt-2">{s.description}</p>}
           </div>
           <div className="flex flex-col items-end gap-2 shrink-0">
+            <div className="flex bg-background border border-border rounded-lg overflow-hidden text-sm">
+              {(['USD', 'INR'] as const).map(c => (
+                <button key={c} onClick={() => setCurrency(c)}
+                  className={`px-3 py-1.5 font-medium transition ${currency === c ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted"}`}>{c}</button>
+              ))}
+            </div>
             {data.isSubscribed && isApproved ? (
               <button onClick={handleUnsubscribe} disabled={subscribing}
                 className="px-5 py-2 rounded-lg text-sm font-medium bg-red-600 hover:bg-red-700 text-white transition-colors disabled:opacity-50">
@@ -127,7 +135,7 @@ export default function StrategyDetailPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="border border-border/40 rounded-xl p-4 space-y-2">
                 <div className="text-sm font-medium mb-2">Backtesting Result</div>
-                <Row label="Initial Capital" value="₹1,000" />
+                <Row label="Initial Capital" value={s.initialCapitalUsd != null ? (currency === 'USD' ? `$${s.initialCapitalUsd.toFixed(2)}` : `₹${(s.initialCapitalUsd * INR_TO_USD).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`) : '—'} />
                 <Row label="Total PnL" value={s.totalPnlPct != null ? `+${s.totalPnlPct.toFixed(1)}%` : '—'} color="green" />
                 <Row label="No. of Trades" value={s.totalTrades ?? '—'} />
                 <Row label="Win Rate" value={s.winRate != null ? `${s.winRate.toFixed(1)}%` : '—'} />
@@ -149,7 +157,7 @@ export default function StrategyDetailPage() {
               <div className="p-4 border-b border-border/40">
                 <div className="text-sm font-medium">Backtested Trades</div>
               </div>
-              <TradesTable trades={data.backtestPaired} emptyText="No backtest trades recorded for this strategy." />
+              <TradesTable trades={data.backtestPaired} emptyText="No backtest trades recorded for this strategy." currency={currency} INR_TO_USD={INR_TO_USD} />
             </div>
           </div>
         )}
@@ -187,7 +195,7 @@ export default function StrategyDetailPage() {
               <div className="p-4 border-b border-border/40">
                 <div className="text-sm font-medium">Live Trades</div>
               </div>
-              <TradesTable trades={data.liveTrades} emptyText="No trades in this period yet." emptyHint="Trades will appear here once TradingView signals start firing." />
+              <TradesTable trades={data.liveTrades} emptyText="No trades in this period yet." emptyHint="Trades will appear here once TradingView signals start firing." currency={currency} INR_TO_USD={INR_TO_USD} />
             </div>
           </div>
         )}
@@ -227,7 +235,7 @@ function Row({ label, value, color }: { label: string; value: any; color?: strin
   )
 }
 
-function TradesTable({ trades, emptyText, emptyHint }: { trades: any[]; emptyText: string; emptyHint?: string }) {
+function TradesTable({ trades, emptyText, emptyHint, currency, INR_TO_USD }: { trades: any[]; emptyText: string; emptyHint?: string; currency: 'USD' | 'INR'; INR_TO_USD: number }) {
   if (!trades || trades.length === 0) {
     return (
       <div className="p-8 text-center text-muted-foreground text-sm">
@@ -263,7 +271,7 @@ function TradesTable({ trades, emptyText, emptyHint }: { trades: any[]; emptyTex
               <td className="px-3 py-2 text-muted-foreground">{new Date(t.entryDate).toLocaleDateString('en-IN')}</td>
               <td className="px-3 py-2">${t.entryPrice?.toFixed(4)}</td>
               <td className="px-3 py-2 text-right">{t.entrySize ?? "—"}</td>
-              <td className="px-3 py-2 text-right">{t.entrySize != null ? `$${(t.entryPrice * t.entrySize).toFixed(2)}` : "—"}</td>
+              <td className="px-3 py-2 text-right">{t.entrySize != null ? (currency === 'USD' ? `$${(t.entryPrice * t.entrySize).toFixed(2)}` : `₹${(t.entryPrice * t.entrySize * INR_TO_USD).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`) : "—"}</td>
               <td className="px-3 py-2 text-muted-foreground">{new Date(t.exitDate).toLocaleDateString('en-IN')}</td>
               <td className="px-3 py-2">${t.exitPrice?.toFixed(4)}</td>
               <td className={`px-3 py-2 text-right font-medium ${t.pnlPct >= 0 ? 'text-green-500' : 'text-red-400'}`}>{t.pnlPct >= 0 ? '+' : ''}{t.pnlPct.toFixed(2)}%</td>

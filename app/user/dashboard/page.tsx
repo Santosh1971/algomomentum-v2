@@ -47,8 +47,17 @@ function DashboardContent() {
 
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [viewUserName, setViewUserName] = useState<string | null>(null);
 
   useEffect(() => { if (status === "unauthenticated") router.push("/Signup"); }, [status, router]);
+
+  useEffect(() => {
+    if (status !== "authenticated" || !viewUserId) { setViewUserName(null); return; }
+    fetch(`/api/v1/admin/users/${viewUserId}`)
+      .then(r => r.json())
+      .then(d => setViewUserName(d.name || d.email || null))
+      .catch(() => setViewUserName(null));
+  }, [status, viewUserId]);
 
   useEffect(() => {
     if (status !== "authenticated") return;
@@ -84,7 +93,7 @@ function DashboardContent() {
       <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-5 sm:space-y-6">
         <div className="bg-white rounded-2xl p-5 sm:p-6 shadow-sm border flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-[#161B22]">Welcome back, {session?.user?.name || session?.user?.email} 👋</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-[#161B22]">{viewUserId ? `${viewUserName ?? "…"}'s Dashboard` : `Welcome back, ${session?.user?.name || session?.user?.email} 👋`}</h1>
             <p className="text-gray-500 mt-1 text-sm">{viewUserId ? "Viewing another user's dashboard (admin) — click Admin Panel to return" : isAdmin ? "Viewing as User — click Admin Panel to switch back" : "User Dashboard"}</p>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
@@ -125,8 +134,10 @@ function DashboardContent() {
             {stats.equityCurve.length > 1 && (() => {
               const firstTradeDate = (stats.equityCurve[0]?.date ?? "").slice(0, 10);
               const effectiveFrom = dateFrom || firstTradeDate;
+              const todayDate = new Date().toISOString().slice(0, 10);
+              const effectiveTo = dateTo || todayDate;
               const filteredCurve = stats.equityCurve.filter(d =>
-                (!effectiveFrom || d.date >= effectiveFrom) && (!dateTo || d.date <= dateTo)
+                (!effectiveFrom || d.date >= effectiveFrom) && (!effectiveTo || d.date <= effectiveTo)
               );
               if (filteredCurve.length < 2) {
                 return (
@@ -153,7 +164,7 @@ function DashboardContent() {
                       <input type="date" value={effectiveFrom} min={firstTradeDate} onChange={e => setDateFrom(e.target.value)}
                         className="border rounded-lg px-2 py-1 bg-white text-gray-700" />
                       <label className="text-gray-500">To</label>
-                      <input type="date" value={dateTo} min={firstTradeDate} onChange={e => setDateTo(e.target.value)}
+                      <input type="date" value={effectiveTo} min={firstTradeDate} onChange={e => setDateTo(e.target.value)}
                         className="border rounded-lg px-2 py-1 bg-white text-gray-700" />
                       {(dateFrom || dateTo) && (
                         <button onClick={() => { setDateFrom(""); setDateTo(""); }} className="text-blue-600 hover:underline">Reset</button>

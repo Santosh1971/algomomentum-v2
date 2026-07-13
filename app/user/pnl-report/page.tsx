@@ -146,10 +146,10 @@ export default function PnlReportPage() {
               <button onClick={downloadExcel}
                 className="text-sm px-3 py-1.5 rounded-lg border text-gray-600 hover:bg-gray-50 font-medium">⬇ Excel</button>
             )}
-            <div className="flex bg-white border rounded-lg overflow-hidden text-sm">
+            <div className="flex bg-background border border-border rounded-lg overflow-hidden text-sm">
               {(["USD", "INR"] as const).map(c => (
                 <button key={c} onClick={() => setCurrency(c)}
-                  className={`px-3 py-1.5 font-medium transition ${currency === c ? "bg-[#161B22] text-white" : "text-gray-600 hover:bg-gray-50"}`}>{c}</button>
+                  className={`px-3 py-1.5 font-medium transition ${currency === c ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted"}`}>{c}</button>
               ))}
             </div>
           </div>

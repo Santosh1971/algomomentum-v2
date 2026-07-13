@@ -97,6 +97,7 @@ export function parseBacktestFile(buffer, filename) {
 
   const stats = extractStats(rows, initialCapital)
   if (overviewPnlPct !== null) stats.totalPnlPct = overviewPnlPct
+  stats.initialCapitalUsd = initialCapital
 
   // Read accurate stats from Performance sheet if available
   if (ext === 'xlsx' || ext === 'xls') {

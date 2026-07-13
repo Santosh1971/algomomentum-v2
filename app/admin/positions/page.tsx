@@ -60,10 +60,10 @@ export default function AdminPositionsPage() {
             <div className={`text-lg font-bold ${totalUpnl >= 0 ? "text-green-600" : "text-red-600"}`}>
               Total UPNL: {fmt(totalUpnl)}
             </div>
-            <div className="flex bg-white border rounded-lg overflow-hidden text-sm">
+            <div className="flex bg-background border border-border rounded-lg overflow-hidden text-sm">
               {(["USD", "INR"] as const).map(c => (
                 <button key={c} onClick={() => setCurrency(c)}
-                  className={`px-3 py-1.5 font-medium transition ${currency === c ? "bg-[#161B22] text-white" : "text-gray-600 hover:bg-gray-50"}`}>{c}</button>
+                  className={`px-3 py-1.5 font-medium transition ${currency === c ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted"}`}>{c}</button>
               ))}
             </div>
             <button onClick={loadAll} className="text-xs px-3 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200">↻ Refresh</button>

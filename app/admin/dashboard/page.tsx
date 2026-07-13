@@ -128,8 +128,10 @@ export default function AdminDashboard() {
             {p.equityCurve.length > 1 && (() => {
               const firstTradeDate = (p.equityCurve[0]?.date ?? "").slice(0, 10);
               const effectiveFrom = dateFrom || firstTradeDate;
+              const todayDate = new Date().toISOString().slice(0, 10);
+              const effectiveTo = dateTo || todayDate;
               const filteredCurve = p.equityCurve.filter(d =>
-                (!effectiveFrom || d.date >= effectiveFrom) && (!dateTo || d.date <= dateTo)
+                (!effectiveFrom || d.date >= effectiveFrom) && (!effectiveTo || d.date <= effectiveTo)
               );
               if (filteredCurve.length < 2) {
                 return (
@@ -156,7 +158,7 @@ export default function AdminDashboard() {
                       <input type="date" value={effectiveFrom} min={firstTradeDate} onChange={e => setDateFrom(e.target.value)}
                         className="border rounded-lg px-2 py-1 bg-white text-gray-700" />
                       <label className="text-gray-500">To</label>
-                      <input type="date" value={dateTo} min={firstTradeDate} onChange={e => setDateTo(e.target.value)}
+                      <input type="date" value={effectiveTo} min={firstTradeDate} onChange={e => setDateTo(e.target.value)}
                         className="border rounded-lg px-2 py-1 bg-white text-gray-700" />
                       {(dateFrom || dateTo) && (
                         <button onClick={() => { setDateFrom(""); setDateTo(""); }} className="text-blue-600 hover:underline">Reset</button>

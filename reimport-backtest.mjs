@@ -40,7 +40,12 @@ if (!fs.existsSync(filePath)) {
 console.log(`Reading ${filePath} for strategy "${strategy.name}" (${strategy.symbol})...`)
 const buffer = fs.readFileSync(filePath)
 const parsed = parseBacktestFile(buffer, path.basename(filePath))
-const { backtestTrades } = parsed
+const { backtestTrades, initialCapitalUsd } = parsed
+
+if (initialCapitalUsd != null) {
+  await prisma.strategy.update({ where: { id: strategyId }, data: { initialCapitalUsd } })
+  console.log(`✓ Saved initialCapitalUsd = ${initialCapitalUsd} for ${strategy.name}.`)
+}
 
 console.log(`Parsed ${backtestTrades?.length ?? 0} backtest trades.`)
 

@@ -223,6 +223,7 @@ model Strategy {
   backtestFileName String?
   backtestFileUrl  String?
   properties      Json?
+  initialCapitalUsd Float?
   webhookToken    String        @unique @default(cuid())
   minCapital      Float?        
   isFeatured      Boolean       @default(false)
