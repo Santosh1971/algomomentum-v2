@@ -28,10 +28,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "This user already has the maximum of 5 accounts" }, { status: 400 });
   }
 
-  const account = await prisma.deltaAccount.create({
-    data: { userId, accountName, accountType },
-  });
+  const existingOfType = await prisma.deltaAccount.findFirst({ where: { userId, accountType } });
+  if (existingOfType) {
+    return NextResponse.json({ error: `This user already has a "${accountType}" account.` }, { status: 409 });
+  }
 
-  const { api_key_enc, api_secret_enc, ...safe } = account;
-  return NextResponse.json({ message: "Account created", account: safe }, { status: 201 });
+  try {
+    const account = await prisma.deltaAccount.create({
+      data: { userId, accountName, accountType },
+    });
+
+    const { api_key_enc, api_secret_enc, ...safe } = account;
+    return NextResponse.json({ message: "Account created", account: safe }, { status: 201 });
+  } catch (e: any) {
+    if (e?.code === 'P2002') {
+      return NextResponse.json({ error: `This user already has a "${accountType}" account.` }, { status: 409 });
+    }
+    console.error('create-account failed:', e);
+    return NextResponse.json({ error: 'Failed to create account' }, { status: 500 });
+  }
 }

@@ -113,8 +113,10 @@ export default function AdminUserDetailPage() {
   }
 
   function openAddAccount() {
+    const usedTypes = user?.deltaAccounts.map(a => a.accountType) ?? [];
+    const available = ["main", "sub1", "sub2", "sub3", "sub4"].filter(t => !usedTypes.includes(t));
     setNewAccountName("");
-    setNewAccountType("main");
+    setNewAccountType(available[0] ?? "sub1");
     setShowAddAccount(true);
   }
 
@@ -439,11 +441,9 @@ export default function AdminUserDetailPage() {
                 <label className="text-sm font-medium text-gray-700">Account Type</label>
                 <select value={newAccountType} onChange={e => setNewAccountType(e.target.value)}
                   className="mt-1 w-full border rounded-lg px-3 py-2 text-sm">
-                  <option value="main">Main</option>
-                  <option value="sub1">Sub1</option>
-                  <option value="sub2">Sub2</option>
-                  <option value="sub3">Sub3</option>
-                  <option value="sub4">Sub4</option>
+                  {["main", "sub1", "sub2", "sub3", "sub4"]
+                    .filter(t => !(user?.deltaAccounts.map(a => a.accountType) ?? []).includes(t) || t === newAccountType)
+                    .map(t => <option key={t} value={t}>{t === "main" ? "Main" : t[0].toUpperCase() + t.slice(1)}</option>)}
                 </select>
               </div>
               <p className="text-xs text-gray-400">Next, you'll enter this user's Delta API key and secret to connect it — same verification a user goes through themselves.</p>
