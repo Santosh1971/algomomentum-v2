@@ -139,7 +139,8 @@ async function handleEntry({ config, side, script, overrideAmount, overrideLever
       client_order_id: `am-test-${config.id.slice(-6)}-${Date.now()}`,
     }))
   }
-  await setLeverage(config.account.api_key_enc, config.account.api_secret_enc, script.productId, leverage)
+  const levResult = await setLeverage(config.account.api_key_enc, config.account.api_secret_enc, script.productId, leverage)
+  console.log(`setLeverage(productId=${script.productId}, requested=${leverage}) →`, JSON.stringify(levResult))
   return assertOrderSuccess(await placeOrder(config.account.api_key_enc, config.account.api_secret_enc, {
     product_id: script.productId, product_symbol: script.exchange_symbol,
     size: quantity, side, order_type: 'market_order', time_in_force: 'ioc',
