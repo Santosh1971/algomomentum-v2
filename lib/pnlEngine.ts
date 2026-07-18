@@ -95,9 +95,11 @@ export async function computePnlReport(
         end_time: endUTC * 1000,
       });
 
-  // Fetch contract size (lot) from Script table — e.g. DUSK=100, SOL=1, ETH=0.01
+  // Fallback only — actual contract size is now read per-fill directly from
+  // Delta's own fill.product.contract_value below, so it can never drift from
+  // whatever Delta itself considers the contract size to be.
   const scriptRecord = await prisma.script.findUnique({ where: { symbol: product_symbol } });
-  const contractSize = scriptRecord?.lot ?? 1;
+  const fallbackContractSize = scriptRecord?.lot ?? 1;
 
   const dailyMap = new Map<string, FillSummary>();
   const coinMap = new Map<string, CoinSummary>();
@@ -162,6 +164,10 @@ export async function computePnlReport(
     const orderSize = parseFloat(fill?.meta_data?.order_size ?? "0");
     const size = orderSize > 0 ? orderSize : parseFloat(fill?.size ?? fill?.quantity ?? "0");
 
+    // Delta's own contract_value for this specific fill's product — always
+    // authoritative, never relies on our own Script table possibly being stale.
+    const deltaContractValue = parseFloat(fill?.product?.contract_value ?? "");
+    const contractSize = !isNaN(deltaContractValue) && deltaContractValue > 0 ? deltaContractValue : fallbackContractSize;
 
     const notionalValue = parseFloat((size * contractSize * exitPrice).toFixed(2));
     trades.push({

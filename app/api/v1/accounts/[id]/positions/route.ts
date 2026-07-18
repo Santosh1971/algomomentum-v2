@@ -36,7 +36,12 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
       const entryPrice = parseFloat(p.entry_price ?? "0")
       const size = Math.abs(p.size)
       const script = cache.getScript(p.product_symbol)
-      const positionValueUSD = size * (script?.lot ?? 1) * entryPrice
+      // Delta's own contract_value for this position — always authoritative,
+      // matches the same approach used in Admin Positions and the PnL Report,
+      // never relies on our own Script table possibly being stale.
+      const deltaContractValue = parseFloat(p.product?.contract_value ?? "")
+      const contractSize = !isNaN(deltaContractValue) && deltaContractValue > 0 ? deltaContractValue : (script?.lot ?? 1)
+      const positionValueUSD = size * contractSize * entryPrice
       const margin = parseFloat(p.margin ?? "0")
       // Delta's position payload doesn't include a direct "leverage" field —
       // compute the actual applied leverage from notional value ÷ margin used.
