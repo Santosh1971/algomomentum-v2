@@ -3,15 +3,24 @@ import { useSession, signOut } from "next-auth/react";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 
 export default function Navbar() {
-  const { data: session } = useSession();
+  const { data: session, update } = useSession();
+  const router = useRouter();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const path = usePathname();
   const isAdmin = session?.user?.role === "admin";
   const isApproved = (session?.user as any)?.isApproved;
+  const isImpersonating = (session as any)?.isImpersonating;
+  const realAdmin = (session as any)?.realAdmin;
+
+  async function exitImpersonation() {
+    await update({ impersonateUserId: null });
+    router.push("/admin/users");
+    router.refresh();
+  }
 
   const userLinks = isApproved ? [
     { href: "/user/dashboard", label: "Dashboard", icon: "📊" },
@@ -83,8 +92,14 @@ export default function Navbar() {
 
   return (
     <>
+      {isImpersonating && (
+        <div className="fixed top-0 inset-x-0 z-50 bg-amber-500 text-black text-sm font-medium px-4 py-2 flex items-center justify-center gap-3">
+          <span>👤 Viewing as {session?.user?.name ?? session?.user?.email} — real login: {realAdmin?.name ?? realAdmin?.email}</span>
+          <button onClick={exitImpersonation} className="underline font-semibold">Exit</button>
+        </div>
+      )}
       {/* Mobile top bar */}
-      <div className="lg:hidden bg-background text-foreground border-b border-border px-4 py-2.5 flex items-center justify-between shadow-lg sticky top-0 z-40">
+      <div className={`lg:hidden bg-background text-foreground border-b border-border px-4 py-2.5 flex items-center justify-between shadow-lg sticky z-40 ${isImpersonating ? "top-9" : "top-0"}`}>
         {Logo}
         <button onClick={() => setDrawerOpen(true)} aria-label="Open menu"
           className="p-2 rounded-lg hover:bg-foreground/10 text-foreground transition">
@@ -114,7 +129,7 @@ export default function Navbar() {
       )}
 
       {/* Desktop sidebar */}
-      <div className="app-sidebar-desktop hidden lg:flex lg:flex-col fixed inset-y-0 left-0 w-64 bg-background text-foreground border-r border-border z-30">
+      <div className={`app-sidebar-desktop hidden lg:flex lg:flex-col fixed inset-x-0 left-0 w-64 bg-background text-foreground border-r border-border z-30 ${isImpersonating ? "top-9 bottom-0" : "inset-y-0"}`}>
         <div className="px-4 py-5">{Logo}</div>
         <div className="flex-1 overflow-y-auto py-2">{NavLinks}</div>
         {Footer}

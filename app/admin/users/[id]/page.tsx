@@ -33,7 +33,7 @@ interface UserDetail {
 }
 
 export default function AdminUserDetailPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
   const router = useRouter();
   const params = useParams();
   const userId = params.id as string;
@@ -110,6 +110,12 @@ export default function AdminUserDetailPage() {
       toast.error(e.message || "Failed to add bot");
     }
     setAddBotSaving(false);
+  }
+
+  async function impersonate() {
+    if (!window.confirm(`View and act as ${user?.name ?? user?.email}? You'll see and be able to change everything exactly as they would, until you click Exit.`)) return;
+    await update({ impersonateUserId: userId });
+    router.push("/user/dashboard");
   }
 
   function openAddAccount() {
@@ -232,6 +238,8 @@ export default function AdminUserDetailPage() {
             </div>
             <button onClick={openAddAccount}
               className="text-sm px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 font-medium">+ Add Account</button>
+            <button onClick={impersonate}
+              className="text-sm px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 font-medium">👤 View as this user</button>
           </div>
         </div>
 

@@ -33,7 +33,7 @@ interface User {
 }
 
 export default function AdminUsersPage() {
-  const { data: session, status } = useSession();
+  const { data: session, status, update } = useSession();
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [approvingId, setApprovingId] = useState<string | null>(null);
@@ -52,6 +52,12 @@ export default function AdminUsersPage() {
   }
 
   useEffect(() => { loadUsers(); }, []);
+
+  async function impersonate(userId: string, name: string) {
+    if (!window.confirm(`View and act as ${name}? You'll see and be able to change everything exactly as they would, until you click Exit.`)) return;
+    await update({ impersonateUserId: userId });
+    router.push("/user/dashboard");
+  }
 
   async function approveUser(userId: string, approve: boolean) {
     if (!window.confirm(approve ? "Approve this user's access?" : "Revoke this user's access?")) return;
@@ -147,12 +153,12 @@ export default function AdminUsersPage() {
                     <tr key={u.id} className="bg-yellow-500/10 border-l-4 border-yellow-400">
                       <td className="px-4 py-3 text-gray-400">{i + 1}</td>
                       <td className="px-4 py-3 font-medium text-gray-800 max-w-[160px]">
-                        <Link href={`/user/dashboard?userId=${u.id}`} className="flex items-center gap-2 hover:underline">
+                        <button onClick={() => impersonate(u.id, u.name ?? u.email ?? "this user")} className="flex items-center gap-2 hover:underline text-left">
                           <div className="w-7 h-7 rounded-full bg-foreground text-background flex items-center justify-center text-xs font-bold flex-shrink-0">
                             {(u.name ?? u.email ?? "?")[0].toUpperCase()}
                           </div>
                           <span className="truncate">{u.name ?? "—"}</span>
-                        </Link>
+                        </button>
                       </td>
                       <td className="px-4 py-3 text-gray-600">{u.email}</td>
                       <td className="px-4 py-3 text-green-600 whitespace-nowrap">
@@ -203,12 +209,12 @@ export default function AdminUsersPage() {
                   <tr key={u.id} className={!u.isApproved ? "bg-yellow-500/20 border-l-4 border-yellow-400" : i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
                     <td className="px-4 py-3 text-gray-400">{i + 1}</td>
                     <td className="px-4 py-3 font-medium text-gray-800 max-w-[160px]">
-                      <Link href={`/user/dashboard?userId=${u.id}`} className="flex items-center gap-2 hover:underline">
+                      <button onClick={() => impersonate(u.id, u.name ?? u.email)} className="flex items-center gap-2 hover:underline text-left">
                         <div className="w-7 h-7 rounded-full bg-foreground text-background flex items-center justify-center text-xs font-bold flex-shrink-0">
                           {(u.name ?? u.email)[0].toUpperCase()}
                         </div>
                         {u.name ?? "—"}
-                      </Link>
+                      </button>
                     </td>
                     <td className="px-4 py-3 text-gray-600">{u.email}</td>
                     <td className="px-4 py-3 text-green-600 whitespace-nowrap">
