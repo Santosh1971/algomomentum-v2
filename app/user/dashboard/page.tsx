@@ -77,10 +77,10 @@ function DashboardContent() {
   const stats = bySymbol[selected];
 
   const statCards = stats ? [
-    { label: "Total Realized PnL", value: fmtP(stats.totalRealizedPnl), color: pnlColor(stats.totalRealizedPnl) },
-    { label: "Total Net PnL", value: fmtP(stats.totalNetPnl), color: pnlColor(stats.totalNetPnl) },
-    { label: "Monthly Realized PnL", value: fmtP(stats.monthlyRealizedPnl), color: pnlColor(stats.monthlyRealizedPnl) },
-    { label: "Monthly Net PnL", value: fmtP(stats.monthlyNetPnl), color: pnlColor(stats.monthlyNetPnl) },
+    { label: "Total Realized PnL", value: `${fmtP(stats.totalRealizedPnl)}${stats.allocatedUsd > 0 ? ` (${(stats.totalRealizedPnl / stats.allocatedUsd * 100).toFixed(2)}%)` : ""}`, color: pnlColor(stats.totalRealizedPnl) },
+    { label: "Total Net PnL", value: `${fmtP(stats.totalNetPnl)}${stats.allocatedUsd > 0 ? ` (${(stats.totalNetPnl / stats.allocatedUsd * 100).toFixed(2)}%)` : ""}`, color: pnlColor(stats.totalNetPnl) },
+    { label: "Monthly Realized PnL", value: `${fmtP(stats.monthlyRealizedPnl)}${stats.allocatedUsd > 0 ? ` (${(stats.monthlyRealizedPnl / stats.allocatedUsd * 100).toFixed(2)}%)` : ""}`, color: pnlColor(stats.monthlyRealizedPnl) },
+    { label: "Monthly Net PnL", value: `${fmtP(stats.monthlyNetPnl)}${stats.allocatedUsd > 0 ? ` (${(stats.monthlyNetPnl / stats.allocatedUsd * 100).toFixed(2)}%)` : ""}`, color: pnlColor(stats.monthlyNetPnl) },
     { label: "Total Trades", value: String(stats.totalTrades), color: "text-gray-800" },
     { label: "Win Rate", value: `${stats.winRate}%`, color: stats.winRate >= 50 ? "text-green-600" : "text-red-600" },
     { label: "Avg Profit/Loss", value: fmtP(stats.avgProfitLoss), color: pnlColor(stats.avgProfitLoss) },

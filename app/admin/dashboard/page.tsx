@@ -73,12 +73,12 @@ export default function AdminDashboard() {
   const statCards = p ? [
     { label: "Active Bots", value: String(p.activeBots), sub: fmtInr(p.activeBotsAllocInr), subColor: "text-green-600" },
     { label: "Inactive Bots", value: String(p.inactiveBots), sub: fmtInr(p.inactiveBotsAllocInr), subColor: "text-red-500" },
-    { label: "Total Realized PnL", value: fmtUsd(p.totalRealizedPnl), color: pnlColor(p.totalRealizedPnl), sub: "Gross PnL from all closed trades" },
-    { label: "Total Net PnL", value: fmtUsd(p.totalNetPnl), color: pnlColor(p.totalNetPnl), sub: "After commissions/fees" },
+    { label: "Total Realized PnL", value: `${fmtUsd(p.totalRealizedPnl)}${p.activeBotsAllocInr > 0 ? ` (${(p.totalRealizedPnl / (p.activeBotsAllocInr / INR_PER_USD) * 100).toFixed(2)}%)` : ""}`, color: pnlColor(p.totalRealizedPnl), sub: "Gross PnL from all closed trades" },
+    { label: "Total Net PnL", value: `${fmtUsd(p.totalNetPnl)}${p.activeBotsAllocInr > 0 ? ` (${(p.totalNetPnl / (p.activeBotsAllocInr / INR_PER_USD) * 100).toFixed(2)}%)` : ""}`, color: pnlColor(p.totalNetPnl), sub: "After commissions/fees" },
     { label: "Total Delta Charge", value: fmtUsd(p.totalDeltaCharge), sub: "All-time collected commission by Delta" },
     { label: "Monthly Delta Charge", value: fmtUsd(p.monthlyDeltaCharge), sub: "Commission earned this month by Delta" },
-    { label: "Monthly Gross PnL", value: fmtUsd(p.monthlyRealizedPnl), color: pnlColor(p.monthlyRealizedPnl), sub: "PnL realized this month before fees" },
-    { label: "Monthly Net PnL", value: fmtUsd(p.monthlyNetPnl), color: pnlColor(p.monthlyNetPnl), sub: "Net profit/loss this month" },
+    { label: "Monthly Gross PnL", value: `${fmtUsd(p.monthlyRealizedPnl)}${p.activeBotsAllocInr > 0 ? ` (${(p.monthlyRealizedPnl / (p.activeBotsAllocInr / INR_PER_USD) * 100).toFixed(2)}%)` : ""}`, color: pnlColor(p.monthlyRealizedPnl), sub: "PnL realized this month before fees" },
+    { label: "Monthly Net PnL", value: `${fmtUsd(p.monthlyNetPnl)}${p.activeBotsAllocInr > 0 ? ` (${(p.monthlyNetPnl / (p.activeBotsAllocInr / INR_PER_USD) * 100).toFixed(2)}%)` : ""}`, color: pnlColor(p.monthlyNetPnl), sub: "Net profit/loss this month" },
   ] : [];
 
   return (

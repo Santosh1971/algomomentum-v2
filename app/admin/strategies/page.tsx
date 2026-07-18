@@ -82,6 +82,11 @@ export default function AdminStrategiesPage() {
                 <span>Subscribers: <span className="text-foreground font-medium">{s._count.subscribers}</span> &nbsp;&nbsp;&nbsp;</span>
                 <span>Subscribed Amount: <span className="text-foreground font-medium">₹{(s.subscribers?.reduce((sum: number, t: any) => sum + (t.amount || 0), 0) || 0).toLocaleString('en-IN')}</span></span>
               </div>
+              <div className="text-xs text-muted-foreground">
+                <span>Leverage: <span className="text-foreground font-medium">{s.defaultLeverage ?? 1}x</span> &nbsp;&nbsp;&nbsp;</span>
+                <span>Sizing: <span className="text-foreground font-medium">{s.orderSizeType === 'equity_pct' ? `${s.defaultOrderSizeValue ?? '—'}% of Equity` : 'Amount (₹)'}</span> &nbsp;&nbsp;&nbsp;</span>
+                <span>Min Amount: <span className="text-foreground font-medium">₹{(s.minCapital ?? 0).toLocaleString('en-IN')}</span></span>
+              </div>
               {(() => {
                 const copy = (txt: string) => (e: any) => {
                   e.stopPropagation();

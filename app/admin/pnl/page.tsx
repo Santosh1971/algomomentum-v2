@@ -188,7 +188,9 @@ function AdminPnlInner() {
                         <th className="text-right py-2 pr-3">Gross PnL</th>
                         <th className="text-right py-2 pr-3">Delta fee</th>
                         <th className="text-right py-2 pr-3">Net PnL</th>
+                        <th className="text-right py-2 pr-3">Net PnL %</th>
                         <th className="text-right py-2 pr-3">Cum PnL</th>
+                        <th className="text-right py-2 pr-3">Cum PnL %</th>
                         <th className="text-center py-2">Status</th>
                       </tr>
                     </thead>
@@ -207,8 +209,18 @@ function AdminPnlInner() {
                           <td className={`py-2 pr-3 text-right font-medium ${pnlColor(t.grossPnl)}`}>{fmt(t.grossPnl)}</td>
                           <td className="py-2 pr-3 text-right text-orange-500">{fmt(t.commission)}</td>
                           <td className={`py-2 pr-3 text-right font-bold ${pnlColor(t.netPnl)}`}>{fmt(t.netPnl)}</td>
+                          <td className={`py-2 pr-3 text-right font-mono ${pnlColor(t.netPnl)}`}>
+                            {(() => { const ps = t.size * (t.contractSize ?? 1) * t.entryPrice; return ps > 0 ? `${(t.netPnl / ps * 100).toFixed(2)}%` : "—"; })()}
+                          </td>
                           <td className={`py-2 pr-3 text-right font-bold ${(() => { const cum = report.trades.slice(i).reduce((s,x) => s+x.netPnl,0); return cum>=0?"text-green-600":"text-red-600"; })()}`}>
                             {fmt(report.trades.slice(i).reduce((s,x) => s+x.netPnl,0))}
+                          </td>
+                          <td className={`py-2 pr-3 text-right font-mono ${(() => { const cum = report.trades.slice(i).reduce((s,x) => s+x.netPnl,0); return cum>=0?"text-green-600":"text-red-600"; })()}`}>
+                            {(() => {
+                              const cum = report.trades.slice(i).reduce((s,x) => s+x.netPnl,0);
+                              const ps = t.size * (t.contractSize ?? 1) * t.entryPrice;
+                              return ps > 0 ? `${(cum / ps * 100).toFixed(2)}%` : "—";
+                            })()}
                           </td>
                           <td className="py-2 text-center">
                             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${t.status === "win" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>{t.status}</span>

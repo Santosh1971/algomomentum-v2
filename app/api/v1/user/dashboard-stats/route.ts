@@ -14,6 +14,15 @@ export async function GET(req: NextRequest) {
   const rows = await prisma.userDashboardStats.findMany({ where: { userId } });
   if (!rows.length) return NextResponse.json({ pending: true });
 
+  const activeBots = await prisma.tradeConfig.findMany({
+    where: { userId, isActive: true, userActive: true },
+    select: { script: true, amount: true },
+  });
+  const INR_TO_USD = 85;
+  const totalAllocatedUsd = activeBots.reduce((sum, b) => sum + b.amount, 0) / INR_TO_USD;
+  const allocByScript: Record<string, number> = {};
+  for (const b of activeBots) allocByScript[b.script] = (allocByScript[b.script] ?? 0) + b.amount / INR_TO_USD;
+
   const bySymbol: Record<string, any> = {};
   for (const r of rows) {
     bySymbol[r.symbol] = {
@@ -23,6 +32,7 @@ export async function GET(req: NextRequest) {
       avgProfitLoss: r.avgProfitLoss, avgTradeSize: r.avgTradeSize,
       equityCurve: r.equityCurve ?? [],
       updatedAt: r.updatedAt,
+      allocatedUsd: r.symbol === "ALL" ? totalAllocatedUsd : (allocByScript[r.symbol] ?? 0),
     };
   }
   const symbols = rows.map(r => r.symbol).filter(s => s !== "ALL").sort();

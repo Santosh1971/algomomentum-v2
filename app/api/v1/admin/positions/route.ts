@@ -47,6 +47,7 @@ export async function GET() {
               side: p.entry_price > 0 ? (p.size > 0 ? "buy" : "sell") : "—",
               size,
               entryPrice,
+              notional,
               markPrice: parseFloat(p.mark_price ?? "0"),
               upnlUSD: parseFloat(p.unrealized_pnl ?? p.upnl ?? "0"),
               leverage,

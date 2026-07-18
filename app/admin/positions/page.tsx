@@ -115,6 +115,7 @@ export default function AdminPositionsPage() {
                         <th className="text-center px-3 py-2">Side</th>
                         <th className="text-right px-3 py-2">Size</th>
                         <th className="text-right px-3 py-2">Entry</th>
+                        <th className="text-right px-3 py-2">Position Size</th>
                         <th className="text-right px-3 py-2">Mark</th>
                         <th className="text-right px-3 py-2">Liq.</th>
                         <th className="text-right px-3 py-2">Lev</th>
@@ -130,6 +131,7 @@ export default function AdminPositionsPage() {
                           </td>
                           <td className="px-3 py-2.5 text-right text-gray-600">{p.size}</td>
                           <td className="px-3 py-2.5 text-right font-mono text-gray-700">{p.entryPrice}</td>
+                          <td className="px-3 py-2.5 text-right font-mono text-gray-700">{fmt(p.notional)}</td>
                           <td className="px-3 py-2.5 text-right font-mono text-gray-700">{p.markPrice}</td>
                           <td className="px-3 py-2.5 text-right font-mono text-orange-500">{p.liquidationPrice}</td>
                           <td className="px-3 py-2.5 text-right text-gray-500">{p.leverage}x</td>
