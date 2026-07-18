@@ -185,6 +185,7 @@ function AdminPnlInner() {
                         <th className="text-right py-2 pr-3">Exit</th>
                         <th className="text-center py-2 pr-3">Side</th>
                         <th className="text-right py-2 pr-3">Lot</th>
+                        <th className="text-right py-2 pr-3">Position Size</th>
                         <th className="text-right py-2 pr-3">Gross PnL</th>
                         <th className="text-right py-2 pr-3">Delta fee</th>
                         <th className="text-right py-2 pr-3">Net PnL</th>
@@ -206,6 +207,7 @@ function AdminPnlInner() {
                             <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${t.side === "buy" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-600"}`}>{t.side}</span>
                           </td>
                           <td className="py-2 pr-3 text-right text-gray-600">{t.size}</td>
+                          <td className="py-2 pr-3 text-right text-gray-600 font-mono">{fmt(t.size * (t.contractSize ?? 1) * t.entryPrice)}</td>
                           <td className={`py-2 pr-3 text-right font-medium ${pnlColor(t.grossPnl)}`}>{fmt(t.grossPnl)}</td>
                           <td className="py-2 pr-3 text-right text-orange-500">{fmt(t.commission)}</td>
                           <td className={`py-2 pr-3 text-right font-bold ${pnlColor(t.netPnl)}`}>{fmt(t.netPnl)}</td>
