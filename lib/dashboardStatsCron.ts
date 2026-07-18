@@ -47,12 +47,11 @@ function summarize(trades: TradeRow[], monthStart: string) {
 export async function refreshDashboardStats() {
   const nowIST = DateTime.now().setZone("Asia/Kolkata");
   const monthStart = nowIST.startOf("month").toFormat("yyyy-MM-dd");
-  const from = "2020-01-01";
   const to = nowIST.toFormat("yyyy-MM-dd");
 
   const allConfigs = await prisma.tradeConfig.findMany({
     select: {
-      userId: true, isActive: true, userActive: true, amount: true, script: true,
+      userId: true, isActive: true, userActive: true, amount: true, script: true, createdAt: true,
       account: { select: { api_key_enc: true, api_secret_enc: true, is_oauth: true, oauth_access_token: true } },
     },
   });
@@ -70,11 +69,15 @@ export async function refreshDashboardStats() {
   for (const c of activeConfigs) { bump(c.script, true, c.amount); bump(ALL, true, c.amount); }
   for (const c of inactiveConfigs) { bump(c.script, false, c.amount); bump(ALL, false, c.amount); }
 
-  // Fetch trades for every active bot once
+  // Fetch trades for every active bot once — each bot's own report starts from
+  // when it was actually created, not a fixed global date, so a user's equity
+  // curve only reflects the period our bot has actually been trading for them
+  // (never their own pre-existing Delta history on the same symbol).
   const results = await Promise.allSettled(
     activeConfigs.map(async c => {
       const oauthToken = c.account.is_oauth ? c.account.oauth_access_token : null;
-      const report = await computePnlReport(c.account.api_key_enc, c.account.api_secret_enc, c.script, from, to, oauthToken);
+      const botFrom = DateTime.fromJSDate(c.createdAt).setZone("Asia/Kolkata").toFormat("yyyy-MM-dd");
+      const report = await computePnlReport(c.account.api_key_enc, c.account.api_secret_enc, c.script, botFrom, to, oauthToken);
       return { userId: c.userId, symbol: c.script, trades: report.trades };
     })
   );
