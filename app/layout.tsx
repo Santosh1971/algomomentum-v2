@@ -13,6 +13,9 @@ if (typeof window === "undefined") { startBillingCron(); }
 import { startDashboardStatsCron } from "@/lib/dashboardStatsCron";
 if (typeof window === "undefined") { startDashboardStatsCron(); }
 
+import { startDiscrepancyCheckCron } from "@/lib/discrepancyCheckCron";
+if (typeof window === "undefined") { startDiscrepancyCheckCron(); }
+
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
