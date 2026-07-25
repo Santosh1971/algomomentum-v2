@@ -1,10 +1,12 @@
 // lib/discrepancyCheckCron.ts
 // Runs every hour. For each active strategy, checks whether any subscriber's
-// bot has stopped while others are still running, shows negative P&L while
-// the majority is positive, or is sitting on a position with a materially
-// different entry price than the rest of the group (a sign their most recent
-// entry/exit silently failed and they're still holding a stale position from
-// an earlier cycle). If anything is found, emails every admin a summary.
+// bot has stopped while others are still running, has NO open position at
+// all while others clearly do (usually a missed entry), shows negative P&L
+// while the majority is positive, or is sitting on a position with a
+// materially different entry price than the rest of the group (a sign their
+// most recent entry/exit silently failed and they're still holding a stale
+// position from an earlier cycle). If anything is found, emails every admin
+// a summary.
 //
 // This is a backup safety net — the primary defense is the immediate
 // per-failure alert built into the production webhook route itself
@@ -81,6 +83,21 @@ async function checkDiscrepancies() {
       .filter((r): r is PromiseFulfilledResult<{ name: string; upnl: number | null; entryPrice: number | null }> => r.status === "fulfilled")
       .map(r => r.value)
       .filter(v => v.upnl !== null && v.entryPrice !== null) as { name: string; upnl: number; entryPrice: number }[];
+
+    const withoutPositions = results
+      .filter((r): r is PromiseFulfilledResult<{ name: string; upnl: number | null; entryPrice: number | null }> => r.status === "fulfilled")
+      .map(r => r.value)
+      .filter(v => v.upnl === null);
+
+    // A bot is marked active in our system but has NO open position on Delta
+    // at all, while others on the same strategy clearly do — usually means a
+    // past entry silently failed and was never retried (this is exactly the
+    // gap the immediate per-fire alert now closes going forward, but this
+    // check catches any bot still sitting empty from before that existed).
+    if (withPositions.length > 0 && withoutPositions.length > 0) {
+      const names = withoutPositions.map(v => v.name).join(", ");
+      issues.push(`${strategy.name} (${strategy.symbol}): ${names} ${withoutPositions.length > 1 ? "have" : "has"} no open position at all, while ${withPositions.length} other subscriber${withPositions.length > 1 ? "s are" : " is"} currently in a trade — likely a missed entry.`);
+    }
 
     if (withPositions.length < 2) continue;
 
