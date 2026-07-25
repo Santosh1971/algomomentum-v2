@@ -1,9 +1,16 @@
 // lib/discrepancyCheckCron.ts
 // Runs every hour. For each active strategy, checks whether any subscriber's
-// bot has stopped while others are still running, or shows negative P&L while
-// the majority of subscribers on the same strategy are positive — either can
-// indicate a bot-specific problem worth an admin looking into. If anything is
-// found, emails every admin a single summary.
+// bot has stopped while others are still running, shows negative P&L while
+// the majority is positive, or is sitting on a position with a materially
+// different entry price than the rest of the group (a sign their most recent
+// entry/exit silently failed and they're still holding a stale position from
+// an earlier cycle). If anything is found, emails every admin a summary.
+//
+// This is a backup safety net — the primary defense is the immediate
+// per-failure alert built into the production webhook route itself
+// (sendTradeFireErrorAlert), which fires the moment a real order is
+// rejected. This hourly check catches anything that slips past that,
+// e.g. a failure mode that doesn't throw.
 
 import cron from "node-cron";
 import { prisma } from "@/lib/prisma";
@@ -54,31 +61,55 @@ async function checkDiscrepancies() {
       issues.push(`${strategy.name} (${strategy.symbol}): ${names} ${stoppedSubs.length > 1 ? "have" : "has"} stopped, while ${activeSubs.length} other subscriber${activeSubs.length > 1 ? "s are" : " is"} still active.`);
     }
 
-    // Among active subscribers with an open position, flag anyone negative
-    // while the majority is positive — same signal, so a lone loser can mean
-    // that bot's entry/exit didn't fire correctly.
-    if (activeSubs.length >= 2) {
-      const results = await Promise.allSettled(activeSubs.map(async tc => {
-        const posData = tc.account.is_oauth && tc.account.oauth_access_token
-          ? await getPositionsOAuth(tc.account.oauth_access_token)
-          : await getPositions(tc.account.api_key_enc, tc.account.api_secret_enc);
-        const pos = (posData?.result ?? []).find((p: any) => p.product_symbol === strategy.symbol && Math.abs(parseFloat(p.size ?? "0")) > 0);
-        const upnl = pos ? parseFloat(pos.unrealized_pnl ?? "0") : null;
-        return { name: tc.user.name ?? tc.user.email ?? "unknown", upnl };
-      }));
+    if (activeSubs.length < 2) continue;
 
-      const withPositions = results
-        .filter((r): r is PromiseFulfilledResult<{ name: string; upnl: number | null }> => r.status === "fulfilled")
-        .map(r => r.value)
-        .filter(v => v.upnl !== null) as { name: string; upnl: number }[];
+    // Fetch each active subscriber's current position once, reused for both
+    // the P&L-direction check and the entry-price check below.
+    const results = await Promise.allSettled(activeSubs.map(async tc => {
+      const posData = tc.account.is_oauth && tc.account.oauth_access_token
+        ? await getPositionsOAuth(tc.account.oauth_access_token)
+        : await getPositions(tc.account.api_key_enc, tc.account.api_secret_enc);
+      const pos = (posData?.result ?? []).find((p: any) => p.product_symbol === strategy.symbol && Math.abs(parseFloat(p.size ?? "0")) > 0);
+      return {
+        name: tc.user.name ?? tc.user.email ?? "unknown",
+        upnl: pos ? parseFloat(pos.unrealized_pnl ?? "0") : null,
+        entryPrice: pos ? parseFloat(pos.entry_price ?? "0") : null,
+      };
+    }));
 
-      if (withPositions.length >= 2) {
-        const positives = withPositions.filter(v => v.upnl > 0);
-        const negatives = withPositions.filter(v => v.upnl < 0);
-        if (negatives.length > 0 && positives.length > negatives.length) {
-          const names = negatives.map(v => v.name).join(", ");
-          issues.push(`${strategy.name} (${strategy.symbol}): ${names} showing negative P&L while ${positives.length} other subscriber${positives.length > 1 ? "s are" : " is"} positive on the same open position.`);
-        }
+    const withPositions = results
+      .filter((r): r is PromiseFulfilledResult<{ name: string; upnl: number | null; entryPrice: number | null }> => r.status === "fulfilled")
+      .map(r => r.value)
+      .filter(v => v.upnl !== null && v.entryPrice !== null) as { name: string; upnl: number; entryPrice: number }[];
+
+    if (withPositions.length < 2) continue;
+
+    // Negative P&L while the majority is positive — same signal, so a lone
+    // loser can mean that bot's entry/exit didn't fire correctly.
+    const positives = withPositions.filter(v => v.upnl > 0);
+    const negatives = withPositions.filter(v => v.upnl < 0);
+    if (negatives.length > 0 && positives.length > negatives.length) {
+      const names = negatives.map(v => v.name).join(", ");
+      issues.push(`${strategy.name} (${strategy.symbol}): ${names} showing negative P&L while ${positives.length} other subscriber${positives.length > 1 ? "s are" : " is"} positive on the same open position.`);
+    }
+
+    // Entry price mismatch — everyone on the same strategy should have
+    // entered at roughly the same price and time. Find the majority entry
+    // price (within 0.5% tolerance) and flag anyone meaningfully off it,
+    // which usually means they're still holding a stale position from an
+    // earlier entry/exit cycle that silently failed to update.
+    const groups: { price: number; members: typeof withPositions }[] = [];
+    for (const v of withPositions) {
+      const g = groups.find(g => Math.abs(g.price - v.entryPrice) / g.price < 0.005);
+      if (g) g.members.push(v);
+      else groups.push({ price: v.entryPrice, members: [v] });
+    }
+    if (groups.length > 1) {
+      groups.sort((a, b) => b.members.length - a.members.length);
+      const [majority, ...minorities] = groups;
+      for (const minority of minorities) {
+        const names = minority.members.map(v => v.name).join(", ");
+        issues.push(`${strategy.name} (${strategy.symbol}): ${names} entered at ${minority.price} while ${majority.members.length} other subscriber${majority.members.length > 1 ? "s" : ""} entered around ${majority.price} — likely holding a stale position from an earlier cycle.`);
       }
     }
   }

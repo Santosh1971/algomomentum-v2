@@ -112,9 +112,43 @@ export async function POST(req: NextRequest, context: { params: Promise<{ symbol
   )
 
   const success = results.filter(r => r.status === 'fulfilled').length
-  const errors  = results.map((r, i) => r.status === 'rejected' ? { userId: strategy.subscribers[i].userId, error: (r as any).reason?.message } : null).filter(Boolean)
+  const errors  = results.map((r, i) => r.status === 'rejected' ? { userId: strategy.subscribers[i].userId, tradeConfigId: strategy.subscribers[i].id, error: (r as any).reason?.message } : null).filter(Boolean)
 
   console.log(`Strategy "${strategy.name}" (${symbol}) fired: ${success}/${results.length}`)
+
+  // A per-subscriber failure here means their real Delta order was rejected —
+  // TradingView never reads our response, so without this the failure would
+  // otherwise vanish with no record and no one would know.
+  if (errors.length > 0) {
+    try {
+      await prisma.tradeFireError.createMany({
+        data: errors.map((e: any) => ({
+          strategyId: strategy.id,
+          tradeConfigId: e.tradeConfigId,
+          userId: e.userId,
+          symbol: strategy.symbol,
+          trade,
+          side,
+          error: e.error ?? 'Unknown error',
+        })),
+      })
+
+      const failedUsers = await prisma.user.findMany({ where: { id: { in: errors.map((e: any) => e.userId) } }, select: { id: true, name: true, email: true } })
+      const errorLines = errors.map((e: any) => {
+        const u = failedUsers.find(fu => fu.id === e.userId)
+        return `${u?.name ?? u?.email ?? e.userId}: ${e.error ?? 'Unknown error'}`
+      })
+
+      const admins = await prisma.user.findMany({ where: { role: 'admin' }, select: { email: true } })
+      const { sendTradeFireErrorAlert } = await import('@/lib/email')
+      for (const admin of admins) {
+        if (admin.email) await sendTradeFireErrorAlert(admin.email, strategy.name, strategy.symbol, trade, errorLines)
+      }
+    } catch (e) {
+      console.error('Could not persist/email trade fire errors:', e)
+    }
+  }
+
   return NextResponse.json({ ok: true, fired: success, total: results.length, errors })
 }
 

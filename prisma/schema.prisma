@@ -259,3 +259,20 @@ model StrategyTrade {
   @@index([firedAt])
   @@index([source])
 }
+
+model TradeFireError {
+  id           String   @id @default(cuid())
+  strategyId   String
+  tradeConfigId String
+  userId       String
+  symbol       String
+  trade        String   // ENTRY or EXIT
+  side         String
+  error        String
+  firedAt      DateTime @default(now())
+  emailedAt    DateTime?
+
+  @@index([strategyId])
+  @@index([tradeConfigId])
+  @@index([firedAt])
+}

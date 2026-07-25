@@ -177,3 +177,27 @@ export async function sendDiscrepancyAlert(adminEmail: string, issues: string[])
   }
 }
 
+export async function sendTradeFireErrorAlert(adminEmail: string, strategyName: string, symbol: string, trade: string, errorLines: string[]) {
+  try {
+    await resend.emails.send({
+      from: FROM, to: adminEmail,
+      subject: `🚨 Live Trade Failed — ${strategyName} (${symbol}) ${trade}`,
+      html: `<div style="font-family:Arial;max-width:520px;margin:0 auto;padding:32px">
+        <div style="background:#1E3A5F;padding:24px;border-radius:8px;text-align:center;margin-bottom:24px">
+          <img src="https://app.algomomentum.in/alm-logo.png" alt="AlgoMomentum" width="64" height="64" style="object-fit:contain;margin-bottom:8px" />
+          <h1 style="color:white;margin:0;font-size:24px">AlgoMomentum</h1>
+          <p style="color:#93c5fd;margin:4px 0 0;font-size:14px">Bridge Platform v2</p>
+        </div>
+        <h2 style="color:#DC2626">Live Trade Failed for ${errorLines.length} Subscriber${errorLines.length > 1 ? "s" : ""}</h2>
+        <p style="color:#6b7280"><strong>${strategyName}</strong> (${symbol}) — ${trade} signal just fired, but the real Delta order was rejected for:</p>
+        <ul style="color:#374151;padding-left:20px;line-height:1.6">
+          ${errorLines.map(l => `<li style="margin-bottom:8px">${l}</li>`).join("")}
+        </ul>
+        <p style="color:#6b7280;font-size:14px">Their position on this symbol may now be out of sync with the rest of the group — worth checking manually.</p>
+        <a href="https://app.algomomentum.in/admin/positions" style="display:inline-block;background:#1E3A5F;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;margin-top:16px">View Positions →</a>
+      </div>`,
+    });
+  } catch (e) {
+    console.error("Trade fire error alert email failed:", e);
+  }
+}
