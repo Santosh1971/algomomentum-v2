@@ -17,6 +17,7 @@
 import cron from "node-cron";
 import { prisma } from "@/lib/prisma";
 import { getPositions, getPositionsOAuth } from "@/lib/deltaClient";
+import { getValidAccessToken } from "@/lib/deltaOAuth";
 
 let started = false;
 
@@ -44,7 +45,7 @@ async function checkDiscrepancies() {
       subscribers: {
         where: { isSubscription: true },
         include: {
-          account: { select: { api_key_enc: true, api_secret_enc: true, is_oauth: true, oauth_access_token: true } },
+          account: { select: { id: true, api_key_enc: true, api_secret_enc: true, is_oauth: true, oauth_access_token: true, oauth_refresh_token: true, oauth_expires_at: true } },
           user: { select: { name: true, email: true } },
         },
       },
@@ -69,7 +70,7 @@ async function checkDiscrepancies() {
     // the P&L-direction check and the entry-price check below.
     const results = await Promise.allSettled(activeSubs.map(async tc => {
       const posData = tc.account.is_oauth && tc.account.oauth_access_token
-        ? await getPositionsOAuth(tc.account.oauth_access_token)
+        ? await getPositionsOAuth((await getValidAccessToken(tc.account))!)
         : await getPositions(tc.account.api_key_enc, tc.account.api_secret_enc);
       const pos = (posData?.result ?? []).find((p: any) => p.product_symbol === strategy.symbol && Math.abs(parseFloat(p.size ?? "0")) > 0);
       return {

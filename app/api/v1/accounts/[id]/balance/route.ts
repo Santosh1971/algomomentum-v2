@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { NEXT_AUTH } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getBalances } from "@/lib/deltaClient";
+import { getValidAccessToken } from "@/lib/deltaOAuth";
 import axios from "axios";
 
 const INR_PER_USD = 85;
@@ -25,8 +26,10 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
 
     if (account.is_oauth && account.oauth_access_token) {
       // OAuth account - use Bearer token without "Bearer" prefix
+      const token = await getValidAccessToken(account);
+      if (!token) return NextResponse.json({ error: "Delta connection expired — please reconnect" }, { status: 401 });
       const res = await axios.get("https://api.india.delta.exchange/v2/wallet/balances", {
-        headers: { Authorization: account.oauth_access_token }
+        headers: { Authorization: token }
       });
       balances = res.data?.result ?? [];
     } else if (account.api_key_enc && account.api_key_enc !== "") {

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { NEXT_AUTH } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { computePnlReport } from "@/lib/pnlEngine";
+import { getValidAccessToken } from "@/lib/deltaOAuth";
 import { DateTime } from "luxon";
 
 export async function GET(req: NextRequest, context: { params: Promise<{ tradeConfigId: string }> }) {
@@ -20,7 +21,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ tradeCo
     select: {
       userId: true,
       script: true,
-      account: { select: { api_key_enc: true, api_secret_enc: true, is_oauth: true, oauth_access_token: true } },
+      account: { select: { id: true, api_key_enc: true, api_secret_enc: true, is_oauth: true, oauth_access_token: true, oauth_refresh_token: true, oauth_expires_at: true } },
     },
   });
 
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ tradeCo
   }
 
   try {
-    const oauthToken = config.account.is_oauth ? config.account.oauth_access_token : null;
+    const oauthToken = config.account.is_oauth ? await getValidAccessToken(config.account) : null;
     const report = await computePnlReport(config.account.api_key_enc, config.account.api_secret_enc, config.script, from, to, oauthToken);
     return NextResponse.json({ tradeConfigId, symbol: config.script, from, to, ...report });
   } catch (err: any) {

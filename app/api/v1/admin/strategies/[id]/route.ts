@@ -8,6 +8,7 @@ import { NEXT_AUTH as authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { parseBacktestFile } from '@/lib/parseBacktest'
 import { setLeverage, setLeverageOAuth } from '@/lib/deltaClient'
+import { getValidAccessToken } from '@/lib/deltaOAuth'
 import cache from '@/lib/cache'
 
 // PATCH /api/admin/strategies/:id — update strategy
@@ -96,11 +97,11 @@ export async function PATCH(req, { params }: { params: Promise<{ id: string }> }
       if (script) {
         const subscribers = await prisma.tradeConfig.findMany({
           where: { strategyId: id, isSubscription: true, isActive: true, userActive: true },
-          include: { account: { select: { api_key_enc: true, api_secret_enc: true, is_oauth: true, oauth_access_token: true } } },
+          include: { account: { select: { id: true, api_key_enc: true, api_secret_enc: true, is_oauth: true, oauth_access_token: true, oauth_refresh_token: true, oauth_expires_at: true } } },
         })
-        await Promise.allSettled(subscribers.map((tc: any) =>
+        await Promise.allSettled(subscribers.map(async (tc: any) =>
           tc.account.is_oauth && tc.account.oauth_access_token
-            ? setLeverageOAuth(tc.account.oauth_access_token, script.productId, data.defaultLeverage)
+            ? setLeverageOAuth((await getValidAccessToken(tc.account))!, script.productId, data.defaultLeverage)
             : setLeverage(tc.account.api_key_enc, tc.account.api_secret_enc, script.productId, data.defaultLeverage)
         ))
       }

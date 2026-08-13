@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { NEXT_AUTH as authOptions } from '@/lib/auth'
 import { getBalances, getBalancesOAuth, getTicker } from '@/lib/deltaClient'
+import { getValidAccessToken } from '@/lib/deltaOAuth'
 import cache from '@/lib/cache'
 import { prisma } from '@/lib/prisma'
 
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
 
   const tc = await prisma.tradeConfig.findUnique({
     where: { id: tradeConfigId },
-    include: { account: { select: { api_key_enc: true, api_secret_enc: true, is_oauth: true, oauth_access_token: true } } },
+    include: { account: { select: { id: true, api_key_enc: true, api_secret_enc: true, is_oauth: true, oauth_access_token: true, oauth_refresh_token: true, oauth_expires_at: true } } },
   })
   if (!tc) return NextResponse.json({ error: 'Trade config not found' }, { status: 404 })
 
@@ -46,7 +47,7 @@ export async function POST(req: NextRequest) {
   } else {
     const isOAuth = tc.account.is_oauth && tc.account.oauth_access_token
     const balData = isOAuth
-      ? await getBalancesOAuth(tc.account.oauth_access_token!)
+      ? await getBalancesOAuth((await getValidAccessToken(tc.account))!)
       : await getBalances(tc.account.api_key_enc, tc.account.api_secret_enc)
     const balList = balData?.result ?? []
     const walletEntry = balList.find((b: any) => b.asset_symbol === 'USD') ?? balList[0]

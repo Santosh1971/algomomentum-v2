@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { placeOrder, placeOrderOAuth, getPositions, getPositionsOAuth, getBalances, getBalancesOAuth, getTicker, setLeverage, setLeverageOAuth } from '@/lib/deltaClient'
+import { getValidAccessToken } from '@/lib/deltaOAuth'
 import { prisma } from '@/lib/prisma'
 
 const INR_TO_USD = 85
@@ -54,7 +55,7 @@ export async function POST(req: NextRequest) {
       user: { email: { in: targetEmails } },
     },
     include: {
-      account: { select: { api_key_enc: true, api_secret_enc: true, is_oauth: true, oauth_access_token: true } },
+      account: { select: { id: true, api_key_enc: true, api_secret_enc: true, is_oauth: true, oauth_access_token: true, oauth_refresh_token: true, oauth_expires_at: true } },
       user: { select: { email: true } },
     },
   })
@@ -100,8 +101,10 @@ async function handleEntry({ config, side, script, overrideAmount, overrideLever
   if (!marketPrice) throw new Error(`No price for ${script.exchange_symbol}`)
 
   const isOAuth = config.account.is_oauth && config.account.oauth_access_token
+  const oauthToken = isOAuth ? await getValidAccessToken(config.account) : null
+  if (isOAuth && !oauthToken) throw new Error('Delta connection expired — user must reconnect')
   const balData = isOAuth
-    ? await getBalancesOAuth(config.account.oauth_access_token!)
+    ? await getBalancesOAuth(oauthToken!)
     : await getBalances(config.account.api_key_enc, config.account.api_secret_enc)
   const balances = balData?.result ?? []
   const wallet = balances.find((b: any) => b.asset_symbol === "USD") ?? balances[0]
@@ -131,10 +134,10 @@ async function handleEntry({ config, side, script, overrideAmount, overrideLever
     }
   }
 
-  if (config.account.is_oauth && config.account.oauth_access_token) {
-    const levResult = await setLeverageOAuth(config.account.oauth_access_token, script.productId, leverage)
+  if (isOAuth) {
+    const levResult = await setLeverageOAuth(oauthToken!, script.productId, leverage)
     console.log(`setLeverageOAuth(productId=${script.productId}, requested=${leverage}) →`, JSON.stringify(levResult))
-    return assertOrderSuccess(await placeOrderOAuth(config.account.oauth_access_token, {
+    return assertOrderSuccess(await placeOrderOAuth(oauthToken!, {
       product_id: script.productId, product_symbol: script.exchange_symbol,
       size: quantity, side, order_type: 'market_order', time_in_force: 'ioc',
       client_order_id: `am-test-${config.id.slice(-6)}-${Date.now()}`,
@@ -154,10 +157,12 @@ async function handleExit({ config, side, script, orderSizeType }: any) {
   let orderResult: any
 
   if (config.account.is_oauth && config.account.oauth_access_token) {
-    const posData = await getPositionsOAuth(config.account.oauth_access_token)
+    const oauthToken = await getValidAccessToken(config.account)
+    if (!oauthToken) throw new Error('Delta connection expired — user must reconnect')
+    const posData = await getPositionsOAuth(oauthToken)
     openPos = (posData?.result ?? []).find((p: any) => p.product_symbol === script.exchange_symbol && Math.abs(p.size) > 0)
     if (!openPos) return { message: 'No open position to exit' }
-    orderResult = assertOrderSuccess(await placeOrderOAuth(config.account.oauth_access_token, {
+    orderResult = assertOrderSuccess(await placeOrderOAuth(oauthToken, {
       product_id: script.productId, product_symbol: script.exchange_symbol,
       size: Math.abs(openPos.size), side, order_type: 'market_order', time_in_force: 'ioc',
       client_order_id: `am-test-${config.id.slice(-6)}-${Date.now()}`,

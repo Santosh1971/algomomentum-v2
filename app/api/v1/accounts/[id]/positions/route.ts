@@ -6,6 +6,7 @@ import { getServerSession } from "next-auth";
 import { NEXT_AUTH } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getPositions, getPositionsOAuth } from "@/lib/deltaClient";
+import { getValidAccessToken } from "@/lib/deltaOAuth";
 import cache from "@/lib/cache";
 
 const INR_PER_USD = 85;
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest, context: { params: Promise<{ id: str
 
   try {
     const data = hasOAuth
-      ? await getPositionsOAuth(account.oauth_access_token!)
+      ? await getPositionsOAuth((await getValidAccessToken(account))!)
       : await getPositions(account.api_key_enc, account.api_secret_enc);
     const positions: any[] = (data?.result ?? []).filter((p: any) => Math.abs(p.size) > 0);
 

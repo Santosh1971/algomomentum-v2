@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { placeOrder, placeOrderOAuth, getPositions, getPositionsOAuth, getBalances, getBalancesOAuth, getTicker, setLeverage, setLeverageOAuth } from '@/lib/deltaClient'
+import { getValidAccessToken } from '@/lib/deltaOAuth'
 import cache from '@/lib/cache'
 import { prisma } from '@/lib/prisma'
 
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ symbol
       subscribers: {
         where: { isActive: true, userActive: true, ...(targetUserId ? { userId: targetUserId } : {}) },
         include: {
-          account: { select: { api_key_enc: true, api_secret_enc: true, delta_account_name: true, is_oauth: true, oauth_access_token: true } },
+          account: { select: { id: true, api_key_enc: true, api_secret_enc: true, delta_account_name: true, is_oauth: true, oauth_access_token: true, oauth_refresh_token: true, oauth_expires_at: true } },
           user: { select: { role: true } },
         },
       },
@@ -78,7 +79,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ symbol
           if (orderSizeType === 'equity_pct') {
             const isOAuth = adminSub.account.is_oauth && adminSub.account.oauth_access_token
             const balData = isOAuth
-              ? await getBalancesOAuth(adminSub.account.oauth_access_token)
+              ? await getBalancesOAuth((await getValidAccessToken(adminSub.account))!)
               : await getBalances(adminSub.account.api_key_enc, adminSub.account.api_secret_enc)
             const balList = balData?.result ?? []
             const walletEntry = balList.find((b: any) => b.asset_symbol === "USD") ?? balList[0]
@@ -159,8 +160,13 @@ async function handleEntry({ tc, side, script, orderSizeType, defaultOrderSizeVa
   // Balance is needed both for '% of equity' sizing and the pre-trade allocation
   // check below, so fetch it once up front regardless of mode.
   const isOAuth = tc.account.is_oauth && tc.account.oauth_access_token
+  // Resolved once and reused below — refreshes and persists a new access token
+  // first if the stored one is expired or about to expire, so an OAuth account
+  // that's gone stale never silently blocks a live entry.
+  const oauthToken = isOAuth ? await getValidAccessToken(tc.account) : null
+  if (isOAuth && !oauthToken) throw new Error('Delta connection expired — user must reconnect')
   const balData = isOAuth
-    ? await getBalancesOAuth(tc.account.oauth_access_token)
+    ? await getBalancesOAuth(oauthToken!)
     : await getBalances(tc.account.api_key_enc, tc.account.api_secret_enc)
   const balList = balData?.result ?? []
   const walletEntry = balList.find((b: any) => b.asset_symbol === "USD") ?? balList[0]
@@ -196,9 +202,9 @@ async function handleEntry({ tc, side, script, orderSizeType, defaultOrderSizeVa
     }
   }
 
-  if (tc.account.is_oauth && tc.account.oauth_access_token) {
-    await setLeverageOAuth(tc.account.oauth_access_token, script.productId, tc.leverage)
-    return assertOrderSuccess(await placeOrderOAuth(tc.account.oauth_access_token, {
+  if (isOAuth) {
+    await setLeverageOAuth(oauthToken!, script.productId, tc.leverage)
+    return assertOrderSuccess(await placeOrderOAuth(oauthToken!, {
       product_id: script.productId, product_symbol: script.exchange_symbol,
       size: quantity, side, order_type: 'market_order', time_in_force: 'ioc',
       client_order_id: `am-${tc.id.slice(-6)}-${Date.now()}`,
@@ -218,10 +224,12 @@ async function handleExit({ tc, side, script, orderSizeType }: any) {
   let orderResult: any
 
   if (tc.account.is_oauth && tc.account.oauth_access_token) {
-    const posData = await getPositionsOAuth(tc.account.oauth_access_token)
+    const oauthToken = await getValidAccessToken(tc.account)
+    if (!oauthToken) throw new Error('Delta connection expired — user must reconnect')
+    const posData = await getPositionsOAuth(oauthToken)
     openPos = (posData?.result ?? []).find((p: any) => p.product_symbol === script.exchange_symbol && Math.abs(p.size) > 0)
     if (!openPos) return { message: 'No open position' }
-    orderResult = assertOrderSuccess(await placeOrderOAuth(tc.account.oauth_access_token, {
+    orderResult = assertOrderSuccess(await placeOrderOAuth(oauthToken, {
       product_id: script.productId, product_symbol: script.exchange_symbol,
       size: Math.abs(openPos.size), side, order_type: 'market_order', time_in_force: 'ioc',
       client_order_id: `am-${tc.id.slice(-6)}-${Date.now()}`,

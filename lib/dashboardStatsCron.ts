@@ -7,6 +7,7 @@
 import cron from "node-cron";
 import { prisma } from "@/lib/prisma";
 import { computePnlReport, TradeRow } from "@/lib/pnlEngine";
+import { getValidAccessToken } from "@/lib/deltaOAuth";
 import { DateTime } from "luxon";
 
 let started = false;
@@ -52,7 +53,7 @@ export async function refreshDashboardStats() {
   const allConfigs = await prisma.tradeConfig.findMany({
     select: {
       userId: true, isActive: true, userActive: true, amount: true, script: true, createdAt: true,
-      account: { select: { api_key_enc: true, api_secret_enc: true, is_oauth: true, oauth_access_token: true } },
+      account: { select: { id: true, api_key_enc: true, api_secret_enc: true, is_oauth: true, oauth_access_token: true, oauth_refresh_token: true, oauth_expires_at: true } },
     },
   });
 
@@ -75,7 +76,7 @@ export async function refreshDashboardStats() {
   // (never their own pre-existing Delta history on the same symbol).
   const results = await Promise.allSettled(
     activeConfigs.map(async c => {
-      const oauthToken = c.account.is_oauth ? c.account.oauth_access_token : null;
+      const oauthToken = c.account.is_oauth ? await getValidAccessToken(c.account) : null;
       const botFrom = DateTime.fromJSDate(c.createdAt).setZone("Asia/Kolkata").toFormat("yyyy-MM-dd");
       const report = await computePnlReport(c.account.api_key_enc, c.account.api_secret_enc, c.script, botFrom, to, oauthToken);
       return { userId: c.userId, symbol: c.script, trades: report.trades };

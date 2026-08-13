@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { NEXT_AUTH } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getBalances, getBalancesOAuth } from '@/lib/deltaClient'
+import { getValidAccessToken } from '@/lib/deltaOAuth'
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(NEXT_AUTH)
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
   try {
     const INR_TO_USD = 85
     const balData = account.is_oauth && account.oauth_access_token
-      ? await getBalancesOAuth(account.oauth_access_token)
+      ? await getBalancesOAuth((await getValidAccessToken(account))!)
       : await getBalances(account.api_key_enc, account.api_secret_enc)
     const balances = balData?.result ?? []
     const wallet = balances.find((b: any) => b.asset_symbol === "USD") ?? balances[0]

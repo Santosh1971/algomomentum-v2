@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { NEXT_AUTH } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getPositions, getBalances, getPositionsOAuth, getBalancesOAuth } from "@/lib/deltaClient";
+import { getValidAccessToken } from "@/lib/deltaOAuth";
 
 export async function GET() {
   const session = await getServerSession(NEXT_AUTH);
@@ -22,10 +23,11 @@ export async function GET() {
 
   const results = await Promise.allSettled(accounts.map(async (account) => {
     try {
-      const [posData, balData] = account.is_oauth && account.oauth_access_token
+      const oauthToken = account.is_oauth && account.oauth_access_token ? await getValidAccessToken(account) : null;
+      const [posData, balData] = oauthToken
         ? await Promise.allSettled([
-            getPositionsOAuth(account.oauth_access_token),
-            getBalancesOAuth(account.oauth_access_token),
+            getPositionsOAuth(oauthToken),
+            getBalancesOAuth(oauthToken),
           ])
         : await Promise.allSettled([
             getPositions(account.api_key_enc, account.api_secret_enc),
