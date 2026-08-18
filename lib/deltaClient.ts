@@ -54,32 +54,29 @@ export async function placeOrder(apiKeyEnc: string, apiSecretEnc: string, body: 
 }
 
 export async function verifyKeys(apiKey: string, apiSecret: string) {
-  // Try /v2/profile first, fall back to /v2/wallet/balances for sub-accounts
-  const { signature, timestamp } = sign("GET", "/v2/profile", "", "", apiSecret);
-  try {
-    const r = await axios.get(`${BASE_URL}/v2/profile`, { 
-      headers: headers(apiKey, signature, timestamp) 
-    });
-    if (r.data?.success) return r.data;
-  } catch (e: any) {
-    // Sub-accounts may not have /v2/profile access, try balances
-    console.log("Profile failed, trying balances for sub-account...");
-  }
-  
-  // Fallback: use wallet balances to verify key works
-  const { signature: sig2, timestamp: ts2 } = sign("GET", "/v2/wallet/balances", "", "", apiSecret);
-  const r2 = await axios.get(`${BASE_URL}/v2/wallet/balances`, { 
-    headers: headers(apiKey, sig2, ts2) 
+  // GET /v2/profile is deprecated for API-key auth as of 19 Aug 2026 (Delta notice:
+  // still reachable via SSO/OAuth login, but API keys get no data from it going forward).
+  // Verify + identify the account via /v2/wallet/balances instead, which remains
+  // available to API keys and includes a per-entry user_id we can use for identification.
+  const { signature, timestamp } = sign("GET", "/v2/wallet/balances", "", "", apiSecret);
+  const r = await axios.get(`${BASE_URL}/v2/wallet/balances`, {
+    headers: headers(apiKey, signature, timestamp),
   });
-  
-  // Return in profile format
+
+  if (!r.data?.success) {
+    return { success: false, result: null };
+  }
+
+  const userId = r.data?.result?.[0]?.user_id;
+
+  // Return in the same shape callers previously read from /v2/profile
   return {
     success: true,
     result: {
-      id: apiKey.slice(0, 8),
-      email: "Sub Account",
-      full_name: "Delta Sub Account",
-    }
+      id: userId ?? apiKey.slice(0, 8),
+      email: "Delta Account",
+      full_name: "Delta Account",
+    },
   };
 }
 
