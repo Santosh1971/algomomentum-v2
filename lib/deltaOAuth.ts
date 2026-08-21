@@ -11,7 +11,19 @@ export function buildDeltaAuthUrl(): string {
   return url.toString();
 }
 
+// Thrown (never swallowed) so callers — and, ultimately, the TradeFireError row
+// and admin alert email — can show the REAL reason a reconnect was needed,
+// instead of a single generic "must reconnect" string that hides whether the
+// access token merely expired or the stored refresh_token itself is dead.
+export class DeltaReconnectRequiredError extends Error {
+  constructor(reason: string) {
+    super(`Delta connection expired — user must reconnect (${reason})`);
+    this.name = "DeltaReconnectRequiredError";
+  }
+}
+
 export async function refreshDeltaToken(refreshToken: string) {
+  let res: Response;
   try {
     const formData = new FormData();
     formData.append("grant_type", "refresh_token");
@@ -19,11 +31,18 @@ export async function refreshDeltaToken(refreshToken: string) {
     formData.append("client_secret", process.env.DELTA_CLIENT_SECRET!);
     formData.append("redirect_uri", process.env.NEXTAUTH_URL + "/api/auth/delta/callback");
     formData.append("refresh_token", refreshToken);
-    const res = await fetch("https://cdn.india.deltaex.org/v2/oauth/token", { method: "POST", body: formData });
-    const data = await res.json();
-    if (!data.access_token) return null;
-    return data;
-  } catch { return null; }
+    res = await fetch("https://cdn.india.deltaex.org/v2/oauth/token", { method: "POST", body: formData });
+  } catch (e: any) {
+    throw new DeltaReconnectRequiredError(`network error contacting Delta: ${e.message}`);
+  }
+  const data = await res.json().catch(() => null);
+  if (!data?.access_token) {
+    // Delta's OAuth error shape is typically { error, error_description } — surface
+    // whichever fields are present rather than a bare HTTP status.
+    const reason = data?.error_description || data?.error || `HTTP ${res.status}`;
+    throw new DeltaReconnectRequiredError(`refresh_token rejected by Delta — ${reason}`);
+  }
+  return data;
 }
 
 // Any DeltaAccount row shape that has the oauth fields we need. Callers can
@@ -55,15 +74,13 @@ export async function getValidAccessToken(account: OAuthAccountLike): Promise<st
   if (stillValid) return account.oauth_access_token;
 
   if (!account.oauth_refresh_token) {
-    console.error(`Delta OAuth token expired for account ${account.id} and no refresh_token stored — user must reconnect.`);
-    return null;
+    throw new DeltaReconnectRequiredError("no refresh_token stored on this account");
   }
 
+  // refreshDeltaToken now throws DeltaReconnectRequiredError itself on any
+  // failure (network error or Delta rejecting the refresh_token) — let it
+  // propagate with the real reason rather than catching and re-generalizing it.
   const refreshed = await refreshDeltaToken(account.oauth_refresh_token);
-  if (!refreshed) {
-    console.error(`Delta OAuth refresh failed for account ${account.id} — user must reconnect.`);
-    return null;
-  }
 
   const { prisma } = await import("@/lib/prisma");
   const newExpiresAt = refreshed.expires_in

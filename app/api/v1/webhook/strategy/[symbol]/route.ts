@@ -122,17 +122,22 @@ export async function POST(req: NextRequest, context: { params: Promise<{ symbol
   // otherwise vanish with no record and no one would know.
   if (errors.length > 0) {
     try {
-      await prisma.tradeFireError.createMany({
-        data: errors.map((e: any) => ({
-          strategyId: strategy.id,
-          tradeConfigId: e.tradeConfigId,
-          userId: e.userId,
-          symbol: strategy.symbol,
-          trade,
-          side,
-          error: e.error ?? 'Unknown error',
-        })),
-      })
+      // createMany doesn't return row ids in Postgres, which is why emailedAt
+      // was always staying NULL below — individual creates inside a
+      // transaction give us real ids to stamp once the email actually sends.
+      const created = await prisma.$transaction(
+        errors.map((e: any) => prisma.tradeFireError.create({
+          data: {
+            strategyId: strategy.id,
+            tradeConfigId: e.tradeConfigId,
+            userId: e.userId,
+            symbol: strategy.symbol,
+            trade,
+            side,
+            error: e.error ?? 'Unknown error',
+          },
+        }))
+      )
 
       const failedUsers = await prisma.user.findMany({ where: { id: { in: errors.map((e: any) => e.userId) } }, select: { id: true, name: true, email: true } })
       const errorLines = errors.map((e: any) => {
@@ -142,8 +147,19 @@ export async function POST(req: NextRequest, context: { params: Promise<{ symbol
 
       const admins = await prisma.user.findMany({ where: { role: 'admin' }, select: { email: true } })
       const { sendTradeFireErrorAlert } = await import('@/lib/email')
+      let anySent = false
       for (const admin of admins) {
-        if (admin.email) await sendTradeFireErrorAlert(admin.email, strategy.name, strategy.symbol, trade, errorLines)
+        if (admin.email) {
+          await sendTradeFireErrorAlert(admin.email, strategy.name, strategy.symbol, trade, errorLines)
+          anySent = true
+        }
+      }
+
+      if (anySent) {
+        await prisma.tradeFireError.updateMany({
+          where: { id: { in: created.map((c: any) => c.id) } },
+          data: { emailedAt: new Date() },
+        })
       }
     } catch (e) {
       console.error('Could not persist/email trade fire errors:', e)
@@ -164,7 +180,6 @@ async function handleEntry({ tc, side, script, orderSizeType, defaultOrderSizeVa
   // first if the stored one is expired or about to expire, so an OAuth account
   // that's gone stale never silently blocks a live entry.
   const oauthToken = isOAuth ? await getValidAccessToken(tc.account) : null
-  if (isOAuth && !oauthToken) throw new Error('Delta connection expired — user must reconnect')
   const balData = isOAuth
     ? await getBalancesOAuth(oauthToken!)
     : await getBalances(tc.account.api_key_enc, tc.account.api_secret_enc)
@@ -225,11 +240,10 @@ async function handleExit({ tc, side, script, orderSizeType }: any) {
 
   if (tc.account.is_oauth && tc.account.oauth_access_token) {
     const oauthToken = await getValidAccessToken(tc.account)
-    if (!oauthToken) throw new Error('Delta connection expired — user must reconnect')
-    const posData = await getPositionsOAuth(oauthToken)
+    const posData = await getPositionsOAuth(oauthToken!)
     openPos = (posData?.result ?? []).find((p: any) => p.product_symbol === script.exchange_symbol && Math.abs(p.size) > 0)
     if (!openPos) return { message: 'No open position' }
-    orderResult = assertOrderSuccess(await placeOrderOAuth(oauthToken, {
+    orderResult = assertOrderSuccess(await placeOrderOAuth(oauthToken!, {
       product_id: script.productId, product_symbol: script.exchange_symbol,
       size: Math.abs(openPos.size), side, order_type: 'market_order', time_in_force: 'ioc',
       client_order_id: `am-${tc.id.slice(-6)}-${Date.now()}`,
