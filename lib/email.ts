@@ -201,3 +201,28 @@ export async function sendTradeFireErrorAlert(adminEmail: string, strategyName: 
     console.error("Trade fire error alert email failed:", e);
   }
 }
+
+export async function sendOAuthReconnectAlert(adminEmail: string, lines: string[]) {
+  try {
+    await resend.emails.send({
+      from: FROM, to: adminEmail,
+      subject: `⚠️ ${lines.length} Delta account${lines.length > 1 ? "s" : ""} need reconnect`,
+      html: `<div style="font-family:Arial;max-width:520px;margin:0 auto;padding:32px">
+        <div style="background:#1E3A5F;padding:24px;border-radius:8px;text-align:center;margin-bottom:24px">
+          <img src="https://app.algomomentum.in/alm-logo.png" alt="AlgoMomentum" width="64" height="64" style="object-fit:contain;margin-bottom:8px" />
+          <h1 style="color:white;margin:0;font-size:24px">AlgoMomentum</h1>
+          <p style="color:#93c5fd;margin:4px 0 0;font-size:14px">Bridge Platform v2</p>
+        </div>
+        <h2 style="color:#DC2626">Delta Reconnect Needed</h2>
+        <p style="color:#6b7280">The scheduled OAuth refresh found ${lines.length} account${lines.length > 1 ? "s" : ""} whose Delta refresh_token has already died — their next live trade will fail unless they reconnect first:</p>
+        <ul style="color:#374151;padding-left:20px;line-height:1.6">
+          ${lines.map(l => `<li style="margin-bottom:8px">${l}</li>`).join("")}
+        </ul>
+        <p style="color:#6b7280;font-size:14px">This was caught proactively, before any trade signal fired — no trade has been missed yet, but will be if this isn't fixed first.</p>
+        <a href="https://app.algomomentum.in/admin/users" style="display:inline-block;background:#1E3A5F;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;margin-top:16px">View Users →</a>
+      </div>`,
+    });
+  } catch (e) {
+    console.error("OAuth reconnect alert email failed:", e);
+  }
+}

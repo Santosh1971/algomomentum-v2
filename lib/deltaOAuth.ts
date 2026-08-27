@@ -60,24 +60,24 @@ type OAuthAccountLike = {
 const REFRESH_SKEW_MS = 5 * 60 * 1000; // 5 minutes
 
 /**
- * Returns a valid OAuth access token for this Delta account, transparently
- * refreshing (and persisting) it first if it's expired or about to expire.
- * Returns null if the account isn't OAuth-connected, or if refresh fails
- * (e.g. the refresh token itself was revoked) — callers should treat null
- * the same way they'd treat a missing oauth_access_token today.
+ * Unconditionally exchanges this account's stored refresh_token for a new
+ * access_token (and persists both), regardless of whether the current
+ * access_token is still valid. This exists separately from
+ * getValidAccessToken() because of a critical asymmetry Delta confirmed on
+ * 2026-08-22: the access_token has a 30-day TTL, but the refresh_token
+ * itself has only a 1-day TTL. getValidAccessToken() only calls refresh when
+ * the ACCESS token is near its 30-day expiry — meaning the refresh_token
+ * would otherwise sit completely unused for ~29 days and be long dead by the
+ * time it's actually needed. OAuthRefreshCron (lib/oauthRefreshCron.ts)
+ * calls this directly, on its own schedule well inside that 1-day window,
+ * to keep the refresh_token chain continuously alive.
  */
-export async function getValidAccessToken(account: OAuthAccountLike): Promise<string | null> {
-  if (!account.is_oauth || !account.oauth_access_token) return null;
-
-  const expiresAt = account.oauth_expires_at ? new Date(account.oauth_expires_at).getTime() : 0;
-  const stillValid = expiresAt - Date.now() > REFRESH_SKEW_MS;
-  if (stillValid) return account.oauth_access_token;
-
+export async function refreshAndPersist(account: OAuthAccountLike): Promise<string> {
   if (!account.oauth_refresh_token) {
     throw new DeltaReconnectRequiredError("no refresh_token stored on this account");
   }
 
-  // refreshDeltaToken now throws DeltaReconnectRequiredError itself on any
+  // refreshDeltaToken throws DeltaReconnectRequiredError itself on any
   // failure (network error or Delta rejecting the refresh_token) — let it
   // propagate with the real reason rather than catching and re-generalizing it.
   const refreshed = await refreshDeltaToken(account.oauth_refresh_token);
@@ -91,12 +91,31 @@ export async function getValidAccessToken(account: OAuthAccountLike): Promise<st
     where: { id: account.id },
     data: {
       oauth_access_token: refreshed.access_token,
-      // Delta may or may not rotate the refresh token on each use — keep the
-      // old one if a new one isn't returned.
+      // Delta confirmed (2026-08-22) the refresh_token is NOT rotated on use —
+      // it keeps returning the same one. Still handled defensively here in
+      // case that ever changes on their side.
       oauth_refresh_token: refreshed.refresh_token ?? account.oauth_refresh_token,
       oauth_expires_at: newExpiresAt,
     },
   });
 
   return refreshed.access_token;
+}
+
+/**
+ * Returns a valid OAuth access token for this Delta account, transparently
+ * refreshing (and persisting) it first if it's expired or about to expire.
+ * Returns null if the account isn't OAuth-connected. Throws
+ * DeltaReconnectRequiredError if refresh is needed but fails (e.g. the
+ * refresh_token itself has died) — callers should let that propagate so the
+ * real reason reaches TradeFireError / the admin alert email.
+ */
+export async function getValidAccessToken(account: OAuthAccountLike): Promise<string | null> {
+  if (!account.is_oauth || !account.oauth_access_token) return null;
+
+  const expiresAt = account.oauth_expires_at ? new Date(account.oauth_expires_at).getTime() : 0;
+  const stillValid = expiresAt - Date.now() > REFRESH_SKEW_MS;
+  if (stillValid) return account.oauth_access_token;
+
+  return refreshAndPersist(account);
 }
