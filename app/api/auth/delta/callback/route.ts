@@ -34,10 +34,23 @@ export async function GET(req: NextRequest) {
 
     const tokenRes = await fetch(TOKEN_URL, { method: "POST", body: formData });
     const tokenData = await tokenRes.json();
-    console.log("Delta token response:", JSON.stringify(tokenData));
+    // Never log tokenData directly — it contains the raw access_token and
+    // refresh_token in plaintext, which would otherwise sit readable in
+    // server logs for as long as they're retained. Log only the non-secret
+    // metadata that's actually useful for debugging.
+    console.log("Delta token response:", JSON.stringify({
+      has_access_token: !!tokenData.access_token,
+      has_refresh_token: !!tokenData.refresh_token,
+      expires_in: tokenData.expires_in,
+      refresh_token_expires_in: tokenData.refresh_token_expires_in,
+      scope: tokenData.scope,
+      token_type: tokenData.token_type,
+      error: tokenData.error,
+      error_description: tokenData.error_description,
+    }));
 
     if (!tokenData.access_token) {
-      console.error("Delta OAuth token error:", tokenData);
+      console.error("Delta OAuth token error:", tokenData.error ?? tokenData.error_description ?? "no access_token in response");
       return NextResponse.redirect(new URL("/user/tradeconfig?delta_error=2", BASE_URL));
     }
 
