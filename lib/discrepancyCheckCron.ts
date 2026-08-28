@@ -43,7 +43,11 @@ async function checkDiscrepancies() {
     where: { isActive: true },
     include: {
       subscribers: {
-        where: { isSubscription: true },
+        // discrepancyExempt = admin has marked this bot as intentionally
+        // paused/stopped — exclude it entirely so it's never flagged in any
+        // of the checks below (stopped, missing position, negative P&L,
+        // stale entry price).
+        where: { isSubscription: true, discrepancyExempt: false },
         include: {
           account: { select: { id: true, api_key_enc: true, api_secret_enc: true, is_oauth: true, oauth_access_token: true, oauth_refresh_token: true, oauth_expires_at: true } },
           user: { select: { name: true, email: true } },

@@ -81,6 +81,13 @@ model TradeConfig {
   isSubscription  Boolean   @default(false)
   strategyRef     Strategy? @relation(fields: [strategyId], references: [id])
 
+  // When true, this bot is permanently excluded from DiscrepancyCheckCron's
+  // hourly comparisons — for subscribers who intentionally paused rather
+  // than stopped unexpectedly, so the admin isn't alerted about them every
+  // hour indefinitely. Does not affect anything else (billing, OAuth
+  // refresh eligibility, etc).
+  discrepancyExempt Boolean @default(false)
+
   user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   account DeltaAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
   Billing Billing[]

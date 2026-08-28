@@ -50,6 +50,11 @@ async function refreshAllOAuthAccounts() {
       oauth_access_token: true,
       oauth_refresh_token: true,
       oauth_expires_at: true,
+      // Only used to decide whether a failure is worth alerting on below —
+      // we still attempt the refresh for every connected account regardless,
+      // since it's cheap and keeps a dormant account ready if the user
+      // reactivates a bot later.
+      tradeConfigs: { where: { isActive: true, userActive: true }, select: { id: true } },
     },
   });
 
@@ -58,28 +63,41 @@ async function refreshAllOAuthAccounts() {
     return;
   }
 
-  const failures: { userId: string; reason: string }[] = [];
+  const failures: { userId: string; reason: string; hasActiveBot: boolean }[] = [];
 
   for (const account of accounts) {
     try {
       await refreshAndPersist(account);
     } catch (e: any) {
-      failures.push({ userId: account.userId, reason: e?.message ?? "Unknown error" });
+      failures.push({
+        userId: account.userId,
+        reason: e?.message ?? "Unknown error",
+        hasActiveBot: account.tradeConfigs.length > 0,
+      });
     }
   }
 
   console.log(`[OAuthRefreshCron] Refreshed ${accounts.length - failures.length}/${accounts.length} account(s)`);
 
-  // A failure here means the refresh_token is ALREADY dead — that account
-  // will silently fail its next live trade unless the user reconnects first.
-  // Email admins now, proactively, instead of finding out from a missed
-  // trade the way Aug 12 and Aug 20 both played out.
-  if (failures.length > 0) {
+  const alertable = failures.filter(f => f.hasActiveBot);
+  const dormant = failures.filter(f => !f.hasActiveBot);
+
+  if (dormant.length > 0) {
+    // Not worth an admin email — no active bot means no trade is at risk of
+    // silently failing. Still logged so it's visible if someone goes looking.
+    console.log(`[OAuthRefreshCron] ${dormant.length} account(s) also need reconnect but have no active bot — skipping alert:`, dormant.map(f => f.userId));
+  }
+
+  // A failure here means the refresh_token is ALREADY dead AND the account
+  // has an active bot — that account will silently fail its next live trade
+  // unless the user reconnects first. Email admins now, proactively, instead
+  // of finding out from a missed trade the way Aug 12 and Aug 20 both played out.
+  if (alertable.length > 0) {
     const users = await prisma.user.findMany({
-      where: { id: { in: failures.map(f => f.userId) } },
+      where: { id: { in: alertable.map(f => f.userId) } },
       select: { id: true, name: true, email: true },
     });
-    const lines = failures.map(f => {
+    const lines = alertable.map(f => {
       const u = users.find((u: any) => u.id === f.userId);
       return `${u?.name ?? u?.email ?? f.userId}: ${f.reason}`;
     });
@@ -89,6 +107,6 @@ async function refreshAllOAuthAccounts() {
     for (const admin of admins) {
       if (admin.email) await sendOAuthReconnectAlert(admin.email, lines);
     }
-    console.error(`[OAuthRefreshCron] ${failures.length} account(s) need reconnect:`, lines);
+    console.error(`[OAuthRefreshCron] ${alertable.length} account(s) with active bots need reconnect:`, lines);
   }
 }
