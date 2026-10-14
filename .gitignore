@@ -45,3 +45,4 @@ next-env.d.ts
 *.log
 .DS_Store
 public/backtest-files/
+backtest-data/
