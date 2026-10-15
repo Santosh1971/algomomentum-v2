@@ -27,6 +27,7 @@ const PRODUCT_ID = 14969;
 
 const arg = (n: string) => { const i = process.argv.indexOf(n); return i >= 0 ? process.argv[i + 1] : undefined; };
 const GO = process.argv.includes("--go");
+const SCEN = arg("--scenario"); // optional: "autocancel"
 const accountId = arg("--account");
 const MAX_BAL = Number(arg("--max-balance-usd") ?? 100);
 const log: any[] = [];
@@ -96,6 +97,21 @@ async function main() {
   try {
     const cid = (s: string) => `probe-${s}-${Date.now()}`;
     await call("POST", `/v2/products/${PRODUCT_ID}/orders/leverage`, { body: { leverage: "2" }, label: "set leverage 2x" });
+
+    if (SCEN === "autocancel") {
+      // Do stop/target orders disappear when the position is closed by ANOTHER order?
+      await call("POST", "/v2/orders", { label: "ENTRY market buy 1 lot", body: { product_id: PRODUCT_ID, product_symbol: SYMBOL, size: 1, side: "buy", order_type: "market_order", time_in_force: "ioc", client_order_id: cid("entry") } });
+      await sleep(2000);
+      const p0 = await getPosition(); const e0 = Number(p0?.entry_price ?? last);
+      await call("POST", "/v2/orders", { label: "STOP-LOSS (-3%)", body: { product_id: PRODUCT_ID, product_symbol: SYMBOL, size: 1, side: "sell", order_type: "market_order", stop_order_type: "stop_loss_order", stop_price: round(e0 * 0.97, tick), stop_trigger_method: "last_traded_price", reduce_only: true, client_order_id: cid("sl") } });
+      await call("POST", "/v2/orders", { label: "TARGET limit (+10%)", body: { product_id: PRODUCT_ID, product_symbol: SYMBOL, size: 1, side: "sell", order_type: "limit_order", limit_price: round(e0 * 1.10, tick), reduce_only: true, time_in_force: "gtc", client_order_id: cid("tp") } });
+      console.log("closing the position with a market order, NOT cancelling the stop/target...");
+      await call("POST", "/v2/orders", { label: "CLOSE market reduce-only (stop/target left in place)", body: { product_id: PRODUCT_ID, product_symbol: SYMBOL, size: 1, side: "sell", order_type: "market_order", time_in_force: "ioc", reduce_only: true, client_order_id: cid("close") } });
+      await sleep(2500);
+      const left = await openOrders();
+      console.log(`RESULT autocancel: position size=${(await getPosition())?.size ?? 0}, orders still open after the position closed = ${left.length}`, left.map((o: any) => `${o.id}:${o.stop_order_type ?? o.order_type}`));
+      return; // cleanup below cancels anything left
+    }
 
     // 1) entry
     await call("POST", "/v2/orders", { label: "ENTRY market buy 1 lot", body: { product_id: PRODUCT_ID, product_symbol: SYMBOL, size: 1, side: "buy", order_type: "market_order", time_in_force: "ioc", client_order_id: cid("entry") } });

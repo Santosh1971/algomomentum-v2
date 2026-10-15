@@ -115,3 +115,21 @@ running XRP trade. Two options, in this order:
 3. Runner in **shadow mode** on production (logs only).
 4. Sub-account live, minimum size, webhook off for that account.
 5. Decide on main/subscriber accounts. Separate decision, not assumed.
+
+## Probe results — 15 Oct 2026, sub-account, 1 lot, API-key auth
+
+Run via `scripts/deltaProbe.ts` on the VPS (account Sub1_Santosh, 2x, XRPUSD).
+
+| Question | Result |
+|---|---|
+| Market entry | OK. Filled 1.3024 vs last 1.3019. |
+| Reduce-only stop-market stop-loss (`stop_order_type: stop_loss_order`, `stop_trigger_method: last_traded_price`) | Accepted. |
+| Reduce-only limit target | Accepted. |
+| Edit stop (`PUT /v2/orders` with `id`, `product_id`, `product_symbol`, `stop_price`) | OK. |
+| Edit stop to a price already beyond the market | **Rejected**, HTTP 400, `immediate_execution_stop_order`. The old stop stays. So when the recomputed stop is already beyond the close (the "hybrid" case) the runner must close at market itself, not try to edit. |
+| Cancel orders, flatten with market reduce-only | OK; account ended flat. |
+
+Not yet answered: do stop/target orders auto-cancel when the position is closed by
+another order (`--scenario autocancel`); actual stop fill slippage in a fast move and
+`last_traded_price` vs `mark_price` behaviour (will only show up in live use on the
+sub-account); whether OAuth tokens can place stop orders (only matters for OAuth accounts).
