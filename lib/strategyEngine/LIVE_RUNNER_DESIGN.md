@@ -106,8 +106,11 @@ running XRP trade. Two options, in this order:
 ## Phases
 
 0. (done) Engine + backtest + admin preview.
-1. Make `BASE_URL` configurable; write a small testnet script that places, edits
-   and cancels a stop and a bracket; answer the VERIFY list above. No production.
+1. **Decided 15 Oct: skip testnet, probe directly on a funded sub-account at 1 lot**
+   (`scripts/deltaProbe.ts`: entry, reduce-only stop, target, stop edit, the
+   edit-beyond-market edge case, then cancel + flatten). Answers the VERIFY list
+   above with API-key auth. Whether *OAuth* tokens can place stop orders stays
+   open (main account is OAuth) — only matters if the runner is ever used there.
 2. Refactor engine into step form; equivalence test against the batch backtest.
 3. Runner in **shadow mode** on production (logs only).
 4. Sub-account live, minimum size, webhook off for that account.
