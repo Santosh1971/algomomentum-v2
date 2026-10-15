@@ -17,8 +17,7 @@
 import crypto from "crypto";
 import axios from "axios";
 import fs from "fs";
-import * as dotenv from "dotenv";
-dotenv.config({ path: ".env" });
+import "dotenv/config"; // must be the first side-effect import: loads .env before lib/prisma reads DATABASE_URL
 import { prisma } from "../lib/prisma";
 import { decrypt } from "../lib/vault";
 
