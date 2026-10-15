@@ -111,7 +111,33 @@ export interface Trade {
  * source, matching the chart it was built on, so no higher/lower timeframe
  * resampling is needed for the core signal).
  */
+export interface OpenPosition {
+  side: "buy" | "sell";
+  entryTime: number;
+  entryPrice: number;
+  switchAchieved: boolean;
+  /** Stop that should be working on the exchange from now until the next bar close. */
+  stopPrice: number;
+  /** Target that should be working on the exchange (very large for longs when targetLongPercent is 9999). */
+  targetPrice: number;
+  switchPrice: number;
+  drawdownPrice: number;
+}
+
+export interface EngineResult {
+  trades: Trade[];
+  /** Position still open after the last candle, or null if flat. */
+  open: OpenPosition | null;
+  /** open time of the last candle processed */
+  lastBarTime: number;
+}
+
 export function runALM3XrpT3(candles: Candle[], cfgOverrides: Partial<ALM3XrpT3Config> = {}): Trade[] {
+  return runALM3XrpT3State(candles, cfgOverrides).trades;
+}
+
+/** Same engine as runALM3XrpT3, but also returns the position left open at the end — what a live runner needs. */
+export function runALM3XrpT3State(candles: Candle[], cfgOverrides: Partial<ALM3XrpT3Config> = {}): EngineResult {
   const cfg: ALM3XrpT3Config = { ...ALM3_XRP_T3_DEFAULTS, ...cfgOverrides };
   const n = candles.length;
   const closes = candles.map((c) => c.close);
@@ -299,5 +325,18 @@ export function runALM3XrpT3(candles: Candle[], cfgOverrides: Partial<ALM3XrpT3C
     }
   }
 
-  return trades;
+  const open: OpenPosition | null =
+    position === 0
+      ? null
+      : {
+          side: position === 1 ? "buy" : "sell",
+          entryTime,
+          entryPrice,
+          switchAchieved,
+          stopPrice: pendingStop,
+          targetPrice: pendingLimit,
+          switchPrice,
+          drawdownPrice,
+        };
+  return { trades, open, lastBarTime: n ? candles[n - 1].time : 0 };
 }

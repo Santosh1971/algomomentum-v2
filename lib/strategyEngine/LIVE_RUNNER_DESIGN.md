@@ -134,3 +134,24 @@ Run via `scripts/deltaProbe.ts` on the VPS (account Sub1_Santosh, 2x, XRPUSD).
 Not yet answered: actual stop fill slippage in a fast move and
 `last_traded_price` vs `mark_price` behaviour (will only show up in live use on the
 sub-account); whether OAuth tokens can place stop orders (only matters for OAuth accounts).
+
+## Walk-forward check of the "replay a rolling window" approach — 15 Oct 2026
+
+`runALM3XrpT3State()` returns the trades plus the position still open at the end of the
+candles (side, entry, switch-SL flag, the stop and target that should be working on the
+exchange). The live runner does **not** need persisted strategy state: after each bar
+close it replays the engine over the last N candles and reads the result.
+
+`npx tsx scripts/walkForward.ts <window>` does this at every historical bar and compares
+with the full-history backtest:
+
+| window | backtest trades checked | entry identical | exit same bar, price and reason identical |
+|---|---|---|---|
+| 1440 bars (30 d) | 332 | 332 | 332 |
+| 720 bars (15 d) | 353 | 353 | 353 |
+| 480 bars (10 d) | 361 | 361 | 361 |
+
+No extra and no missing entries. So SuperTrend/T3 seeding does not make a windowed
+replay diverge from the full-history backtest. Plan to use ~30 days of candles.
+Remaining runner work is therefore the exchange side: reconcile with the actual Delta
+position, place/edit/cancel orders (rules above), shadow mode, alerts.
