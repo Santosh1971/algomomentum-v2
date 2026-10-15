@@ -288,3 +288,23 @@ model TradeFireError {
   @@index([tradeConfigId])
   @@index([firedAt])
 }
+
+// Native strategy engine runner (lib/strategyEngine/liveRunner.ts): one row per
+// evaluated bar close. In shadow mode "actions" is what the runner WOULD do;
+// nothing was sent to the exchange.
+model EngineRunLog {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  accountId  String
+  engineType String
+  mode       String   // "shadow" (live is not implemented)
+  barTime    DateTime // open time of the last closed 30m bar that was evaluated
+  ok         Boolean  @default(true)
+  replay     Json?    // engine's view: open position (or null) and the last trade
+  exchange   Json?    // what Delta reported: position, stop/target orders, balance
+  actions    Json?    // actions the runner decided on
+  notes      String?
+
+  @@unique([accountId, barTime, mode])
+  @@index([createdAt])
+}

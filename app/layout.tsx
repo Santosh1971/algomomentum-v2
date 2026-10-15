@@ -19,6 +19,9 @@ if (typeof window === "undefined") { startDiscrepancyCheckCron(); }
 import { startOAuthRefreshCron } from "@/lib/oauthRefreshCron";
 if (typeof window === "undefined") { startOAuthRefreshCron(); }
 
+import { startEngineRunnerCron } from "@/lib/strategyEngine/liveRunner";
+if (typeof window === "undefined") { startEngineRunnerCron(); } // no-op unless ENGINE_RUNNER_ACCOUNT_ID is set
+
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {

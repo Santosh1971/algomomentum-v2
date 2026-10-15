@@ -155,3 +155,21 @@ No extra and no missing entries. So SuperTrend/T3 seeding does not make a window
 replay diverge from the full-history backtest. Plan to use ~30 days of candles.
 Remaining runner work is therefore the exchange side: reconcile with the actual Delta
 position, place/edit/cancel orders (rules above), shadow mode, alerts.
+
+## Shadow runner (built 15 Oct 2026, not live-trading)
+
+- `liveDecision.ts` — pure decision rules. `scripts/testDecision.ts` runs them against a
+  simulated exchange over all history: 0 position mismatches, 0 alerts, 0 leftover orders
+  (30-day and 10-day windows). Exits at the bar close (ribbon cross, or the recomputed stop
+  already beyond the close — ~14% of trades) are executed by us with a market order; level
+  exits are expected to be filled by the exchange stop.
+- `deltaReadonly.ts` — GET-only Delta access. No order-placing code exists in shadow mode.
+- `liveRunner.ts` — every 30 min at :00:10 / :30:10 UTC (= IST :30 / :00) it fetches ~31 days of
+  closed candles, replays the engine, reads the account's position/orders/balance, and writes
+  what it WOULD do to `EngineRunLog`. Idempotent per (account, bar). Refuses main/OAuth accounts.
+- Off by default. Enabled by `ENGINE_RUNNER_ACCOUNT_ID=<DeltaAccount.id>` in `.env`.
+- Admin page `/admin/engine-log` shows the last 150 rows.
+- Migration: `prisma/migrations/20261016_add_engine_run_log`.
+
+Known limits of shadow v1: uses the engine's default parameters (not the Strategy's saved
+engineConfig), no email alerts yet, sizing is only a preview (`previewLots`).
