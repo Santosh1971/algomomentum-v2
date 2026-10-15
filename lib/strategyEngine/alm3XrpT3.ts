@@ -222,6 +222,13 @@ export function runALM3XrpT3(candles: Candle[], cfgOverrides: Partial<ALM3XrpT3C
   }
 
   for (let i = 0; i < n; i++) {
+    // True when the position was closed by the bar-close logic (ribbon exit, or a
+    // stop that the close is already beyond). In Pine with process_orders_on_close
+    // that exit fills at this bar's close *after* the script has run, so
+    // strategy.position_size is still non-zero while the entry condition is
+    // evaluated and no new entry can happen on this bar. (An intrabar stop/target
+    // fill, by contrast, has already closed the position before the script runs.)
+    let closedAtBarClose = false;
     if (position !== 0) {
       // ---- Phase 1: test the working stop/target against this bar ----
       const mode = cfg.stopMode ?? "intrabar";
@@ -255,32 +262,38 @@ export function runALM3XrpT3(candles: Candle[], cfgOverrides: Partial<ALM3XrpT3C
         if (closes[i] >= switchPrice) switchAchieved = true;
         if (switchAchieved && closes[i] < t3Slow[i]) {
           closeTrade(i, closes[i], "buy_tp_ribbon");
+          closedAtBarClose = true;
         } else {
           const buyStopLoss = switchAchieved ? t3Slow[i] : st[i];
           const liquidatePrice = buyStopLoss - buyStopLoss * (cfg.liquidatePercent / 100);
           pendingStop = Math.max(liquidatePrice, drawdownPrice);
           pendingLimit = buyTarget;
-          if (cfg.stopMode === "hybrid" && closes[i] <= pendingStop)
+          if (cfg.stopMode === "hybrid" && closes[i] <= pendingStop) {
             closeTrade(i, closes[i], pendingStop >= drawdownPrice ? "buy_liq_exit" : "buy_dd_exit");
+            closedAtBarClose = true;
+          }
         }
       } else if (position === -1) {
         if (closes[i] <= switchPrice) switchAchieved = true;
         if (switchAchieved && closes[i] > t3Slow[i]) {
           closeTrade(i, closes[i], "sell_tp_ribbon");
+          closedAtBarClose = true;
         } else {
           const sellStopLoss = switchAchieved ? t3Slow[i] : st[i];
           const liquidatePrice = sellStopLoss + sellStopLoss * (cfg.liquidatePercent / 100);
           pendingStop = Math.min(liquidatePrice, drawdownPrice);
           pendingLimit = sellTarget;
-          if (cfg.stopMode === "hybrid" && closes[i] >= pendingStop)
+          if (cfg.stopMode === "hybrid" && closes[i] >= pendingStop) {
             closeTrade(i, closes[i], pendingStop < drawdownPrice ? "sell_liq_exit" : "sell_dd_exit");
+            closedAtBarClose = true;
+          }
         }
       }
     }
 
     // ---- Fresh entry check (also runs on the same bar a position just closed,
     //      matching Pine's instant position_size update within one bar) ----
-    if (position === 0) {
+    if (position === 0 && !closedAtBarClose) {
       if (buySignal(i)) openLong(i);
       else if (sellSignal(i)) openShort(i);
     }

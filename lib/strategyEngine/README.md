@@ -61,17 +61,32 @@ moves), if the close is already beyond the new stop the trade exits at that
 close. That second case is what TV does on bars where SuperTrend jumps
 through price.
 
-Result: 357 of 367 TV entries reproduced with identical entry prices, 352
-of those exit on the same bar, and compounded return is +74.8% vs TV's
-+72.3%.
+### Same-bar re-entry rule (fixed 15 Oct 2026)
+
+With `process_orders_on_close=true`, an exit decided by the script at a bar's
+close (ribbon exit via `strategy.close`, or a stop the close is already beyond)
+fills at that close *after* the script has run, so `strategy.position_size` is
+still non-zero when the entry condition is evaluated and no entry can happen
+on that bar. An intrabar stop/target fill has already closed the position
+before the script runs, so a same-bar re-entry is allowed there. The engine
+now does the same (`closedAtBarClose` in `alm3XrpT3.ts`). Before this fix the
+engine re-entered on the exit bar in 12 cases where TV did not.
+
+Result (hybrid stop mode, TV's own date range): 364 of 367 TV entries
+reproduced with identical entry prices, 359 of those exit on the same bar
+(351 at the same price). Over TV's range the engine gives +70.7% / 41.6% win
+rate / PF 1.193 on 370 trades, vs TV's +72.3% / 42.2% / 1.198 on 367.
 
 ### Still open
 
-- ~10 trades where this engine takes a fresh entry a few bars *before* TV
-  does after a stop-out (e.g. 13 Apr 03:30 vs TV 07:30); both then exit
-  together. Cause not identified — would need TV's own indicator values for
-  those bars. Suspects: indicator warm-up/seeding differences, or an
-  entry-flag detail in the Pine source.
+- 3 early entries 1.5–5 bars before TV after a stop-out (5 Apr 04:00,
+  13 Apr 03:30, 12 Jun 09:00 IST), 2 extra trades on 24 Apr, and one extra
+  short on 14 Oct 18:00 that TV never took. Cause not identified — would need
+  TV's own indicator values for those bars. The first trade (10 Jan) also
+  differs because of indicator warm-up.
+- 8 exits land on the same bar as TV but at a different price. In most, a
+  ribbon exit (close) and an intrabar stop fall on the same bar and TV books
+  the ribbon exit at the close; the engine books the stop first.
 - A few early-January differences are expected: the fetched history starts
   9 Jan, so indicators are less warmed up than in TV.
 - Position sizing: TV rounds quantity and uses ~100% of equity; the runner
