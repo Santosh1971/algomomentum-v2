@@ -50,7 +50,9 @@ export function computeBacktestStats(trades: Trade[], initialCapitalUsd = 1000):
   let grossProfitUsd = 0;
   let grossLossUsd = 0;
 
-  const equityData: EquityPoint[] = [{ date: new Date().toISOString(), equity }];
+  const equityData: EquityPoint[] = [
+    { date: trades.length ? new Date(trades[0].entryTime * 1000).toISOString() : new Date().toISOString(), equity },
+  ];
   const backtestTrades: BacktestStats["backtestTrades"] = [];
 
   for (const t of trades) {
@@ -89,7 +91,7 @@ export function computeBacktestStats(trades: Trade[], initialCapitalUsd = 1000):
   const totalTrades = wins + losses;
   const winRate = totalTrades > 0 ? (wins / totalTrades) * 100 : null;
   const profitFactor = grossLossUsd > 0 ? grossProfitUsd / grossLossUsd : null;
-  const totalPnlPct = (equity / initialCapitalUsd) * 100;
+  const totalPnlPct = ((equity - initialCapitalUsd) / initialCapitalUsd) * 100; // profit %, same meaning as parseBacktest.ts
 
   return {
     equityData,

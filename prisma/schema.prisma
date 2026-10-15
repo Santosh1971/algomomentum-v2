@@ -242,6 +242,11 @@ model Strategy {
   minLiveLot      Float?
   orderSizeType   String   @default("currency") // 'lot' | 'currency' | 'equity_pct'
   defaultOrderSizeValue Float? // for 'equity_pct' mode: the admin-set % applied to ALL subscribers
+  // Native strategy engine (lib/strategyEngine): which engine this strategy
+  // can be backtested with, and its admin-editable parameters. Null = no
+  // native engine, strategy only uses TradingView uploads/webhooks.
+  engineType      String?
+  engineConfig    Json?
   subscribers     TradeConfig[]
 }
 

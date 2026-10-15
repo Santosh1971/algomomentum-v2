@@ -39,11 +39,7 @@ Oct 14 2026, 13,344 bars):
   library implements a different seeding/variant of SuperTrend, which is a
   known cross-library inconsistency, not evidence of a bug here. Pine's own
   documented source is the ground truth we're targeting, not pandas_ta.)
-- Engine sanity run over the full 8+ months: 332 trades, diverse exit-reason
-  mix (not collapsed into one reason, which would indicate a bug), ~50.9%
-  win rate, 1.538 profit factor, ~11.9h average holding time — all
-  structurally plausible for this kind of mean-reversion-with-trend-filter
-  strategy.
+- Full-history run and TradingView cross-check: see the next section.
 
 ## Cross-check against a real TradingView export (done 15 Oct 2026)
 
@@ -93,15 +89,31 @@ of those exit on the same bar, and compounded return is +74.8% vs TV's
   non-compounding approximation at the single-trade level; equity
   compounding between trades is handled by `backtestRunner.ts`.
 
-## Next steps (not started)
+## Admin integration (built, not deployed)
 
-- `StrategyConfig` parameter model (DB + admin form) so the constants in
-  `ALM3_XRP_T3_DEFAULTS` become editable per-strategy instead of hardcoded.
-- Wire `backtestRunner.ts`'s output into an actual API route that creates/
-  updates a `Strategy` row + `StrategyTrade` rows, reusing
-  `app/api/v1/admin/strategies/[id]/route.ts`'s existing persistence shape.
-- A "Run native backtest" button in `/admin/strategies` alongside the
-  existing "upload TV export" flow.
-- Only after the above is reviewed and the TV-export cross-check is done:
-  a live runner (separate, much more cautious phase — not started, not
-  scheduled).
+- `Strategy.engineType` / `Strategy.engineConfig` (migration
+  `prisma/migrations/20261015_add_strategy_engine`).
+- `registry.ts` lists the available engines + their editable parameters.
+- `fetchCandles.ts` pages Delta's public candle endpoint.
+- `GET/PUT /api/v1/admin/strategies/[id]/engine` — read/save engine + params.
+- `POST /api/v1/admin/strategies/[id]/native-backtest` — runs the engine
+  over a date range. **Dry run by default**; only `apply: true` overwrites the
+  strategy's displayed backtest stats/trades (which marketplace subscribers
+  see, and which normally come from a TradingView upload).
+- "Engine" button on `/admin/strategies` opens a modal: pick engine, edit
+  parameters, choose range, run preview, then optionally apply.
+
+Deploy steps (when reviewed): apply the migration SQL, `npx prisma generate`,
+build, `pm2 restart algomomentum` (as `santosh`, no sudo).
+
+Tested here: engine/stat code against real candles; the modal in headless
+Chromium against a mocked API backed by real engine output. NOT tested here:
+the two API routes against a real DB/session, and the live Delta candle
+fetch (the dev sandbox can't reach Delta or regenerate the Prisma client).
+First real run should be a preview, compared with the TV export.
+
+## Not started
+
+- A live runner (replacing the TradingView webhook). Separate, much more
+  cautious phase: real orders, native stop/TP orders on Delta, etc.
+- Closing the ~10 early-entry differences listed above.

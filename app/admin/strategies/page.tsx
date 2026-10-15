@@ -11,6 +11,7 @@ export default function AdminStrategiesPage() {
   const [editing, setEditing]       = useState(null)
   const [loading, setLoading]       = useState(true)
   const [propsModal, setPropsModal] = useState(null)
+  const [engineModal, setEngineModal] = useState(null)
 
   useEffect(() => { fetchStrategies() }, [])
 
@@ -127,6 +128,7 @@ export default function AdminStrategiesPage() {
               <div className="flex gap-2 flex-wrap">
                 <button onClick={() => { setEditing(s); setShowForm(true) }} className="text-xs px-3 py-1.5 rounded border border-border/40 hover:bg-muted/30">Edit</button>
                 <button onClick={() => setPropsModal(s)} className="text-xs px-3 py-1.5 rounded border border-blue-500/40 text-blue-400 hover:bg-blue-500/10">Properties</button>
+                <button onClick={() => setEngineModal(s)} className="text-xs px-3 py-1.5 rounded border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/10">Engine</button>
                 <button onClick={() => handleDelete(s.id)} className="text-xs px-3 py-1.5 rounded border border-red-500/30 text-red-400 hover:bg-red-500/10">Delete</button>
               </div>
             </div>
@@ -160,6 +162,13 @@ export default function AdminStrategiesPage() {
             )}
           </div>
         </div>
+      )}
+      {engineModal && (
+        <EngineModal
+          strategy={engineModal}
+          onClose={() => setEngineModal(null)}
+          onApplied={() => { setEngineModal(null); fetchStrategies() }}
+        />
       )}
       {showForm && (
         <StrategyFormModal
@@ -291,6 +300,136 @@ function StrategyFormModal({ initial, onClose, onSaved }) {
             {loading ? 'Saving…' : 'Save strategy'}
           </button>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function EngineModal({ strategy, onClose, onApplied }: { strategy: any; onClose: () => void; onApplied: () => void }) {
+  const [catalog, setCatalog] = useState<any>(null)
+  const [engineType, setEngineType] = useState('')
+  const [config, setConfig] = useState<any>({})
+  const [startDate, setStartDate] = useState('2026-02-09T19:30')
+  const [endDate, setEndDate] = useState('')
+  const [capital, setCapital] = useState(1000)
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<string | null>(null)
+  const [result, setResult] = useState<any>(null)
+
+  useEffect(() => {
+    fetch(`/api/v1/admin/strategies/${strategy.id}/engine`).then(r => r.json()).then(d => {
+      setCatalog(d)
+      setEngineType(d.engineType || '')
+      setConfig(d.config || {})
+    })
+  }, [strategy.id])
+
+  const def = catalog?.engines?.find((e: any) => e.key === engineType)
+
+  function pickEngine(key: string) {
+    setEngineType(key)
+    const e = catalog.engines.find((x: any) => x.key === key)
+    setConfig(e ? { ...e.defaults } : {})
+    setResult(null)
+  }
+
+  async function save() {
+    setBusy(true); setMsg(null)
+    const r = await fetch(`/api/v1/admin/strategies/${strategy.id}/engine`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ engineType: engineType || null, config }),
+    })
+    setBusy(false)
+    setMsg(r.ok ? 'Saved.' : 'Save failed.')
+  }
+
+  async function run(apply: boolean) {
+    if (apply && !confirm('This REPLACES the backtest stats and trades currently shown for this strategy (including any TradingView upload). Continue?')) return
+    setBusy(true); setMsg(null)
+    // IST wall-clock inputs, as used everywhere else for this strategy
+    const toIso = (v: string) => (v ? v + ':00+05:30' : null)
+    // make sure the engine type is saved before running
+    await fetch(`/api/v1/admin/strategies/${strategy.id}/engine`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ engineType, config }),
+    })
+    const r = await fetch(`/api/v1/admin/strategies/${strategy.id}/native-backtest`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ startDate: toIso(startDate), endDate: toIso(endDate), initialCapital: capital, config, apply }),
+    })
+    const d = await r.json()
+    setBusy(false)
+    if (!r.ok) { setMsg(d.error || 'Backtest failed'); return }
+    setResult(d)
+    if (apply) { setMsg('Applied to strategy.'); onApplied() }
+  }
+
+  const s = result?.stats
+  return (
+    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={onClose}>
+      <div className="bg-background border border-border/50 rounded-2xl w-full max-w-2xl max-h-[88vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-base font-medium">Native engine — {strategy.name}</div>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-xl">×</button>
+        </div>
+        {!catalog ? <div className="text-sm text-muted-foreground">Loading…</div> : (
+          <div className="space-y-4">
+            <Field label="Engine">
+              <select value={engineType} onChange={e => pickEngine(e.target.value)} className="form-input">
+                <option value="">None (TradingView only)</option>
+                {catalog.engines.map((e: any) => <option key={e.key} value={e.key}>{e.label}</option>)}
+              </select>
+            </Field>
+            {def && (<>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {def.fields.map((f: any) => (
+                  <Field key={f.key} label={f.label}>
+                    <input type="number" step={f.step ?? 'any'} min={f.min} value={config[f.key] ?? ''}
+                      onChange={e => setConfig({ ...config, [f.key]: e.target.value })} className="form-input" />
+                  </Field>
+                ))}
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <Field label="Start (IST)"><input type="datetime-local" value={startDate} onChange={e => setStartDate(e.target.value)} className="form-input" /></Field>
+                <Field label="End (IST, optional)"><input type="datetime-local" value={endDate} onChange={e => setEndDate(e.target.value)} className="form-input" /></Field>
+                <Field label="Initial capital ($)"><input type="number" value={capital} onChange={e => setCapital(Number(e.target.value))} className="form-input" /></Field>
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                <button disabled={busy} onClick={save} className="text-xs px-3 py-1.5 rounded border border-border/40 hover:bg-muted/30 disabled:opacity-50">Save parameters</button>
+                <button disabled={busy} onClick={() => run(false)} className="text-xs px-3 py-1.5 rounded bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50">{busy ? 'Running…' : 'Run backtest (preview)'}</button>
+                {result && !result.applied && (
+                  <button disabled={busy} onClick={() => run(true)} className="text-xs px-3 py-1.5 rounded border border-amber-500/50 text-amber-400 hover:bg-amber-500/10 disabled:opacity-50">Apply to strategy…</button>
+                )}
+              </div>
+            </>)}
+            {msg && <div className="text-xs text-muted-foreground">{msg}</div>}
+            {s && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
+                  {[['Net profit', `${s.totalPnlPct}%`], ['Win rate', `${s.winRate}%`], ['Profit factor', s.profitFactor], ['Max drawdown', `${s.maxDrawdown}%`], ['Trades', s.totalTrades]].map(([k, v]: any) => (
+                    <div key={k} className="rounded-lg border border-border/30 p-2"><div className="text-[10px] text-muted-foreground">{k}</div><div className="text-sm font-medium">{v}</div></div>
+                  ))}
+                </div>
+                <div className="text-[10px] text-muted-foreground">{result.candles} candles used · preview only unless applied · figures are an estimate until checked against a TradingView export</div>
+                <div className="overflow-x-auto max-h-64 overflow-y-auto">
+                  <table className="w-full text-xs">
+                    <thead><tr className="text-left text-muted-foreground"><th className="py-1">#</th><th>Side</th><th>Exit</th><th>Reason</th><th className="text-right">Price</th><th className="text-right">Net %</th></tr></thead>
+                    <tbody>
+                      {result.trades.slice().reverse().map((t: any) => (
+                        <tr key={t.tradeNumber} className="border-t border-border/20">
+                          <td className="py-1">{t.tradeNumber}</td><td>{t.side}</td>
+                          <td>{new Date(t.firedAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'short', timeStyle: 'short' })}</td>
+                          <td>{t.signal}</td><td className="text-right">{t.price.toFixed(4)}</td>
+                          <td className={`text-right ${t.netPnlPct >= 0 ? 'text-green-500' : 'text-red-500'}`}>{t.netPnlPct.toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
