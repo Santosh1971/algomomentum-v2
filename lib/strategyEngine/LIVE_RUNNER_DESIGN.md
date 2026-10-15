@@ -129,7 +129,8 @@ Run via `scripts/deltaProbe.ts` on the VPS (account Sub1_Santosh, 2x, XRPUSD).
 | Edit stop to a price already beyond the market | **Rejected**, HTTP 400, `immediate_execution_stop_order`. The old stop stays. So when the recomputed stop is already beyond the close (the "hybrid" case) the runner must close at market itself, not try to edit. |
 | Cancel orders, flatten with market reduce-only | OK; account ended flat. |
 
-Not yet answered: do stop/target orders auto-cancel when the position is closed by
-another order (`--scenario autocancel`); actual stop fill slippage in a fast move and
+| Position closed by another order (market reduce-only) while a stop and a limit target are open (`--scenario autocancel`) | The limit target was cancelled automatically; **the stop-loss stayed open** with no position. A leftover reduce-only stop would then hit the *next* position. **Runner rule: after every exit cancel all open stops on the product; before every entry verify there are none.** |
+
+Not yet answered: actual stop fill slippage in a fast move and
 `last_traded_price` vs `mark_price` behaviour (will only show up in live use on the
 sub-account); whether OAuth tokens can place stop orders (only matters for OAuth accounts).
