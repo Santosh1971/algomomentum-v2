@@ -45,25 +45,41 @@ Oct 14 2026, 13,344 bars):
   structurally plausible for this kind of mean-reversion-with-trend-filter
   strategy.
 
-## What is NOT yet validated — do this before trusting the numbers
+## Cross-check against a real TradingView export (done 15 Oct 2026)
 
-**The indicator math is proven correct; the full backtest's fidelity to
-TradingView's own Strategy Tester output is not yet proven.** The only way
-to actually confirm that is a trade-by-trade diff against a real TradingView
-export of this exact script for the exact same date range. Concretely:
+Compared against TV's Strategy Tester export for this exact script
+(XRPUSD.P, 30m, 367 trades, +72.29% from Jan 10 to Oct 14 2026). Run with
+`npx tsx scripts/compareTV.ts hybrid && python3 scripts/compareTV.py`
+(needs the TV CSV saved as `backtest-data/tv_export.csv`; the TV export
+timestamps are IST).
 
-1. Export this strategy's backtest from TradingView as CSV/XLSX for XRPUSD,
-   30-min, same date range as the data pulled here (Jan 10 – Oct 14 2026).
-2. Run it through the *existing* `parseBacktestFile()` to get TV's own
-   trade list and stats.
-3. Diff that trade-by-trade against `runALM3XrpT3()`'s output for the same
-   candles. Differences to expect and investigate:
-   - Exact fill price on stop/limit touches (this engine assumes a fill at
-     the exact stop/limit price; Pine's backtester may fill slightly
-     differently on a gapping bar).
-   - The simultaneous-stop-and-target-in-one-bar tie-break (this engine
-     assumes stop fills first, which is the standard conservative backtest
-     convention, but isn't necessarily what Pine's simulator assumes).
+| stop handling | exit bar matched | exit price matched |
+|---|---|---|
+| intrabar fill at stop level | 313 | 305 |
+| close-based only | 199 | 82 |
+| **hybrid (default)** | **352** | **344** |
+
+Hybrid = the stop placed at the previous bar's close fills intrabar at its
+level; then, after the stop is recomputed on the current bar (SuperTrend
+moves), if the close is already beyond the new stop the trade exits at that
+close. That second case is what TV does on bars where SuperTrend jumps
+through price.
+
+Result: 357 of 367 TV entries reproduced with identical entry prices, 352
+of those exit on the same bar, and compounded return is +74.8% vs TV's
++72.3%.
+
+### Still open
+
+- ~10 trades where this engine takes a fresh entry a few bars *before* TV
+  does after a stop-out (e.g. 13 Apr 03:30 vs TV 07:30); both then exit
+  together. Cause not identified — would need TV's own indicator values for
+  those bars. Suspects: indicator warm-up/seeding differences, or an
+  entry-flag detail in the Pine source.
+- A few early-January differences are expected: the fetched history starts
+  9 Jan, so indicators are less warmed up than in TV.
+- Position sizing: TV rounds quantity and uses ~100% of equity; the runner
+  here compounds the percentage return. Not compared in detail.
 
 ## Known, deliberate simplifications
 

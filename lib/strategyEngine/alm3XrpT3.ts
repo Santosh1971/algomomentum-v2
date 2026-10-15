@@ -60,6 +60,11 @@ export interface ALM3XrpT3Config {
   startTime?: number; // unix seconds, inclusive
   endTime?: number; // unix seconds, inclusive (only used if useDateRange is true)
   useDateRange?: boolean;
+  // How stop/limit levels are tested: "intrabar" fills at the level when the
+  // bar's high/low touches it; "close" triggers on the bar's close and fills
+  // at the close; "close_cur" same but against the stop recomputed on the
+  // current bar. See README for which one matches TradingView.
+  stopMode?: "intrabar" | "close" | "close_cur" | "hybrid";
 }
 
 // The exact constants the live script was deployed with ("...Fixed" vars in
@@ -77,6 +82,7 @@ export const ALM3_XRP_T3_DEFAULTS: ALM3XrpT3Config = {
   commissionPercent: 0.03,
   startTime: Date.parse("2026-02-09T19:30:00+05:30") / 1000,
   useDateRange: false,
+  stopMode: "hybrid", // best match to TradingView's Strategy Tester — see README
 };
 
 export interface Trade {
@@ -217,32 +223,31 @@ export function runALM3XrpT3(candles: Candle[], cfgOverrides: Partial<ALM3XrpT3C
 
   for (let i = 0; i < n; i++) {
     if (position !== 0) {
-      // ---- Phase 1: intrabar check of the order placed at the previous bar's close ----
+      // ---- Phase 1: test the working stop/target against this bar ----
+      const mode = cfg.stopMode ?? "intrabar";
+      if (mode === "close_cur") {
+        // recompute the stop on the current bar before testing it
+        if (position === 1) {
+          const sl = switchAchieved ? t3Slow[i] : st[i];
+          pendingStop = Math.max(sl - sl * (cfg.liquidatePercent / 100), drawdownPrice);
+        } else {
+          const sl = switchAchieved ? t3Slow[i] : st[i];
+          pendingStop = Math.min(sl + sl * (cfg.liquidatePercent / 100), drawdownPrice);
+        }
+      }
+      const useClose = mode === "close" || mode === "close_cur";
       if (position === 1) {
-        const hitStop = lows[i] <= pendingStop;
-        const hitTarget = highs[i] >= pendingLimit;
-        if (hitStop && hitTarget) {
-          // Both touched in the same bar — conservative assumption: stop first.
-          const reason = pendingStop >= drawdownPrice ? "buy_liq_exit" : "buy_dd_exit";
-          closeTrade(i, pendingStop, reason);
-        } else if (hitStop) {
-          const reason = pendingStop >= drawdownPrice ? "buy_liq_exit" : "buy_dd_exit";
-          closeTrade(i, pendingStop, reason);
-        } else if (hitTarget) {
-          closeTrade(i, pendingLimit, "buy_target");
-        }
+        const hitStop = (useClose ? closes[i] : lows[i]) <= pendingStop;
+        const hitTarget = (useClose ? closes[i] : highs[i]) >= pendingLimit;
+        const fill = (lvl: number) => (useClose ? closes[i] : lvl);
+        if (hitStop) closeTrade(i, fill(pendingStop), pendingStop >= drawdownPrice ? "buy_liq_exit" : "buy_dd_exit");
+        else if (hitTarget) closeTrade(i, fill(pendingLimit), "buy_target");
       } else if (position === -1) {
-        const hitStop = highs[i] >= pendingStop;
-        const hitTarget = lows[i] <= pendingLimit;
-        if (hitStop && hitTarget) {
-          const reason = pendingStop < drawdownPrice ? "sell_liq_exit" : "sell_dd_exit";
-          closeTrade(i, pendingStop, reason);
-        } else if (hitStop) {
-          const reason = pendingStop < drawdownPrice ? "sell_liq_exit" : "sell_dd_exit";
-          closeTrade(i, pendingStop, reason);
-        } else if (hitTarget) {
-          closeTrade(i, pendingLimit, "sell_target");
-        }
+        const hitStop = (useClose ? closes[i] : highs[i]) >= pendingStop;
+        const hitTarget = (useClose ? closes[i] : lows[i]) <= pendingLimit;
+        const fill = (lvl: number) => (useClose ? closes[i] : lvl);
+        if (hitStop) closeTrade(i, fill(pendingStop), pendingStop < drawdownPrice ? "sell_liq_exit" : "sell_dd_exit");
+        else if (hitTarget) closeTrade(i, fill(pendingLimit), "sell_target");
       }
 
       // ---- Phase 2: bar-close logic, only if still open ----
@@ -255,6 +260,8 @@ export function runALM3XrpT3(candles: Candle[], cfgOverrides: Partial<ALM3XrpT3C
           const liquidatePrice = buyStopLoss - buyStopLoss * (cfg.liquidatePercent / 100);
           pendingStop = Math.max(liquidatePrice, drawdownPrice);
           pendingLimit = buyTarget;
+          if (cfg.stopMode === "hybrid" && closes[i] <= pendingStop)
+            closeTrade(i, closes[i], pendingStop >= drawdownPrice ? "buy_liq_exit" : "buy_dd_exit");
         }
       } else if (position === -1) {
         if (closes[i] <= switchPrice) switchAchieved = true;
@@ -265,6 +272,8 @@ export function runALM3XrpT3(candles: Candle[], cfgOverrides: Partial<ALM3XrpT3C
           const liquidatePrice = sellStopLoss + sellStopLoss * (cfg.liquidatePercent / 100);
           pendingStop = Math.min(liquidatePrice, drawdownPrice);
           pendingLimit = sellTarget;
+          if (cfg.stopMode === "hybrid" && closes[i] >= pendingStop)
+            closeTrade(i, closes[i], pendingStop < drawdownPrice ? "sell_liq_exit" : "sell_dd_exit");
         }
       }
     }
