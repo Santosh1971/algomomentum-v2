@@ -173,3 +173,39 @@ position, place/edit/cancel orders (rules above), shadow mode, alerts.
 
 Known limits of shadow v1: uses the engine's default parameters (not the Strategy's saved
 engineConfig), no email alerts yet, sizing is only a preview (`previewLots`).
+
+## Pre-live hardening — 22 Oct 2026 (still shadow mode, nothing places orders)
+
+Why: the first week of shadow logs (19–22 Oct) showed the engine agreeing with the Pine strategy on every
+trade (replica of the Pine script, started from four different dates), while the live TradingView-alert bot
+skipped/late-fired some signals (19 Oct 21:00, 20 Oct 01:30) and took one the strategy did not (22 Oct 02:00).
+
+Changes:
+- `fetchCandles.ts`: 5 attempts with backoff and a 20 s timeout, and the error now says why it failed
+  (5 of ~150 runs had failed with a bare timeout).
+- `liveRunner.ts`: a catch-up pass at :04:20 / :34:20 UTC re-runs a bar whose first attempt failed on the candle
+  fetch; the expected shadow-mode alert "engine open, exchange flat" no longer turns the row red; each row now
+  stores the engine's last 6 trades with net % and the open trade's running %.
+- Admin page shows those trades.
+- `liveGuards.ts` (pure, tested): every refusal live mode will need — confirm text, kill switch, lot cap
+  (no default, hard ceiling 50), API-key sub-accounts only, balance cap, no active webhook bot on the account.
+- `liveExecutor.ts` (tested against a fake exchange, not wired to Delta): turns the decide() actions into orders
+  through a small `TradeApi` interface. Rules: Delta is the source of truth, never hold a position without exactly
+  one stop (close at once if the stop cannot be placed or confirmed), a stop beyond the market means close at
+  market, cancel leftover stops after every exit and before every entry, retry a failed emergency close and keep
+  the stop in place until the account is confirmed flat, stop after the first failed action.
+- `scripts/testExecutor.ts`: fake exchange built from the probe results; run A (no failures) must match the engine
+  exactly (20 000 bars: 559 entries, 0 mismatches, 0 alerts); run B injects random failures with 5 seeds (stop
+  placement fails, entry times out after filling, edits fail, closes fail) and checks that after every bar there is
+  never a position without one stop, never orders while flat, never more than the lot cap, and no exception.
+  The first version of run B found a real bug (an emergency close that failed still cancelled the stop); fixed.
+- `scripts/engineReport.ts`: lists what the engine would have traded, with net %.
+
+NOT built (needs a decision, see the hand-over note): `deltaTrade.ts` (the HTTP client that places/edits/cancels
+orders, using the request shapes from `scripts/deltaProbe.ts`) and the `live` branch of the runner that would call
+`executeActions`. `ENGINE_RUNNER_MODE=live` is still refused.
+
+Go-live checklist (all required): (1) shadow log clean for a week, with at least a few complete trades whose entry/exit
+times match the engine report; (2) the five items above reviewed and the order client written and tested once on the
+sub-account with `--go`-style supervision; (3) the XRPUSD webhook bot on the same account switched off; (4)
+`ENGINE_MAX_LOTS=1` for the first days; (5) kill switch known: `touch /var/www/algomomentum/ENGINE_KILL`.

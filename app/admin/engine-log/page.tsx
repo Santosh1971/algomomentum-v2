@@ -29,11 +29,39 @@ export default function EngineLogPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-[#161B22]">Engine runner log</h1>
-            <p className="text-sm text-gray-500 mt-1">Shadow mode: nothing here was sent to Delta. Times are IST, one row per 30-minute bar close.</p>
+            <p className="text-sm text-gray-500 mt-1">Shadow mode: nothing here was sent to Delta. Times are IST, one row per 30-minute bar close. In shadow mode the trade is never placed, so an engine position next to a flat exchange is expected.</p>
           </div>
           <button onClick={load} className="border rounded-lg px-3 py-1.5 text-sm">Refresh</button>
         </div>
         {err && <div className="text-red-600 text-sm">{err}</div>}
+        {rows[0]?.replay?.recent?.length > 0 && (
+          <div className="bg-white rounded-xl border overflow-x-auto">
+            <div className="p-3 border-b text-sm font-semibold text-[#161B22]">
+              What the engine would have traded (latest run)
+              {rows[0].replay.open && rows[0].replay.openPnlPct != null && (
+                <span className="ml-3 font-normal text-gray-500">open {rows[0].replay.open.side}: {Number(rows[0].replay.openPnlPct).toFixed(2)}% so far</span>
+              )}
+            </div>
+            <table className="w-full text-sm">
+              <thead className="text-left text-gray-500 border-b">
+                <tr><th className="p-2">Side</th><th className="p-2">Entered (IST)</th><th className="p-2">Price</th><th className="p-2">Exited (IST)</th><th className="p-2">Price</th><th className="p-2">Net %</th><th className="p-2">How</th></tr>
+              </thead>
+              <tbody>
+                {[...rows[0].replay.recent].reverse().map((t: any, i: number) => (
+                  <tr key={i} className="border-b">
+                    <td className="p-2">{t.side}</td>
+                    <td className="p-2 whitespace-nowrap">{ist(new Date((t.entryTime + 1800) * 1000).toISOString())}</td>
+                    <td className="p-2">{Number(t.entryPrice).toFixed(4)}</td>
+                    <td className="p-2 whitespace-nowrap">{ist(new Date((t.exitTime + 1800) * 1000).toISOString())}</td>
+                    <td className="p-2">{Number(t.exitPrice).toFixed(4)}</td>
+                    <td className={"p-2 " + (t.netPnlPct >= 0 ? "text-green-700" : "text-red-600")}>{Number(t.netPnlPct).toFixed(2)}</td>
+                    <td className="p-2 text-gray-500">{t.reason}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
         <div className="bg-white rounded-xl border overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-left text-gray-500 border-b">
