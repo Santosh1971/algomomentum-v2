@@ -28,7 +28,7 @@ export interface ExchangeState {
 
 export type Action =
   | { type: "CANCEL_ALL_STOPS"; why: string }
-  | { type: "ENTER"; side: "buy" | "sell"; stopPrice: number; targetPrice: number | null; why: string }
+  | { type: "ENTER"; side: "buy" | "sell"; stopPrice: number; targetPrice: number | null; why: string; previewLots?: number; lots?: number }
   | { type: "SET_STOP"; price: number; why: string }
   | { type: "SET_TARGET"; price: number; why: string }
   | { type: "CLOSE_MARKET"; why: string }

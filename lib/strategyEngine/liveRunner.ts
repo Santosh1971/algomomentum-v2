@@ -27,7 +27,10 @@ const ENGINE = "alm3_xrp_t3";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-export async function runShadowOnce(): Promise<void> {
+// Failures that happen before any decision was made are safe to retry within the same bar.
+const RETRYABLE_NOTES = /^(error: Delta candle|candle for bar|only \d+ candles)/;
+
+export async function runShadowOnce(opts: { retryFailed?: boolean } = {}): Promise<void> {
   const accountId = process.env.ENGINE_RUNNER_ACCOUNT_ID;
   if (!accountId) return;
   const mode = process.env.ENGINE_RUNNER_MODE ?? "shadow";
@@ -41,7 +44,12 @@ export async function runShadowOnce(): Promise<void> {
   const barTime = new Date(barTimeSec * 1000);
 
   const existing = await prisma.engineRunLog.findUnique({ where: { accountId_barTime_mode: { accountId, barTime, mode } } });
-  if (existing) return; // already evaluated this bar
+  if (existing) {
+    // already evaluated this bar, unless the catch-up pass finds it failed on the candle fetch
+    const retry = opts.retryFailed && !existing.ok && existing.actions == null && RETRYABLE_NOTES.test(existing.notes ?? "");
+    if (!retry) return;
+    await prisma.engineRunLog.delete({ where: { id: existing.id } });
+  }
 
   const write = (data: { ok: boolean; replay?: any; exchange?: any; actions?: any; notes?: string }) =>
     prisma.engineRunLog
@@ -76,9 +84,18 @@ export async function runShadowOnce(): Promise<void> {
     );
 
     const lastTrade = replay.trades[replay.trades.length - 1] ?? null;
+    // Shadow mode places no orders, so "engine is in a trade but the exchange is flat" is expected, not a failure.
+    const real = actions.filter((a) => !(a.type === "ALERT" && /^engine has an open/.test(a.message)));
+    const recent = replay.trades.slice(-6).map((t) => ({
+      side: t.side, entryTime: t.entryTime, entryPrice: t.entryPrice, exitTime: t.exitTime,
+      exitPrice: t.exitPrice, reason: t.exitReason, netPnlPct: t.netPnlPct,
+    }));
+    const openPnlPct = replay.open
+      ? ((replay.open.side === "buy" ? last.close / replay.open.entryPrice - 1 : replay.open.entryPrice / last.close - 1) * 100)
+      : null;
     await write({
-      ok: !actions.some((a) => a.type === "ALERT"),
-      replay: { open: replay.open, lastTrade, barClose: last.close, candles: closed.length },
+      ok: !real.some((a) => a.type === "ALERT"),
+      replay: { open: replay.open, lastTrade, recent, openPnlPct, barClose: last.close, candles: closed.length },
       exchange: { ...state, balanceUsd, raw },
       actions,
     });
@@ -95,5 +112,7 @@ export function startEngineRunnerCron() {
   started = true;
   // 10 seconds after each 30-minute boundary (UTC :00 and :30 are also IST :30 and :00)
   cron.schedule("10 0,30 * * * *", () => { runShadowOnce().catch((e) => console.error("[EngineRunner] fatal:", e)); }, { timezone: "UTC" });
+  // catch-up pass 4 minutes later: re-runs the bar if the first attempt failed fetching candles
+  cron.schedule("20 4,34 * * * *", () => { runShadowOnce({ retryFailed: true }).catch((e) => console.error("[EngineRunner] retry fatal:", e)); }, { timezone: "UTC" });
   console.log(`[EngineRunner] Scheduled (${process.env.ENGINE_RUNNER_MODE ?? "shadow"} mode) — every 30 min for account ${process.env.ENGINE_RUNNER_ACCOUNT_ID}`);
 }

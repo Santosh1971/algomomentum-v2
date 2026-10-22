@@ -11,6 +11,7 @@ const RES_SECS: Record<string, number> = {
   "1h": 3600, "2h": 7200, "4h": 14400, "1d": 86400,
 };
 const PAGE_CANDLES = 2000;
+const MAX_ATTEMPTS = 5;
 
 export async function fetchDeltaCandles(
   symbol: string,
@@ -29,13 +30,17 @@ export async function fetchDeltaCandles(
       try {
         const r = await axios.get(`${BASE_URL}/v2/history/candles`, {
           params: { symbol, resolution, start: cursor, end: pageEnd },
-          timeout: 15000,
+          timeout: 20000,
         });
         rows = r.data?.result ?? [];
         break;
       } catch (e: any) {
-        if (attempt >= 3) throw new Error(`Delta candle fetch failed: ${e.response?.data?.error ?? e.message}`);
-        await new Promise((res) => setTimeout(res, 500 * attempt));
+        if (attempt >= MAX_ATTEMPTS) {
+          const body = e.response?.data?.error ?? e.response?.data;
+          const detail = [e.code, e.response?.status, typeof body === "string" ? body : body ? JSON.stringify(body) : "", e.message].filter(Boolean).join(" ");
+          throw new Error(`Delta candle fetch failed after ${attempt} attempts: ${detail}`.slice(0, 400));
+        }
+        await new Promise((res) => setTimeout(res, 1500 * attempt)); // 1.5s, 3s, 4.5s, 6s
       }
     }
     for (const c of rows) {
