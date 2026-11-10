@@ -3,14 +3,25 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
+import EngineChart from "@/components/EngineChart";
 
 const ist = (iso: string) => new Date(iso).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false });
+
+/** share of the balance used as margin, worked out from the logged sizing (0.77 for the current setting) */
+const shareOf = (a: any): string | null => {
+  const z = a?.sizing;
+  if (!z || !a.previewLots || !z.balanceUsd || !z.leverage || !z.price) return null;
+  const f = (a.previewLots * z.price) / (z.balanceUsd * z.leverage);
+  return f > 0 && f < 0.995 ? f.toFixed(2) : null;
+};
 
 export default function EngineLogPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [rows, setRows] = useState<any[]>([]);
   const [err, setErr] = useState<string | null>(null);
+  const [chart, setChart] = useState<any>(null);
+  const [chartErr, setChartErr] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/Signup");
@@ -19,6 +30,7 @@ export default function EngineLogPage() {
 
   function load() {
     fetch("/api/v1/admin/engine-log").then((r) => r.json()).then((d) => (d.rows ? setRows(d.rows) : setErr(d.error ?? "failed"))).catch((e) => setErr(String(e)));
+    fetch("/api/v1/admin/engine-chart").then((r) => r.json()).then((d) => (d.candles ? (setChart(d), setChartErr(null)) : setChartErr(d.error ?? "failed"))).catch((e) => setChartErr(String(e)));
   }
   useEffect(() => { load(); }, []);
 
@@ -29,11 +41,12 @@ export default function EngineLogPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-[#161B22]">Engine runner log</h1>
-            <p className="text-sm text-gray-500 mt-1">Shadow mode: nothing here was sent to Delta. Times are IST, one row per 30-minute bar close. In shadow mode the trade is never placed, so an engine position next to a flat exchange is expected.</p>
+            <p className="text-sm text-gray-500 mt-1">Rows marked SHADOW were never sent to Delta; rows marked LIVE placed real orders (see Notes). Times are IST, one row per 30-minute bar close. In shadow mode the trade is never placed, so an engine position next to a flat exchange is expected.</p>
           </div>
           <button onClick={load} className="border rounded-lg px-3 py-1.5 text-sm">Refresh</button>
         </div>
         {err && <div className="text-red-600 text-sm">{err}</div>}
+        <EngineChart data={chart} error={chartErr} />
         {rows[0]?.replay?.recent?.length > 0 && (
           <div className="bg-white rounded-xl border overflow-x-auto">
             <div className="p-3 border-b text-sm font-semibold text-[#161B22]">
@@ -74,11 +87,11 @@ export default function EngineLogPage() {
                 const acts: any[] = r.actions ?? [];
                 return (
                   <tr key={r.id} className={"border-b align-top " + (r.ok ? "" : "bg-red-50")}>
-                    <td className="p-2 whitespace-nowrap">{ist(r.barTime)}</td>
+                    <td className="p-2 whitespace-nowrap">{ist(r.barTime)} <span className={"ml-1 rounded px-1 text-xs text-white " + (r.mode === "live" ? "bg-red-600" : "bg-gray-400")}>{r.mode === "live" ? "LIVE" : "SHADOW"}</span></td>
                     <td className="p-2">{r.ok ? "✓" : "✗"}</td>
                     <td className="p-2 whitespace-nowrap">{open ? `${open.side} @ ${open.entryPrice} · stop ${Number(open.stopPrice).toFixed(4)}` : r.replay ? "flat" : "—"}</td>
-                    <td className="p-2 whitespace-nowrap">{pos ? `${pos.side} ${pos.size} @ ${pos.entryPrice}` : r.exchange ? "flat" : "—"}</td>
-                    <td className="p-2">{acts.length ? acts.map((a, i) => <div key={i}>{a.type === "ALERT" ? "⚠ " + a.message : a.type + (a.side ? " " + a.side : "") + (a.stopPrice ? " stop " + Number(a.stopPrice).toFixed(4) : a.price ? " @ " + Number(a.price).toFixed(4) : "") + (a.previewLots !== undefined ? ` (${a.previewLots} lots)` : "")}</div>) : <span className="text-gray-400">nothing</span>}</td>
+                    <td className="p-2 whitespace-nowrap">{pos ? `${pos.side} ${pos.size} @ ${pos.entryPrice}` : r.exchange ? "flat" : "—"}{r.exchange?.balanceUsd !== undefined && <span className="text-gray-400"> · ${Number(r.exchange.balanceUsd).toFixed(0)}</span>}</td>
+                    <td className="p-2">{acts.length ? acts.map((a, i) => <div key={i}>{a.type === "ALERT" ? "⚠ " + a.message : a.type + (a.side ? " " + a.side : "") + (a.stopPrice ? " stop " + Number(a.stopPrice).toFixed(4) : a.price ? " @ " + Number(a.price).toFixed(4) : "") + (a.previewLots !== undefined ? ` (${a.previewLots} lots${a.sizing ? ` = $${Number(a.sizing.balanceUsd).toFixed(0)} × ${a.sizing.leverage}${shareOf(a) ? ` × ${shareOf(a)}` : ""} ÷ ${Number(a.sizing.price).toFixed(4)}` : ""})${a.lots !== undefined && a.lots !== a.previewLots ? ` → traded ${a.lots} (canary cap)` : ""}` : "")}</div>) : <span className="text-gray-400">nothing</span>}</td>
                     <td className="p-2 text-gray-500">{r.notes}</td>
                   </tr>
                 );

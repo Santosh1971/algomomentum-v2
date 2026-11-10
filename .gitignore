@@ -47,3 +47,6 @@ next-env.d.ts
 public/backtest-files/
 backtest-data/
 probe-log-*.json
+
+# server address for engine-env.sh (kept out of the public repo)
+.engine-host

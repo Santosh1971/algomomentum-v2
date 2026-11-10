@@ -4,7 +4,7 @@
 // Kept free of I/O so scripts/testExecutor.ts can test every refusal.
 
 export const LIVE_CONFIRM_TEXT = "PLACE_REAL_ORDERS";
-export const MAX_LOTS_CEILING = 50; // hard ceiling, whatever ENGINE_MAX_LOTS says (about $65 at XRP 1.3)
+export const MAX_LOTS_CEILING = 200; // hard ceiling, whatever ENGINE_MAX_LOTS says (about $230 notional at XRP 1.15): fits a ~$150 account at 0.77 x 2
 export const DEFAULT_MAX_BALANCE_USD = 150;
 
 export interface LiveGuardInput {
