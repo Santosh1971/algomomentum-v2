@@ -129,8 +129,6 @@ export default function EngineChart({ data, error }: { data: (ChartData & { cand
     return (
       <g key={label}>
         <line x1={x(levels.entryTime)} x2={W - R} y1={yy} y2={yy} stroke={color} strokeWidth={1.4} strokeDasharray="7 4" />
-        <rect x={W - R + 2} y={yy - 9} width={R - 4} height={18} rx={3} fill={color} />
-        <text x={W - R + 6} y={yy + 4} fontSize="10.5" fill="#fff" fontWeight={700}>{outside ? (price < lo ? "▼ " : "▲ ") : ""}{p4(price)}</text>
         <text x={W - R - 6} y={outside && price < lo ? yy - 14 : yy - 4} fontSize="10.5" textAnchor="end" fill={color} fontWeight={700}>{label}</text>
       </g>
     );
@@ -146,6 +144,31 @@ export default function EngineChart({ data, error }: { data: (ChartData & { cand
       </g>
     );
   };
+
+  // Price tags on the right axis (entry / stop / target / last price). Each line stays at its true price; when two tags would
+  // overlap, the tags are spread apart (a short leader joins a moved tag to its line) so every number stays readable.
+  const TAG_H = 19;
+  const tagList = (() => {
+    const items: { key: string; text: string; color: string; ly: number }[] = [];
+    const add = (key: string, price: number | null | undefined, color: string) => {
+      if (price === null || price === undefined || !levels || !inView(levels.entryTime)) return;
+      const outside = y(price) < T || y(price) > H - B;
+      items.push({ key, color, ly: clampY(price), text: `${outside ? (price < lo ? "▼ " : "▲ ") : ""}${p4(price)}` });
+    };
+    add("entry", levels?.entryPrice, ENTRY);
+    add("stop", levels?.stop, STOP);
+    add("target", levels?.target, UP);
+    items.push({ key: "last", color: INK, ly: y(last.close), text: p4(last.close) });
+    items.sort((a, b) => a.ly - b.ly);
+    const ty = items.map((it) => it.ly);
+    for (let i = 1; i < ty.length; i++) ty[i] = Math.max(ty[i], ty[i - 1] + TAG_H);           // push down
+    const bottom = H - B + 6;
+    for (let i = ty.length - 1; i >= 0; i--) {                                                 // then pull back up if it ran off the bottom
+      if (i === ty.length - 1) ty[i] = Math.min(ty[i], bottom);
+      else ty[i] = Math.min(ty[i], ty[i + 1] - TAG_H);
+    }
+    return items.map((it, i) => ({ ...it, ty: ty[i] }));
+  })();
 
   // risk : reward of the open trade, measured from the entry price
   const rr = (() => {
@@ -209,8 +232,13 @@ export default function EngineChart({ data, error }: { data: (ChartData & { cand
         {ref(levels?.switchPrice ?? null, "switch")}
         {ref(levels?.drawdownPrice ?? null, "DD cap")}
         <line x1={L} x2={W - R} y1={y(last.close)} y2={y(last.close)} stroke={INK} strokeWidth={0.8} strokeDasharray="1 3" />
-        <rect x={W - R + 2} y={y(last.close) - 9} width={R - 4} height={18} rx={3} fill={INK} />
-        <text x={W - R + 6} y={y(last.close) + 4} fontSize="10.5" fill="#fff" fontWeight={700}>{p4(last.close)}</text>
+        {tagList.map((t) => (
+          <g key={t.key}>
+            {Math.abs(t.ty - t.ly) > 1 && <line x1={W - R} x2={W - R + 2} y1={t.ly} y2={t.ty} stroke={t.color} strokeWidth={1} />}
+            <rect x={W - R + 2} y={t.ty - 9} width={R - 4} height={18} rx={3} fill={t.color} />
+            <text x={W - R + 6} y={t.ty + 4} fontSize="10.5" fill="#fff" fontWeight={700}>{t.text}</text>
+          </g>
+        ))}
       </svg>
       <div className="text-xs text-gray-400 mt-1">Hover a candle for its prices. An entry sits on the candle that opened when the order went in (the bar after the signal bar). Exits are drawn at the engine's own exit candle and price; Delta's fill can differ a little, and a stop or target hit between bars shows on Delta first.</div>
     </div>
